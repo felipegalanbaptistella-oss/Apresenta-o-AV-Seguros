@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gestão de Riscos — Gerador de apresentação</title>
+  <link rel="stylesheet" href="assets/app.css" />
+  <script src="assets/jszip.min.js"></script>
+  <script src="assets/pptxgen.min.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="page-header">
+      <div class="brand"><span class="brand-symbol"><img src="assets/logo-alta-vista.png" alt="Alta Vista" /></span><span>GESTÃO DE RISCOS</span></div>
+      <h1>Gerador de apresentação comercial</h1>
+      <p>Preencha os dados uma única vez. Os custos sucessórios, a cobertura recomendada e todos os gráficos são calculados automaticamente antes da geração do PowerPoint.</p>
+    </header>
+
+    <div class="layout">
+      <form class="card form-card" id="clientForm">
+        <h2>Dados do cliente</h2>
+        <div class="grid">
+          <div class="field"><label for="clientName">Nome do cliente principal</label><input id="clientName" required placeholder="Ex.: João da Silva" /></div>
+          <div class="field"><label for="consultant">Corretor responsável</label><select id="consultant" required><option value="fabio">Fabio Kenji Hassui</option><option value="alexandre">Alexandre Faustino</option><option value="moises">Moisés Santos</option></select></div>
+          <div class="field full"><label>Composição familiar</label><div class="switch"><button type="button" class="active" data-status="single">Cliente solteiro</button><button type="button" data-status="couple">Cliente com cônjuge</button></div></div>
+        </div>
+
+        <div id="spouseBlock" class="couple hidden">
+          <p class="person-title">Dados do cônjuge</p>
+          <div class="grid"><div class="field"><label for="spouseName">Nome do cônjuge</label><input id="spouseName" placeholder="Ex.: Ana da Silva" /></div><div class="field"><label for="spouseInsurance">Seguro já contratado pelo cônjuge (R$)</label><input id="spouseInsurance" type="text" inputmode="decimal" data-money-input value="0,00" /></div></div>
+        </div>
+
+        <section class="section">
+          <h3>Patrimônio do cliente principal</h3>
+          <p class="small-note">A previdência privada aparece no patrimônio, mas é retirada da base do custo sucessório.</p>
+          <div class="grid">
+            <div class="field"><label for="xp">Investimentos na XP (R$)</label><input id="xp" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+            <div class="field"><label for="otherInvestments">Outras instituições (R$)</label><input id="otherInvestments" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+            <div class="field"><label for="privatePension">Previdência privada (R$)</label><input id="privatePension" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+            <div class="field"><label for="realEstate">Imóveis e ativos físicos (R$)</label><input id="realEstate" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+            <div class="field"><label for="holdings">Participações societárias / holdings (R$)</label><input id="holdings" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+            <div class="field"><label for="currentInsurance">Seguro de vida já contratado (R$)</label><input id="currentInsurance" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+          </div>
+        </section>
+
+        <section id="spouseAssets" class="section couple hidden">
+          <h3>Patrimônio do cônjuge</h3>
+          <div class="grid">
+            <div class="field"><label for="spouseXp">Investimentos na XP (R$)</label><input id="spouseXp" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+            <div class="field"><label for="spouseOther">Outras instituições (R$)</label><input id="spouseOther" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+            <div class="field"><label for="spousePension">Previdência privada (R$)</label><input id="spousePension" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+            <div class="field"><label for="spouseRealEstate">Imóveis e ativos físicos (R$)</label><input id="spouseRealEstate" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+            <div class="field"><label for="spouseHoldings">Participações societárias / holdings (R$)</label><input id="spouseHoldings" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+          </div>
+        </section>
+
+        <section class="section output-section">
+          <h3>Diagnóstico calculado</h3>
+          <div class="grid">
+            <div class="field"><label for="successionLiabilityOutput">Passivo sucessório estimado</label><input id="successionLiabilityOutput" type="text" readonly value="R$ 0,00" /><span class="small-note">15% do patrimônio total, retirando a previdência privada.</span></div>
+            <div class="field"><label for="recommendedInsurance">Cobertura total recomendada</label><input id="recommendedInsurance" type="text" readonly value="R$ 0,00" /></div>
+            <div class="field"><label for="coverageGap">Capital adicional a contratar</label><input id="coverageGap" type="text" readonly value="R$ 0,00" /><span class="small-note">Cobertura recomendada menos os seguros já contratados.</span></div>
+            <div class="field"><label for="healthProfile">Perfil de saúde</label><select id="healthProfile"><option>A preencher</option><option>Saudável</option><option>Com agravantes</option></select></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3>Dados da cotação WL10</h3>
+          <p class="small-note">O custo e os valores de resgate dependem da cotação da seguradora. Preencha abaixo exatamente os números apresentados na proposta.</p>
+          <div class="grid three">
+            <div class="field"><label for="clientAge">Idade atual</label><input id="clientAge" type="number" min="18" max="100" step="1" required placeholder="Informe a idade" /></div>
+            <div class="field"><label for="annualPremium">Prêmio anual da apólice (R$)</label><input id="annualPremium" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+            <div class="field"><label for="ipca">Reajuste projetado (% a.a.)</label><input id="ipca" type="text" inputmode="decimal" data-decimal-input value="5,00" /></div>
+            <div class="field"><label for="projectionYears">Horizonte visível (anos)</label><input id="projectionYears" type="number" min="12" max="40" step="1" value="20" /></div>
+            <div class="field"><label for="annualReturn">Rentabilidade atuarial (% a.a.)</label><input id="annualReturn" type="text" inputmode="decimal" data-decimal-input value="3,00" /></div>
+          </div>
+          <div class="surrender-block">
+            <div class="surrender-heading"><div><strong>Valores de resgate da cotação</strong><span>Uma coluna, como no Excel: um valor para cada ano da projeção.</span></div><span class="surrender-bulk-badge">Colagem em massa ativada</span></div>
+            <div class="surrender-paste-guide"><strong>Como preencher de uma vez</strong><span>Copie a coluna de valores no Excel, clique na primeira célula abaixo e pressione <kbd>Ctrl</kbd> + <kbd>V</kbd>. Os números serão distribuídos automaticamente pelas linhas.</span></div>
+            <div class="surrender-editor"><div class="surrender-editor-head"><span>Ano</span><span>Idade</span><span>Valor de resgate (R$)</span></div><div id="surrenderInputs" class="surrender-editor-body"></div></div>
+            <div id="surrenderPasteStatus" class="surrender-paste-status" role="status" aria-live="polite">Você ainda pode editar qualquer célula individualmente.</div>
+          </div>
+        </section>
+
+        <div class="actions"><button class="btn primary" type="submit" id="generateBtn">Gerar apresentação PowerPoint</button></div>
+        <div class="status" id="status" role="status" aria-live="polite"></div>
+      </form>
+
+      <aside class="card summary">
+        <h2>Resumo calculado</h2>
+        <div class="metric"><span>Patrimônio total</span><strong id="sumTotal">R$ 0,00</strong></div>
+        <div class="metric"><span>Previdência fora do inventário</span><strong id="sumPension">R$ 0,00</strong></div>
+        <div class="metric danger"><span>Custo sucessório estimado</span><strong id="sumLiability">R$ 0,00</strong></div>
+        <div class="metric"><span>Família recebe sem seguro</span><strong id="sumWithoutInsurance">R$ 0,00</strong></div>
+        <div class="metric positive"><span>Família recebe com cobertura</span><strong id="sumWithInsurance">R$ 0,00</strong></div>
+        <div class="metric total"><span>Capital adicional WL10</span><strong id="sumGap">R$ 0,00</strong></div>
+        <div class="payback-callout"><span>Tempo estimado para pagar o prêmio somente com rendimentos</span><strong id="paybackSummary">—</strong></div>
+        <div class="consultant-summary"><span>Corretor responsável</span><strong id="consultantSummaryName">Fabio Kenji Hassui</strong><a id="consultantSummaryPhone" href="tel:+5511992700538">(11) 99270-0538</a><a id="consultantSummaryEmail" href="mailto:fabio.hassui@altavistainvest.com.br">fabio.hassui@altavistainvest.com.br</a></div>
+        <div class="note">A comparação usa a mesma fotografia patrimonial nos dois cenários. O que muda é a entrada da cobertura de vida, deixando visível o efeito sobre o valor transmitido à família.</div>
+      </aside>
+    </div>
+
+    <section class="preview-section" aria-labelledby="previewTitle">
+      <div class="preview-heading"><div><span class="eyebrow">PRÉVIA EM TEMPO REAL</span><h2 id="previewTitle">Os gráficos que irão para a apresentação</h2></div><p>As cinco telas abaixo mudam junto com os campos de entrada.</p></div>
+
+      <article class="preview-slide" id="previewCosts">
+        <div class="slide-brand">GESTÃO DE RISCOS</div><h3>CUSTOS DA SUCESSÃO</h3>
+        <div class="cost-layout">
+          <div class="slide-panel asset-map"><h4>MAPEAMENTO DE ATIVOS INVENTARIÁVEIS</h4><div id="assetRows"></div><div class="asset-total"><span>TOTAL INVENTARIÁVEL</span><strong id="previewInventoriable">R$ 0,00</strong></div></div>
+          <div class="cost-right"><div class="succession-box"><div><h4>ENCARGOS DA SUCESSÃO</h4><p>ITCMD | Honorários | Custas processuais | Cartório</p></div><strong>15%</strong><div class="erosion"><span>EROSÃO PATRIMONIAL ESTIMADA</span><b id="previewLiability">-R$ 0,00</b></div></div><div class="transmitted"><span>PATRIMÔNIO LÍQUIDO TRANSMITIDO</span><strong id="previewNet">R$ 0,00</strong><small>A família receberá menos patrimônio sem liquidez planejada</small></div></div>
+        </div>
+      </article>
+
+      <article class="preview-slide" id="previewWithout">
+        <div class="slide-brand">GESTÃO DE RISCOS</div><h3>PATRIMÔNIO ATUAL — SEM SEGURO</h3>
+        <div class="wealth-layout"><div><div class="slide-panel donut-panel"><h4>ATIVOS FINANCEIROS</h4><div class="donut-row"><div class="donut" id="donutWithout"><span id="donutWithoutCenter">0%</span></div><div class="chart-legend" id="legendWithout"></div></div></div><div class="value-list"><div><span>Ativos financeiros</span><strong id="withoutFinancial">R$ 0,00</strong></div><div><span>Patrimônio imobilizado</span><strong id="withoutIlliquid">R$ 0,00</strong></div></div></div><div class="slide-panel wealth-panel"><h4>PATRIMÔNIO TOTAL</h4><div class="wealth-bar-wrap"><div class="wealth-bar"><div class="wealth-financial" id="withoutBarFinancial"></div><div class="wealth-illiquid" id="withoutBarIlliquid"></div><div class="wealth-cost" id="withoutBarCost"></div></div><div class="bar-labels"><span class="red">■ PASSIVO SUCESSÓRIO</span><span>■ PATRIMÔNIO IMOBILIZADO</span><span class="gold">■ ATIVOS FINANCEIROS</span></div></div></div></div>
+      </article>
+
+      <article class="preview-slide" id="previewWith">
+        <div class="slide-brand">GESTÃO DE RISCOS</div><h3>PATRIMÔNIO <em>COM SEGURO DE VIDA RESGATÁVEL</em></h3>
+        <div class="wealth-layout"><div><div class="slide-panel donut-panel"><h4>ATIVOS E PROTEÇÃO</h4><div class="donut-row"><div class="donut" id="donutWith"><span id="donutWithCenter">0%</span></div><div class="chart-legend" id="legendWith"></div></div></div><div class="value-list green-list"><div><span>Seguro de vida</span><strong id="withInsurance">R$ 0,00</strong></div><div><span>Patrimônio transmitido</span><strong id="withTransmitted">R$ 0,00</strong></div></div></div><div class="slide-panel wealth-panel"><h4>PATRIMÔNIO PROTEGIDO</h4><div class="wealth-bar-wrap"><div class="wealth-bar protected"><div class="wealth-insurance" id="withBarInsurance"></div><div class="wealth-financial" id="withBarFinancial"></div><div class="wealth-illiquid" id="withBarIlliquid"></div><div class="wealth-cost covered" id="withBarCost"></div></div><div class="bar-labels"><span class="green">■ SEGURO DE VIDA</span><span>■ PATRIMÔNIO IMOBILIZADO</span><span class="gold">■ ATIVOS FINANCEIROS</span><span>■ CUSTO SUCESSÓRIO COBERTO</span></div></div></div></div>
+      </article>
+
+      <article class="preview-slide wl-slide" id="previewWL10">
+        <div class="wl-title"><h3>PROJEÇÃO <em>VITALÍCIA</em></h3><strong id="projectionIpca">IPCA: 5% a.a.</strong><span id="projectionClientName">CLIENTE</span></div>
+        <div class="wl-layout"><div class="wl-table-shell"><table class="wl-table"><thead><tr><th>IDADE</th><th>CAPITAL SEGURADO</th><th>APORTE ANUAL</th><th>APORTE ACUMULADO</th><th>RESGATE</th></tr></thead><tbody id="wlTableBody"></tbody></table><div class="wl-lifetime">∞ Capital Segurado e Resgate seguem vitalícios ∞</div></div><div class="wl-benefits"><div><h4>BENEFÍCIOS SECURITÁRIOS</h4><p>CONGELAMENTO DE RISCO</p><p>CONGELAMENTO DE IDADE</p></div><div><h4>BENEFÍCIOS FINANCEIROS E TRIBUTÁRIOS</h4><p>ALAVANCAGEM <small>(Liquidez em D+0)</small></p><p>ISENÇÃO DE IMPOSTOS*</p><p>QUITAÇÃO NO 10º ANO <small>(sem novos aportes)</small></p></div><div><h4>BENEFÍCIOS LEGAIS</h4><p>INCOMUNICÁVEL</p><p>INALIENÁVEL</p><p>IMPENHORÁVEL</p></div></div></div>
+        <div class="wl-footnotes"><span>Rentabilidade futura não é garantida. Material informativo.</span><span>*Tabela progressiva sobre o lucro em caso de resgate.</span></div>
+      </article>
+
+      <article class="preview-slide" id="previewPayback">
+        <div class="slide-brand">GESTÃO DE RISCOS</div><h3>COMO <em>DIVERSIFICAR COM SEUS RENDIMENTOS</em></h3>
+        <div class="slide-panel payback-panel"><div class="chart-head"><span>CENÁRIO DE PAYBACK</span><strong>ATIVOS FINANCEIROS: <b id="paybackAssets">R$ 0,00</b></strong></div><canvas id="paybackChart" aria-label="Evolução dos rendimentos mensais comparada ao prêmio anual"></canvas></div><div class="payback-cards"><div><span>PRÊMIO ANUAL</span><strong id="paybackPremium">R$ 0,00</strong></div><div class="highlight"><span>RENDIMENTOS PAGAM A APÓLICE EM</span><strong id="paybackMonths">—</strong></div><div><span>PRÊMIO / PATRIMÔNIO TOTAL</span><strong id="premiumVsTotal">0%</strong></div><div><span>PERFIL DE SAÚDE</span><strong id="previewHealth">A preencher</strong></div></div>
+      </article>
+    </section>
+
+    <footer>Material informativo — os valores projetados dependem das premissas preenchidas e da cotação da seguradora.</footer>
+  </main>
+  <script src="assets/template-ppt.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
