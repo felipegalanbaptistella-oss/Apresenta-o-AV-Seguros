@@ -126,7 +126,7 @@
     let cursor = 0; const stops = values.map((value, i) => { const start = cursor; cursor += Math.max(0,value) / total * 100; return `${colors[i]} ${start}% ${cursor}%`; });
     el.style.background = `conic-gradient(${stops.join(',')})`; el.querySelector('span').textContent = centerText;
   }
-  function legendHtml(items) { return items.map(item => `<div class="legend-item"><span class="legend-swatch" style="background:${item.color}"></span><span>${item.label}<br><strong>${money(item.value)}</strong></span></div>`).join(''); }
+  function legendHtml(items) { const total=items.reduce((sum,item)=>sum+Math.max(0,Number(item.value)||0),0)||1;return items.map(item => `<div class="legend-item"><span class="legend-swatch" style="background:${item.color}"></span><span>${item.label}<br><strong>${money(item.value)} · ${((Math.max(0,Number(item.value)||0)/total)*100).toLocaleString('pt-BR',{maximumFractionDigits:2})}%</strong></span></div>`).join(''); }
 
   function setDashboardDetail(element,title,lines=[]) {
     if(!element) return;
@@ -183,18 +183,18 @@
     ctx.fillStyle='#d6a700';ctx.fillRect(left,4,12,3);ctx.fillStyle='#d9e0ec';ctx.fillText('capital segurado',left+18,9);ctx.fillStyle='#70b544';ctx.fillRect(left+135,4,12,3);ctx.fillStyle='#d9e0ec';ctx.fillText('prêmio anual',left+153,9);
   }
   function drawPayback(d,activeMonth=null) {
-    const canvas=$('paybackChart'); if(!canvas) return; const {ctx,w,h}=prepCanvas(canvas); const left=72,top=24,right=20,bottom=28; const months=12; const annualRates=[0.08,0.10,0.12,d.annualReturn].filter((v,i,a)=>v>0&&a.findIndex(x=>Math.abs(x-v)<.00001)===i); const rates=annualRates.map(rate=>rate/12); const colors=['#7d6a36','#b88700','#d6a700','#70b544'];
+    const canvas=$('paybackChart'); if(!canvas) return; const {ctx,w,h}=prepCanvas(canvas); const left=72,top=24,right=20,bottom=28; const months=12; const rates=[.006,.008,.01]; const colors=['#7d6a36','#b88700','#d6a700'];
     const maxY=Math.max(d.annualPremium*1.35,...rates.map(r=>d.financial*r*months),1); drawAxes(ctx,w,h,left,top,right,bottom,maxY);
     const x=m=>left+(w-left-right)*m/months; const y=v=>h-bottom-(h-top-bottom)*v/maxY;
-    rates.forEach((rate,i)=>drawLine(ctx,Array.from({length:months+1},(_,m)=>({x:x(m),y:y(d.financial*rate*m)})),colors[i%colors.length],rate===d.monthlyReturn?3:2));
+    rates.forEach((rate,i)=>drawLine(ctx,Array.from({length:months+1},(_,m)=>({x:x(m),y:y(d.financial*rate*m)})),colors[i%colors.length],2));
     if(d.annualPremium>0) drawLine(ctx,[{x:x(0),y:y(d.annualPremium)},{x:x(months),y:y(d.annualPremium)}],'#8bd05f',2,[8,6]);
     ctx.fillStyle='#c5d0e5';ctx.font='10px Segoe UI';[0,2,4,6,8,10,12].forEach(m=>ctx.fillText(`M${m}`,x(m)-8,h-8));
-    ctx.font='10px Segoe UI'; let lx=left; rates.forEach((rate,i)=>{ctx.fillStyle=colors[i%colors.length];ctx.fillRect(lx,4,12,3);ctx.fillStyle='#d9e0ec';const label=`${(annualRates[i]*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}% a.a.`;ctx.fillText(label,lx+17,9);lx+=88;});
+    ctx.font='10px Segoe UI'; let lx=left; rates.forEach((rate,i)=>{ctx.fillStyle=colors[i%colors.length];ctx.fillRect(lx,4,12,3);ctx.fillStyle='#d9e0ec';const label=`${(rate*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}% a.m.`;ctx.fillText(label,lx+17,9);lx+=88;});
     if(Number.isInteger(activeMonth)){
       const markerX=x(activeMonth);line(ctx,markerX,top,markerX,h-bottom,'rgba(255,255,255,.5)',1,[4,4]);
       rates.forEach((rate,i)=>{ctx.beginPath();ctx.arc(markerX,y(d.financial*rate*activeMonth),5,0,Math.PI*2);ctx.fillStyle=colors[i%colors.length];ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();});
     }
-    canvas.__dashboardMeta={d,left,right,w,months,annualRates,rates};
+    canvas.__dashboardMeta={d,left,right,w,months,rates};
     setDashboardDetail(canvas,'Cenário de payback',['Mova o cursor sobre o gráfico para comparar cada mês.']);
   }
 
@@ -251,7 +251,7 @@
     if(target.id==='paybackChart'&&target.__dashboardMeta){
       const meta=target.__dashboardMeta,rect=target.getBoundingClientRect(),localX=(event.clientX-rect.left)*(meta.w/rect.width),month=clamp(Math.round((localX-meta.left)/(meta.w-meta.left-meta.right)*meta.months),0,meta.months);
       if(target.__hoverMonth!==month){target.__hoverMonth=month;drawPayback(meta.d,month);}
-      const lines=[`Prêmio anual: ${money(meta.d.annualPremium)}`,...meta.annualRates.map(rate=>`${(rate*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}% a.a.: ${money(meta.d.financial*(rate/12)*month)}`)];
+      const lines=[`Prêmio anual: ${money(meta.d.annualPremium)}`,...meta.rates.map(rate=>`${(rate*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}% a.m.: ${money(meta.d.financial*rate*month)}`)];
       showTooltip(target,event,`Mês ${month}`,lines.join('\n'));return;
     }
     showTooltip(target,event);
