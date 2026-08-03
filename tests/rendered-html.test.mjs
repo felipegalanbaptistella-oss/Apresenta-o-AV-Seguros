@@ -53,4 +53,6 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /RENDIMENTOS PAGAM A ALOCAÇÃO ANUAL EM/);
   assert.match(template, /ALOCAÇÃO PROPOSTA VS PATRIMÔNIO LÍQUIDO/);
   assert.match(template, /monthsAtRate\(d,rate\)/);
+  assert.match(template, /const surname=\(d\.lastName\|\|d\.firstName\|\|'Cliente'\)/);
+  assert.match(template, /const texture=document\.createElement\('canvas'\)/);
 });

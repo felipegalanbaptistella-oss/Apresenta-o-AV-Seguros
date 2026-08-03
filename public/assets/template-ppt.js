@@ -78,10 +78,13 @@
 
   async function slide1(d){
     const {canvas,ctx}=await canvasFor(1);
-    const band=ctx.createLinearGradient(250,0,1350,0);band.addColorStop(0,'rgba(2,14,56,0)');band.addColorStop(.18,'rgba(2,14,56,.94)');band.addColorStop(.30,'rgba(2,14,56,1)');band.addColorStop(.70,'rgba(2,14,56,1)');band.addColorStop(.82,'rgba(2,14,56,.94)');band.addColorStop(1,'rgba(2,14,56,0)');
-    rect(ctx,250,620,1100,175,band);line(ctx,455,642,1145,642,'rgba(197,160,91,.75)',1);line(ctx,455,774,1145,774,'rgba(197,160,91,.55)',1);
-    text(ctx,'PLANEJAMENTO SUCESSÓRIO PARA',500,675,600,{size:14,color:GOLD,bold:true,align:'center',font:'Georgia'});
-    fitText(ctx,d.familyLabel||clientLabel(d),390,724,820,{size:38,min:22,color:WHITE,bold:false,align:'center',font:'Georgia'});
+    // A arte-base já contém o fundo, os logotipos e a tipografia do modelo aprovado.
+    // Apenas o sobrenome é substituído para manter o nome da família dinâmico.
+    // Limpa a linha fixa do arquivo-modelo copiando a textura do mar logo abaixo,
+    // sem criar uma caixa visível atrás do sobrenome.
+    const texture=document.createElement('canvas');texture.width=380;texture.height=60;const textureCtx=texture.getContext('2d');textureCtx.drawImage(canvas,1100,780,380,60,0,0,380,60);textureCtx.globalCompositeOperation='destination-in';const edgeX=textureCtx.createLinearGradient(0,0,380,0);edgeX.addColorStop(0,'rgba(0,0,0,0)');edgeX.addColorStop(.12,'rgba(0,0,0,1)');edgeX.addColorStop(.88,'rgba(0,0,0,1)');edgeX.addColorStop(1,'rgba(0,0,0,0)');textureCtx.fillStyle=edgeX;textureCtx.fillRect(0,0,380,60);const edgeY=textureCtx.createLinearGradient(0,0,0,60);edgeY.addColorStop(0,'rgba(0,0,0,0)');edgeY.addColorStop(.18,'rgba(0,0,0,1)');edgeY.addColorStop(.82,'rgba(0,0,0,1)');edgeY.addColorStop(1,'rgba(0,0,0,0)');textureCtx.fillStyle=edgeY;textureCtx.fillRect(0,0,380,60);ctx.drawImage(texture,610,724);
+    const surname=(d.lastName||d.firstName||'Cliente').trim().toLocaleUpperCase('pt-BR');
+    fitText(ctx,`- ${surname} -`,555,752,490,{size:34,min:20,color:GOLD,bold:false,align:'center',font:'Georgia'});
     return pngBytes(canvas);
   }
 
