@@ -206,10 +206,10 @@
       cell.forEach((v,j)=>fitText(ctx,v,cols[j]+4,y+rowH/2,cols[j+1]-cols[j]-8,{size:active&&j>0?19:16,min:10,color:active&&(i===milestone10||i===rows.length-1)&&(j===1||j===4)?GREEN:WHITE,bold:active,align:'center'}));
     });
     if(stage>=3){
-      const arrowCenters=[527,762,990];
+      const arrowCenters=[405,645,876];
       for(let i=11;i<Math.min(18,rows.length);i++){
         const ay=top+i*rowH+rowH*.48;
-        arrowCenters.forEach(ax=>{line(ctx,ax-22,ay-10,ax,ay+10,'#bc9440',4);line(ctx,ax,ay+10,ax+22,ay-10,'#bc9440',4);});
+        arrowCenters.forEach(ax=>{line(ctx,ax-14,ay-8,ax,ay+6,'#bc9440',3);line(ctx,ax,ay+6,ax+14,ay-8,'#bc9440',3);});
       }
     }
     const footerY=top+rows.length*rowH;
