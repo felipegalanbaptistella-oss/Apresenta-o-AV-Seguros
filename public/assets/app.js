@@ -23,10 +23,11 @@
   };
   let mode = 'single';
   let surrenderValues = [];
+  let surrenderPdfImportBusy = false;
 
-  const moneyInputIds = ['xp','otherInvestments','privatePension','realEstate','holdings','currentInsurance','spouseXp','spouseOther','spousePension','spouseRealEstate','spouseHoldings','spouseInsurance','annualPremium'];
+  const moneyInputIds = ['xp','otherInvestments','privatePension','realEstate','holdings','currentInsurance','spouseXp','spouseOther','spousePension','spouseRealEstate','spouseHoldings','spouseInsurance','coverageGap','annualPremium'];
   const decimalInputIds = ['ipca','annualReturn'];
-  const inputIds = ['xp','otherInvestments','privatePension','realEstate','holdings','currentInsurance','spouseXp','spouseOther','spousePension','spouseRealEstate','spouseHoldings','spouseInsurance','clientAge','annualPremium','ipca','projectionYears','annualReturn','healthProfile','consultant'];
+  const inputIds = ['clientFirstName','clientLastName','xp','otherInvestments','privatePension','realEstate','holdings','currentInsurance','spouseXp','spouseOther','spousePension','spouseRealEstate','spouseHoldings','spouseInsurance','coverageGap','clientAge','annualPremium','ipca','projectionYears','annualReturn','consultant'];
 
   function formatMoneyWhileTyping(input){
     const raw=input.value.replace(/\./g,'').replace(/[^\d,]/g,'');
@@ -50,7 +51,7 @@
     const inventoriable = Math.max(0, total - pension);
     const liability = inventoriable * 0.15;
     const recommended = liability;
-    const coverageGap = Math.max(0, recommended - currentInsurance);
+    const coverageGap = Math.max(0, num('coverageGap'));
     const coverageAfter = currentInsurance + coverageGap;
     const withoutInsurance = Math.max(0, total - liability);
     const withInsurance = Math.max(0, total - liability + coverageAfter);
@@ -63,11 +64,15 @@
     const ageValue = num('clientAge');
     const age = ageValue ? clamp(ageValue, 18, 100) : null;
     const projectionYears = clamp(num('projectionYears') || 20, 12, 40);
+    const firstName = $('clientFirstName').value.trim();
+    const lastName = $('clientLastName').value.trim();
+    const name = [firstName,lastName].filter(Boolean).join(' ') || 'Cliente';
+    const familyLabel = `Família ${lastName || firstName || 'Cliente'}`;
     return {
-      name: $('clientName').value || 'Cliente', spouseName: $('spouseName').value || 'Cônjuge', consultant: consultantData.name, consultantData, spouse,
+      firstName, lastName, name, familyLabel, spouseName: $('spouseName').value || 'Cônjuge', consultant: consultantData.name, consultantData, spouse,
       xp, other, pension, realEstate, holdings, financial, illiquid, total, inventoriable, liability, recommended, currentInsurance, coverageGap, coverageAfter,
       withoutInsurance, withInsurance, annualPremium, annualReturn, monthlyReturn, paybackRaw, paybackMonths,
-      age, ipca: num('ipca') || 5, projectionYears, surrenderValues:Array.from({length:projectionYears},(_,i)=>Number(surrenderValues[i])||0), health: $('healthProfile').value
+      age, ipca: num('ipca') || 5, projectionYears, surrenderValues:Array.from({length:projectionYears},(_,i)=>Number(surrenderValues[i])||0)
     };
   }
 
@@ -94,6 +99,80 @@
     if(container.dataset.signature===signature) return;
     container.dataset.signature=signature;
     container.innerHTML=Array.from({length:d.projectionYears},(_,i)=>{const age=d.age===null?'—':`${d.age+i} anos`,value=(Number(surrenderValues[i])||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});return `<label class="surrender-row"><strong>${i+1}º</strong><span>${age}</span><input type="text" inputmode="decimal" data-money-input data-surrender-index="${i}" value="${value}" aria-label="Valor de resgate no ${i+1}º ano, ${d.age===null?'idade a preencher':`idade ${d.age+i}`}" /></label>`;}).join('');
+  }
+
+  function refreshSurrenderInputs(){
+    const container=$('surrenderInputs');
+    const scrollTop=container?.scrollTop||0;
+    if(container)delete container.dataset.signature;
+    render();
+    if(container)container.scrollTop=scrollTop;
+  }
+
+  function setSurrenderPdfStatus(message,state=''){
+    const status=$('surrenderPdfStatus');
+    if(!status)return;
+    status.className=`surrender-pdf-status ${state}`.trim();
+    status.textContent=message;
+  }
+
+  function pdfRecognitionMessage(reason){
+    const messages={
+      no_text:'Este PDF parece ser uma imagem ou digitalização. Use a colagem manual ou envie uma versão com texto pesquisável.',
+      no_header:'Não encontrei um cabeçalho de resgate no PDF. Os valores atuais foram preservados.',
+      ambiguous_surrender_columns:'O PDF possui mais de uma coluna de resgate e não há uma regra definida para escolher entre elas. Os valores atuais foram preservados.',
+      too_few_rows:'Encontrei a tabela, mas não há linhas suficientes para importar com segurança. Os valores atuais foram preservados.',
+      non_sequential_rows:'Os anos da tabela não formam uma sequência confiável. Os valores atuais foram preservados.',
+      misaligned_column:'A coluna de resgate ficou ambígua neste PDF. Os valores atuais foram preservados.'
+    };
+    return messages[reason]||'Não consegui reconhecer a coluna de resgate com segurança. Os valores atuais foram preservados.';
+  }
+
+  async function importSurrenderPdf(file){
+    const button=$('surrenderPdfButton'),drop=$('surrenderPdfDrop'),filename=$('surrenderPdfFilename'),input=$('surrenderPdfInput');
+    if(surrenderPdfImportBusy){setSurrenderPdfStatus('Já existe uma cotação sendo processada. Aguarde a conclusão.','warning');return;}
+    surrenderPdfImportBusy=true;
+    const initial=data(),horizon=initial.projectionYears,previousValues=[...surrenderValues],previousSignature=JSON.stringify(previousValues);
+    let mutationApplied=false;
+    if(filename)filename.textContent=file?.name||'Nenhum arquivo selecionado';
+    if(button){button.disabled=true;button.textContent='Lendo PDF…';}
+    drop?.classList.add('loading');
+    setSurrenderPdfStatus('Lendo a cotação e procurando a coluna de resgate…','loading');
+    try{
+      if(!window.SurrenderPdf?.extractSurrenderValues)throw new Error('O leitor de PDF não foi carregado. Atualize a página e tente novamente.');
+      const result=await window.SurrenderPdf.extractSurrenderValues(file,{currentAge:initial.age,maxValues:80});
+      if(result.confidence!=='high'){
+        setSurrenderPdfStatus(pdfRecognitionMessage(result.reason),'warning');
+        return;
+      }
+      const current=data();
+      if(current.age!==initial.age||current.projectionYears!==horizon||JSON.stringify(surrenderValues)!==previousSignature){
+        setSurrenderPdfStatus('A idade, o horizonte ou a tabela foram alterados durante a leitura. O PDF não foi aplicado; selecione-o novamente.','warning');
+        return;
+      }
+      const presentIndices=(result.presentIndices||result.values.map((_,index)=>index)).filter(Number.isInteger);
+      const nextValues=Array.from({length:horizon},(_,index)=>Number(previousValues[index])||0);
+      presentIndices.forEach(index=>{if(index>=0&&index<horizon)nextValues[index]=Number(result.values[index])||0;});
+      surrenderValues=nextValues;
+      mutationApplied=true;
+      refreshSurrenderInputs();
+      const imported=presentIndices.filter(index=>index>=0&&index<horizon).length,ignored=presentIndices.filter(index=>index>=horizon).length,missing=Math.max(0,horizon-imported);
+      const details=[`${imported} ${imported===1?'valor importado':'valores importados'} de ${result.pageCount} ${result.pageCount===1?'página':'páginas'}`];
+      if(ignored)details.push(`${ignored} ${ignored===1?'linha excedeu':'linhas excederam'} o horizonte e ${ignored===1?'foi ignorada':'foram ignoradas'}`);
+      if(missing)details.push(`${missing} ${missing===1?'linha não identificada permaneceu':'linhas não identificadas permaneceram'} como estava${missing===1?'':'m'}`);
+      details.push('Revise os valores antes de gerar a apresentação');
+      setSurrenderPdfStatus(`${details.join('. ')}.`,'success');
+      if(button)button.textContent='Selecionar outro PDF';
+    }catch(error){
+      if(mutationApplied){surrenderValues=previousValues;try{refreshSurrenderInputs();}catch(_){/* sem ação */}}
+      setSurrenderPdfStatus(error?.message||'Não foi possível ler esta cotação. Os valores atuais foram preservados.','error');
+      if(filename)filename.textContent='Nenhum arquivo importado';
+    }finally{
+      surrenderPdfImportBusy=false;
+      drop?.classList.remove('loading');
+      if(button){button.disabled=false;if(button.textContent==='Lendo PDF…')button.textContent='Selecionar PDF';}
+      if(input)input.value='';
+    }
   }
 
   function pasteSurrenderColumn(event,input){
@@ -202,7 +281,7 @@
     const d=data();
     syncSurrenderInputs(d);
     setText('sumTotal',money(d.total)); setText('sumPension',money(d.pension)); setText('sumLiability',money(d.liability)); setText('sumWithoutInsurance',money(d.withoutInsurance)); setText('sumWithInsurance',money(d.withInsurance)); setText('sumGap',money(d.coverageGap));
-    $('successionLiabilityOutput').value=money(d.liability); $('recommendedInsurance').value=money(d.recommended); $('coverageGap').value=money(d.coverageGap);
+    $('successionLiabilityOutput').value=money(d.liability); $('recommendedInsurance').value=money(d.recommended);
     setText('paybackSummary',d.paybackMonths?`${d.paybackMonths} ${d.paybackMonths===1?'mês':'meses'}`:'Informe o prêmio');
 
     $('assetRows').innerHTML=[['Investimentos na XP',d.xp],['Outras instituições',d.other],['Imóveis e ativos físicos',d.realEstate],['Participações societárias / holdings',d.holdings],['Previdência privada (fora da base)',-d.pension]].map((a,i)=>`<div class="asset-row ${i===4?'pension':''}"><span>${a[0]}</span><strong>${a[1]<0?'-':''}${money(Math.abs(a[1]))}</strong></div>`).join('');
@@ -236,12 +315,18 @@
     if(consultantPhone){consultantPhone.textContent=d.consultantData.phone;consultantPhone.href=`tel:${d.consultantData.phoneHref}`;}
     if(consultantEmail){consultantEmail.textContent=d.consultantData.email;consultantEmail.href=`mailto:${d.consultantData.email}`;}
     drawProjection(d);
-    setText('paybackAssets',money(d.financial));setText('paybackPremium',money(d.annualPremium));setText('paybackMonths',d.paybackMonths?`${d.paybackMonths} ${d.paybackMonths===1?'MÊS':'MESES'}`:'—');setText('premiumVsTotal',d.total?`${(d.annualPremium/d.total*100).toLocaleString('pt-BR',{maximumFractionDigits:2})}%`:'0%');setText('previewHealth',d.health);drawPayback(d);
+    setText('paybackAssets',money(d.financial));setText('paybackPremium',money(d.annualPremium));setText('paybackMonths',d.paybackMonths?`${d.paybackMonths} ${d.paybackMonths===1?'MÊS':'MESES'}`:'—');setText('premiumVsTotal',d.total?`${(d.annualPremium/d.total*100).toLocaleString('pt-BR',{maximumFractionDigits:2})}%`:'0%');drawPayback(d);
     document.querySelectorAll('.payback-cards>div').forEach(card=>setDashboardDetail(card,card.querySelector('span')?.textContent||'Indicador',[card.querySelector('strong')?.textContent||'']));
   }
 
   document.querySelectorAll('[data-status]').forEach(btn=>btn.addEventListener('click',()=>{mode=btn.dataset.status;document.querySelectorAll('[data-status]').forEach(b=>b.classList.toggle('active',b===btn));$('spouseBlock').classList.toggle('hidden',mode!=='couple');$('spouseAssets').classList.toggle('hidden',mode!=='couple');render();}));
-  inputIds.forEach(id=>{const input=$(id);if(!input)return;if(moneyInputIds.includes(id)||decimalInputIds.includes(id)){finishMoneyFormat(input);input.addEventListener('focus',()=>{if(parseNumericValue(input.value)===0)input.select();});input.addEventListener('input',()=>{formatMoneyWhileTyping(input);render();});input.addEventListener('blur',()=>{finishMoneyFormat(input);render();});return;}input.addEventListener(['healthProfile','consultant'].includes(id)?'change':'input',render);});
+  inputIds.forEach(id=>{const input=$(id);if(!input)return;if(moneyInputIds.includes(id)||decimalInputIds.includes(id)){finishMoneyFormat(input);input.addEventListener('focus',()=>{if(parseNumericValue(input.value)===0)input.select();});input.addEventListener('input',()=>{formatMoneyWhileTyping(input);render();});input.addEventListener('blur',()=>{finishMoneyFormat(input);render();});return;}input.addEventListener(id==='consultant'?'change':'input',render);});
+  const surrenderPdfInput=$('surrenderPdfInput'),surrenderPdfButton=$('surrenderPdfButton'),surrenderPdfDrop=$('surrenderPdfDrop');
+  surrenderPdfButton?.addEventListener('click',()=>surrenderPdfInput?.click());
+  surrenderPdfInput?.addEventListener('change',()=>{const file=surrenderPdfInput.files?.[0];if(file)importSurrenderPdf(file);});
+  ['dragenter','dragover'].forEach(type=>surrenderPdfDrop?.addEventListener(type,event=>{event.preventDefault();event.stopPropagation();surrenderPdfDrop.classList.add('dragover');}));
+  ['dragleave','drop'].forEach(type=>surrenderPdfDrop?.addEventListener(type,event=>{event.preventDefault();event.stopPropagation();surrenderPdfDrop.classList.remove('dragover');}));
+  surrenderPdfDrop?.addEventListener('drop',event=>{const file=event.dataTransfer?.files?.[0];if(file)importSurrenderPdf(file);});
   $('surrenderInputs')?.addEventListener('focusin',event=>{const input=event.target.closest('[data-surrender-index]');if(input&&parseNumericValue(input.value)===0)input.select();});
   $('surrenderInputs')?.addEventListener('paste',event=>{const input=event.target.closest('[data-surrender-index]');if(input)pasteSurrenderColumn(event,input);});
   $('surrenderInputs')?.addEventListener('input',event=>{const input=event.target.closest('[data-surrender-index]');if(!input)return;formatMoneyWhileTyping(input);surrenderValues[Number(input.dataset.surrenderIndex)]=parseNumericValue(input.value);render();});
@@ -274,7 +359,7 @@
     function wealthSlide(title,withInsurance){const slide=pptx.addSlide();addHeader(pptx,slide,title);addCard(pptx,slide,.5,1.35,4.45,4.85);addCard(pptx,slide,5.15,1.35,4.35,4.85);slide.addText(withInsurance?'ATIVOS E PROTEÇÃO':'ATIVOS FINANCEIROS',{x:.8,y:1.68,w:2.8,h:.2,fontSize:12,bold:true,color:'C7A15B',margin:0});addDonut(pptx,slide,.75,2.05,2.55,2.25,d,withInsurance);const legend=[['XP',d.xp,'D2A500'],['Outras instituições',d.other,'BD974F'],['Previdência privada',d.pension,'FFBF00']];if(withInsurance)legend.push(['Seguro de vida',d.coverageAfter,'70B544']);addLegend(slide,legend,3.1,2.3);slide.addText(withInsurance?'SEGURO DE VIDA':'ATIVOS FINANCEIROS',{x:.8,y:4.72,w:2.5,h:.26,fontSize:14,bold:true,color:withInsurance?'70B544':'F1F3F8',margin:0});slide.addText(fmt(withInsurance?d.coverageAfter:d.financial),{x:2.8,y:4.68,w:1.75,h:.3,fontSize:15,bold:true,color:'F1F3F8',align:'right',margin:0,fit:'shrink'});slide.addText('Patrimônio imobilizado',{x:.8,y:5.25,w:2.5,h:.24,fontSize:13,color:'F1F3F8',margin:0});slide.addText(fmt(d.illiquid),{x:2.8,y:5.22,w:1.75,h:.25,fontSize:14,bold:true,color:'F1F3F8',align:'right',margin:0,fit:'shrink'});slide.addText(withInsurance?'PATRIMÔNIO PROTEGIDO':'PATRIMÔNIO TOTAL',{x:5.45,y:1.68,w:3,h:.22,fontSize:12,bold:true,color:'C7A15B',margin:0});addWealthBar(pptx,slide,d,withInsurance);const items=withInsurance?[['Seguro de vida',d.coverageAfter,'70B544'],['Patrimônio imobilizado',d.illiquid,'294878'],['Ativos financeiros',d.financial,'BD974F'],['Custo sucessório coberto',d.liability,'BFC2C8']]:[['Passivo sucessório',d.liability,'FF4848'],['Patrimônio imobilizado',d.illiquid,'294878'],['Ativos financeiros',d.financial,'BD974F']];addLegend(slide,items,8.05,2.9);slide.addText(withInsurance?'A cobertura recompõe a liquidez consumida na sucessão.':'Sem uma fonte de liquidez, o custo sai do patrimônio da família.',{x:5.55,y:5.9,w:3.45,h:.2,fontSize:11.5,bold:true,color:withInsurance?'70B544':'FF6666',align:'center',margin:0,fit:'shrink'});return slide;}
     wealthSlide('PATRIMÔNIO ATUAL — SEM SEGURO',false);wealthSlide('PATRIMÔNIO COM SEGURO RESGATÁVEL',true);
     const projection=wlProjection(d);s=pptx.addSlide();addHeader(pptx,s,'PROJEÇÃO VITALÍCIA');s.addText(`IPCA: ${pct(d.ipca)} a.a.`,{x:7.7,y:.62,w:1.4,h:.22,fontSize:12,bold:true,color:'E5B957',align:'right',margin:0});addCard(pptx,s,.45,1.35,6.55,4.95);const cats=projection.map(r=>String(r.age));s.addChart(pptx.ChartType.line,[{name:'Capital segurado',labels:cats,values:projection.map(r=>Math.round(r.capital))},{name:'Prêmio anual',labels:cats,values:projection.map(r=>Math.round(r.premium))}],{x:.75,y:1.75,w:5.95,h:3.55,showTitle:false,showLegend:true,legendPos:'b',legendColor:'F1F3F8',showValue:false,catAxisLabelFontSize:8,catAxisLabelColor:'AEB9D1',valAxisLabelFontSize:9,valAxisLabelColor:'AEB9D1',chartColors:['D6A700','70B544'],showCatName:false,lineSize:3,showMarker:false,valGridLine:{color:'29416E',width:1},catAxisLineColor:'6B7DA2',valAxisLineColor:'6B7DA2'});s.addText('10 aportes anuais',{x:.8,y:5.65,w:1.8,h:.22,fontSize:11,color:'C5D0E5',margin:0});s.addText('APÓLICE QUITADA',{x:2.8,y:5.65,w:1.8,h:.22,fontSize:12,bold:true,color:'70B544',align:'center',margin:0});s.addText('cobertura continua vitalícia →',{x:4.9,y:5.65,w:1.75,h:.22,fontSize:11,color:'C5D0E5',align:'right',margin:0});[['Capital inicial',fmt(d.coverageGap),'E5B957'],['Último prêmio | 10º aporte',fmt(projection[9]?.premium||0),'E5B957'],['Novos aportes após o 10º ano','R$ 0,00','70B544']].forEach((a,i)=>{addCard(pptx,s,7.25,1.35+i*1.63,2.3,1.38);s.addText(a[0],{x:7.48,y:1.65+i*1.63,w:1.85,h:.28,fontSize:11,bold:true,color:'C7A15B',align:'center',margin:0,fit:'shrink'});s.addText(a[1],{x:7.45,y:2.13+i*1.63,w:1.9,h:.3,fontSize:16,bold:true,color:a[2],align:'center',margin:0,fit:'shrink'});});
-    s=pptx.addSlide();addHeader(pptx,s,'COMO DIVERSIFICAR COM SEUS RENDIMENTOS');addCard(pptx,s,.45,1.35,9.1,3.8);s.addText('CENÁRIO DE PAYBACK',{x:.75,y:1.65,w:2.2,h:.22,fontSize:12,bold:true,color:'C7A15B',margin:0});s.addText(`ATIVOS FINANCEIROS: ${fmt(d.financial)}`,{x:6.6,y:1.62,w:2.45,h:.25,fontSize:13,bold:true,color:'F1F3F8',align:'right',margin:0,fit:'shrink'});const labels=Array.from({length:13},(_,i)=>`Mês ${i}`);const rates=[.006,.008,.01,d.monthlyReturn].filter((v,i,a)=>v>0&&a.findIndex(x=>Math.abs(x-v)<.00001)===i);const series=rates.map((rate,i)=>({name:`Rentabilidade ${(rate*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}%`,labels,values:labels.map((_,m)=>Math.round(d.financial*rate*m))}));series.push({name:'Prêmio anual',labels,values:labels.map(()=>Math.round(d.annualPremium))});s.addChart(pptx.ChartType.line,series,{x:.75,y:2.0,w:8.4,h:2.75,showLegend:true,legendPos:'b',legendColor:'F1F3F8',showValue:false,catAxisLabelFontSize:8,catAxisLabelColor:'AEB9D1',valAxisLabelFontSize:9,valAxisLabelColor:'AEB9D1',chartColors:['7D6A36','B88700','D6A700','70B544','8BD05F'],lineSize:2,showMarker:false,valGridLine:{color:'29416E',width:1}});const payCards=[['PRÊMIO ANUAL',fmt(d.annualPremium),'F1F3F8'],['RENDIMENTOS PAGAM EM',d.paybackMonths?`${d.paybackMonths} ${d.paybackMonths===1?'MÊS':'MESES'}`:'—','70B544'],['PRÊMIO / PATRIMÔNIO TOTAL',d.total?pct(d.annualPremium/d.total*100):'0%','F1F3F8'],['PERFIL DE SAÚDE',d.health,'F1F3F8']];payCards.forEach((a,i)=>{addCard(pptx,s,.45+i*2.35,5.35,2.15,1.15,i===1?'70B544':'A77D25',i===1?'173C32':'061743');s.addText(a[0],{x:.62+i*2.35,y:5.6,w:1.8,h:.2,fontSize:9.5,bold:true,color:'C7A15B',align:'center',margin:0,fit:'shrink'});s.addText(a[1],{x:.62+i*2.35,y:5.98,w:1.8,h:.24,fontSize:14,bold:true,color:a[2],align:'center',margin:0,fit:'shrink'});});
+    s=pptx.addSlide();addHeader(pptx,s,'COMO DIVERSIFICAR COM SEUS RENDIMENTOS');addCard(pptx,s,.45,1.35,9.1,3.8);s.addText('CENÁRIO DE PAYBACK',{x:.75,y:1.65,w:2.2,h:.22,fontSize:12,bold:true,color:'C7A15B',margin:0});s.addText(`ATIVOS FINANCEIROS: ${fmt(d.financial)}`,{x:6.6,y:1.62,w:2.45,h:.25,fontSize:13,bold:true,color:'F1F3F8',align:'right',margin:0,fit:'shrink'});const labels=Array.from({length:13},(_,i)=>`Mês ${i}`);const rates=[.006,.008,.01,d.monthlyReturn].filter((v,i,a)=>v>0&&a.findIndex(x=>Math.abs(x-v)<.00001)===i);const series=rates.map((rate,i)=>({name:`Rentabilidade ${(rate*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}%`,labels,values:labels.map((_,m)=>Math.round(d.financial*rate*m))}));series.push({name:'Prêmio anual',labels,values:labels.map(()=>Math.round(d.annualPremium))});s.addChart(pptx.ChartType.line,series,{x:.75,y:2.0,w:8.4,h:2.75,showLegend:true,legendPos:'b',legendColor:'F1F3F8',showValue:false,catAxisLabelFontSize:8,catAxisLabelColor:'AEB9D1',valAxisLabelFontSize:9,valAxisLabelColor:'AEB9D1',chartColors:['7D6A36','B88700','D6A700','70B544','8BD05F'],lineSize:2,showMarker:false,valGridLine:{color:'29416E',width:1}});const payCards=[['PRÊMIO ANUAL',fmt(d.annualPremium),'F1F3F8'],['RENDIMENTOS PAGAM EM',d.paybackMonths?`${d.paybackMonths} ${d.paybackMonths===1?'MÊS':'MESES'}`:'—','70B544'],['PRÊMIO / PATRIMÔNIO TOTAL',d.total?pct(d.annualPremium/d.total*100):'0%','F1F3F8']];payCards.forEach((a,i)=>{addCard(pptx,s,.55+i*3.0,5.35,2.75,1.15,i===1?'70B544':'A77D25',i===1?'173C32':'061743');s.addText(a[0],{x:.75+i*3.0,y:5.6,w:2.35,h:.2,fontSize:9.5,bold:true,color:'C7A15B',align:'center',margin:0,fit:'shrink'});s.addText(a[1],{x:.75+i*3.0,y:5.98,w:2.35,h:.24,fontSize:14,bold:true,color:a[2],align:'center',margin:0,fit:'shrink'});});
     s=pptx.addSlide();s.background={color:'020E38'};addBrand(s);s.addText('Ter patrimônio é conquista.',{x:1.5,y:2.2,w:7,h:.4,fontFace:'Georgia',fontSize:24,color:'F1F3F8',align:'center',margin:0});s.addText('Proteger o LEGADO é preservar escolhas.',{x:1.1,y:2.88,w:7.8,h:.5,fontFace:'Georgia',fontSize:25,color:'E5B957',align:'center',margin:0});s.addText(d.consultant,{x:3,y:4.55,w:4,h:.3,fontSize:15,color:'F1F3F8',align:'center',margin:0});s.addText('Apresentação confidencial',{x:3,y:5.2,w:4,h:.25,fontSize:10,color:'9BA8C2',align:'center',margin:0});
     return pptx;
   }
@@ -285,6 +370,21 @@
     return zip.generateAsync({type:'blob',compression:'DEFLATE'});
   }
   function downloadBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},500);}
-  $('clientForm').addEventListener('submit',async event=>{event.preventDefault();if(!event.currentTarget.reportValidity())return;const status=$('status'),btn=$('generateBtn');btn.disabled=true;status.textContent='Personalizando o PowerPoint original e aplicando as transições…';try{const d=data(),blob=await window.buildTemplatePpt(d);const safe=d.name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'');downloadBlob(blob,`Gestao-de-Riscos-${safe||'Cliente'}.pptx`);status.textContent='Apresentação gerada no padrão original, com tabela WL10 e contatos do corretor.';}catch(error){console.error(error);status.textContent=`Erro ao gerar o PPT: ${error?.message||String(error)}`;}finally{btn.disabled=false;}});
+  async function generateOutput(kind){
+    const form=$('clientForm');if(!form.reportValidity())return;
+    const status=$('status'),pptBtn=$('generatePptBtn'),pdfBtn=$('generatePdfBtn');
+    pptBtn.disabled=true;pdfBtn.disabled=true;
+    status.textContent=kind==='pdf'?'Montando o PDF sem os slides duplicados de efeito…':'Personalizando o PowerPoint e aplicando as transições…';
+    try{
+      const d=data();
+      const blob=kind==='pdf'?await window.buildTemplatePdf(d):await window.buildTemplatePpt(d);
+      const safe=d.familyLabel.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'');
+      downloadBlob(blob,`Gestao-de-Riscos-${safe||'Familia'}.${kind==='pdf'?'pdf':'pptx'}`);
+      status.textContent=kind==='pdf'?'PDF gerado sem as duplicações usadas no efeito da apresentação.':'PowerPoint gerado com os efeitos de apresentação.';
+    }catch(error){console.error(error);status.textContent=`Erro ao gerar o ${kind==='pdf'?'PDF':'PowerPoint'}: ${error?.message||String(error)}`;}
+    finally{pptBtn.disabled=false;pdfBtn.disabled=false;}
+  }
+  $('clientForm').addEventListener('submit',event=>{event.preventDefault();generateOutput('pptx');});
+  $('generatePdfBtn').addEventListener('click',()=>generateOutput('pdf'));
   render();
 })();

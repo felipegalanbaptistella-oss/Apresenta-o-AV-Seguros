@@ -40,16 +40,17 @@
       const next=angle+Math.PI*2*share;
       const mid=(angle+next)/2;
       const emphasized=i===highlightIndex;
-      const offset=emphasized?5:0;
+      const offset=emphasized?9:0;
       const ox=Math.cos(mid)*offset,oy=Math.sin(mid)*offset;
       ctx.save();
       ctx.beginPath();
-      ctx.arc(cx+ox,cy+oy,r+(emphasized?5:0),angle,next);
-      ctx.arc(cx+ox,cy+oy,inner-(emphasized?2:0),next,angle,true);
+      ctx.arc(cx+ox,cy+oy,r+(emphasized?9:0),angle,next);
+      ctx.arc(cx+ox,cy+oy,inner-(emphasized?4:0),next,angle,true);
       ctx.closePath();
       ctx.fillStyle=colors[i];ctx.fill();
-      if(emphasized){ctx.strokeStyle='#d7efc8';ctx.lineWidth=2;ctx.stroke();}
+      if(emphasized){ctx.strokeStyle='#e1f5d5';ctx.lineWidth=4;ctx.stroke();}
       ctx.restore();
+      if(!emphasized){angle=next;return;}
       const label=pct(actualShares[i]*100);
       if(actualShares[i]>=.075){
         const rr=(r+inner)/2;
@@ -68,6 +69,11 @@
     return {actualShares,displayShares};
   }
   async function pngBytes(canvas){const blob=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Falha ao criar a imagem do slide.')),'image/png'));return new Uint8Array(await blob.arrayBuffer());}
+  async function pngToJpegBytes(bytes){
+    const bitmap=await createImageBitmap(new Blob([bytes],{type:'image/png'}));
+    try{const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;const ctx=canvas.getContext('2d');ctx.drawImage(bitmap,0,0,W,H);const blob=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Falha ao compactar uma página do PDF.')),'image/jpeg',.94));return new Uint8Array(await blob.arrayBuffer());}
+    finally{bitmap.close();}
+  }
   async function staticSlide(no){const {canvas}=await canvasFor(no);return pngBytes(canvas);}
 
   async function slide1(d){
@@ -75,7 +81,7 @@
     const band=ctx.createLinearGradient(250,0,1350,0);band.addColorStop(0,'rgba(2,14,56,0)');band.addColorStop(.18,'rgba(2,14,56,.94)');band.addColorStop(.30,'rgba(2,14,56,1)');band.addColorStop(.70,'rgba(2,14,56,1)');band.addColorStop(.82,'rgba(2,14,56,.94)');band.addColorStop(1,'rgba(2,14,56,0)');
     rect(ctx,250,620,1100,175,band);line(ctx,455,642,1145,642,'rgba(197,160,91,.75)',1);line(ctx,455,774,1145,774,'rgba(197,160,91,.55)',1);
     text(ctx,'PLANEJAMENTO SUCESSÓRIO PARA',500,675,600,{size:14,color:GOLD,bold:true,align:'center',font:'Georgia'});
-    fitText(ctx,clientLabel(d),390,724,820,{size:38,min:22,color:WHITE,bold:false,align:'center',font:'Georgia'});
+    fitText(ctx,d.familyLabel||clientLabel(d),390,724,820,{size:38,min:22,color:WHITE,bold:false,align:'center',font:'Georgia'});
     return pngBytes(canvas);
   }
 
@@ -103,15 +109,18 @@
     const financial=Math.max(0,d.financial-(reallocation?d.annualPremium:0));
     const pieces=[{label:'Ativos financeiros',value:financial,color:GOLD},{label:'Patrimônio imobilizado',value:d.illiquid,color:BLUE}];
     if(withInsurance)pieces.unshift({label:'Seguro de vida',value:d.coverageAfter,color:GREEN});
-    if(reallocation)pieces.unshift({label:'Reserva lastreada',value:d.annualPremium,color:GREEN,isReserve:true});
+    if(reallocation){
+      const reserveValue=Math.max(0,d.annualPremium),gap=10,reserveH=reserveValue>0?Math.max(10,Math.min(22,h*reserveValue/Math.max(d.total,1))):0;
+      const mainH=h-reserveH-(reserveH?gap*2:0),mainTotal=Math.max(1,financial+d.illiquid);
+      const mainPieces=[{value:financial,color:GOLD},{value:d.illiquid,color:BLUE}];
+      let cursor=y+mainH;
+      mainPieces.forEach((piece,index)=>{const ph=piece.value>0?mainH*piece.value/mainTotal:0;if(!ph)return;cursor-=ph;rect(ctx,x,cursor,w,ph,piece.color,index===mainPieces.length-1?[12,12,0,0]:0);if(ph>=32)fitText(ctx,brl(piece.value),x+8,cursor+ph/2,w-16,{size:17,min:11,color:WHITE,bold:true,align:'center'});});
+      if(reserveH){const reserveY=y+mainH+gap;rect(ctx,x,reserveY,w,reserveH,GREEN,3,'#d7efc8',1);}
+      const baseline=y+h;line(ctx,x-155,baseline,x-14,baseline,'#8795af',2,[10,8]);line(ctx,x+w+14,baseline,x+w+155,baseline,'#8795af',2,[10,8]);
+      const costY=baseline+10,costH=Math.max(34,h*d.liability/Math.max(d.total,1));rect(ctx,x,costY,w,costH,RED,[0,0,12,12]);fitText(ctx,`-${brl(d.liability)}`,x+6,costY+costH/2,w-12,{size:16,min:11,color:WHITE,bold:true,align:'center'});return;
+    }
     const max=Math.max(1,pieces.reduce((a,b)=>a+Math.max(0,b.value),0));
     const heights=pieces.map(piece=>piece.value>0?h*piece.value/max:0);
-    const reserveIndex=pieces.findIndex(piece=>piece.isReserve);
-    if(reserveIndex>=0&&heights[reserveIndex]>0&&heights[reserveIndex]<8){
-      const delta=8-heights[reserveIndex];
-      const donor=heights.reduce((best,height,index)=>index!==reserveIndex&&height>heights[best]?index:best,reserveIndex===0?1:0);
-      if(donor>=0&&heights[donor]>delta+10){heights[reserveIndex]=8;heights[donor]-=delta;}
-    }
     const visible=pieces.map((piece,index)=>({piece,height:heights[index]})).filter(item=>item.height>0);
     let cursor=y+h;
     visible.forEach((item,visibleIndex)=>{
@@ -134,7 +143,7 @@
     else rect(ctx,56,630,732,144,'#03143d',14,'#9d7624',2);
     const vals=withInsurance?[d.xp,d.other,d.pension,d.coverageAfter]:reallocation?[Math.max(0,d.xp-d.annualPremium),d.other,d.pension,d.annualPremium]:[d.xp,d.other,d.pension];
     const colors=withInsurance?[GOLD2,GOLD,'#ffbf00',GREEN]:reallocation?[GOLD2,GOLD,'#ffbf00',GREEN]:[GOLD2,GOLD,'#ffbf00'];
-    donut(ctx,250,405,130,62,vals,colors,{highlightIndex:reallocation?3:-1,minHighlightShare:.03});
+    donut(ctx,250,405,130,62,vals,colors,{highlightIndex:(reallocation||withInsurance)?3:-1,minHighlightShare:.045});
     const donutBrand=await loadImage('assets/marca.png');ctx.drawImage(donutBrand,214,391,72,28);
     const items=[{label:'Posição em investimentos (XP)',color:GOLD2},{label:'Posição em outras instituições',color:GOLD},{label:'Previdência Privada',color:'#ffbf00'}];
     if(withInsurance)items.push({label:'SEGURO DE VIDA',color:GREEN});if(reallocation)items.push({label:'RESERVA LASTREADA',color:GREEN,bold:true});legend(ctx,items,420,335,55);
@@ -184,23 +193,24 @@
     return pngBytes(canvas);
   }
 
-  function gauge(ctx,x,y,w,h,title,value,withInsurance){
+  function gauge(ctx,x,y,w,h,title,value){
     rect(ctx,x,y,w,h,'#03143d',12,'#9d7624',2);
-    text(ctx,title,x+24,y+29,w-48,{size:17,color:GOLD,bold:true,align:'center',maxLines:2});
-    const cx=x+w/2,cy=y+h-39,r=Math.min(142,w*.33),start=Math.PI;
-    const zones=[[0,.03,RED],[.03,.25,GREEN],[.25,.65,'#b7d98b'],[.65,1,'#f1dd8b']];
-    ctx.save();ctx.lineWidth=30;ctx.lineCap='butt';zones.forEach(([a,b,color])=>{ctx.beginPath();ctx.arc(cx,cy,r,start+Math.PI*a,start+Math.PI*b);ctx.strokeStyle=color;ctx.stroke();});ctx.restore();
+    text(ctx,title,x+24,y+25,w-48,{size:18,color:GOLD,bold:true,align:'center',maxLines:2});
+    const cx=x+w/2,cy=y+h-28,r=Math.min(165,w*.31),start=Math.PI;
+    const zones=[[0,.035,RED],[.035,.065,'#e98b35'],[.065,.28,GREEN],[.28,.56,'#c9e2ae'],[.56,1,'#f5df8d']];
+    ctx.save();ctx.lineWidth=48;ctx.lineCap='butt';zones.forEach(([a,b,color])=>{ctx.beginPath();ctx.arc(cx,cy,r,start+Math.PI*a,start+Math.PI*b);ctx.strokeStyle=color;ctx.stroke();});ctx.restore();
+    ctx.beginPath();ctx.moveTo(cx-r+20,cy);ctx.arc(cx,cy,r-49,Math.PI,Math.PI*2);ctx.lineTo(cx+r-20,cy);ctx.closePath();ctx.fillStyle='#c7a466';ctx.fill();
     const normalized=Math.max(0,Math.min(1,value/10)),angle=start+Math.PI*normalized;
-    const nx=cx+Math.cos(angle)*(r-8),ny=cy+Math.sin(angle)*(r-8);
-    line(ctx,cx,cy,nx,ny,WHITE,5);ctx.beginPath();ctx.arc(cx,cy,10,0,Math.PI*2);ctx.fillStyle=WHITE;ctx.fill();
-    text(ctx,'0%',x+38,cy+8,60,{size:14,color:MUTED,bold:true,align:'center'});text(ctx,'10%+',x+w-98,cy+8,60,{size:14,color:MUTED,bold:true,align:'center'});
-    fitText(ctx,pct(value),cx-85,cy-42,170,{size:34,min:24,color:WHITE,bold:true,align:'center'});
-    const status=!withInsurance?'FORA · SEM SEGURO':value>10?'FORA · ACIMA DE 10%':'FAIXA A CONFIRMAR';
-    const statusColor=!withInsurance||value>10?RED:GOLD;
-    text(ctx,status,x+55,y+h-14,w-110,{size:15,color:statusColor,bold:true,align:'center'});
+    line(ctx,cx+Math.cos(angle)*(r-27),cy+Math.sin(angle)*(r-27),cx+Math.cos(angle)*(r+29),cy+Math.sin(angle)*(r+29),'#f4f5f8',4);
+    text(ctx,'Ótimo',x+160,cy-76,120,{size:16,color:'#173c32',bold:true,align:'center'});
+    text(ctx,'Recomendado',cx-140,y+82,280,{size:17,color:'#25342b',bold:true,align:'center'});
+    text(ctx,'Alta exposição',x+w-265,cy-92,160,{size:16,color:'#2e2e2e',bold:true,align:'center',maxLines:2});
+    text(ctx,'Não se aplica',x+24,cy+10,150,{size:16,color:WHITE,bold:true,align:'center'});
+    text(ctx,'Acima de 10%',x+w-180,cy+10,155,{size:16,color:WHITE,bold:true,align:'center'});
+    fitText(ctx,pct(value),cx-105,cy-48,210,{size:38,min:27,color:WHITE,bold:true,align:'center'});
   }
   async function slide13(d){
-    const {canvas,ctx}=await canvasFor(13);rect(ctx,62,160,1475,420,'#03143d');text(ctx,'CENÁRIO DE PAYBACK',92,185,330,{size:18,color:GOLD,bold:true});
+    const {canvas,ctx}=await canvasFor(13);rect(ctx,0,582,W,H-582,NAVY);rect(ctx,62,160,1475,420,'#03143d');text(ctx,'CENÁRIO DE PAYBACK',92,185,330,{size:18,color:GOLD,bold:true});
     fitText(ctx,brl(d.financial),1220,190,265,{size:28,min:20,color:WHITE,bold:true,align:'center'});
     const monthlyRates=[.006,.008,.01],colors=['#7d6a36','#b88700','#d6a700'];
     const x0=250,y0=500,x1=1440,y1=230,max=Math.max(d.annualPremium*1.2,d.financial*.01*12,1);
@@ -210,10 +220,9 @@
     const py=y0-(y0-y1)*(d.annualPremium/max);line(ctx,x0,py,x1,py,GREEN,4,[16,12]);fitText(ctx,brl(d.annualPremium),1220,py-25,240,{size:23,min:17,color:WHITE,bold:true,align:'center'});
     const legendItems=[{label:'VALOR DO SEGURO',color:GREEN,dash:true},...monthlyRates.map((rate,i)=>({label:`Rentabilidade ${(rate*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}% a.m.`,color:colors[i]}))];
     legendItems.forEach((item,i)=>{const lx=300+i*285;line(ctx,lx,548,lx+34,548,item.color,4,item.dash?[12,8]:[]);text(ctx,item.label,lx+45,548,220,{size:14,color:WHITE,bold:item.dash});});
-    const cardY=595,cardW=460,insuredAllocation=d.total?d.annualPremium/d.total*100:0;
-    gauge(ctx,55,cardY,cardW,240,'SITUAÇÃO ATUAL · SEM SEGURO',0,false);
-    gauge(ctx,570,cardY,cardW,240,'SITUAÇÃO PROPOSTA · COM SEGURO / PATRIMÔNIO TOTAL',insuredAllocation,true);
-    rect(ctx,1085,cardY,445,240,'#03143d',12,'#9d7624',2);text(ctx,'PERFIL DE SAÚDE',1110,640,395,{size:19,color:GOLD,bold:true,align:'center'});fitText(ctx,d.health||'A preencher',1120,760,375,{size:34,min:21,color:WHITE,bold:true,align:'center'});
+    const cardY=600,cardW=720,insuredAllocation=d.total?d.coverageGap/d.total*100:0;
+    gauge(ctx,55,cardY,cardW,270,'ALOCAÇÃO ATUAL · SEM O NOVO SEGURO',0);
+    gauge(ctx,825,cardY,cardW,270,'ALOCAÇÃO PROPOSTA · CAPITAL ADICIONAL / PATRIMÔNIO TOTAL',insuredAllocation);
     return pngBytes(canvas);
   }
   async function slide14(d){
@@ -272,14 +281,29 @@
       zip.file(name,xml);
     }
   }
+  async function renderSlides(d){
+    const tasks=[[1,()=>slide1(d)],[2,()=>staticSlide(2)],[3,()=>staticSlide(3)],[4,()=>staticSlide(4)],[5,()=>staticSlide(5)],[6,()=>slide6(d)],[7,()=>staticSlide(7)],[8,()=>assetSlide(8,d,'current')],[9,()=>assetSlide(9,d,'reallocation')],[10,()=>assetSlide(10,d,'with')],[11,()=>slide11(d,1)],[12,()=>slide11(d,2)],[15,()=>slide11(d,3)],[13,()=>slide13(d)],[14,()=>slide14(d)]];
+    const rendered=[];for(const [no,render] of tasks)rendered.push([no,await render()]);return rendered;
+  }
   window.buildTemplatePpt=async d=>{
     if(!window.JSZip)throw new Error('A biblioteca JSZip não foi carregada.');
     const response=await fetch('assets/modelo-base.pptx');if(!response.ok)throw new Error('O arquivo-modelo do PowerPoint não foi encontrado.');
     const zip=await JSZip.loadAsync(await response.arrayBuffer());
     await prepareProjectionStages(zip);
-    const rendered=await Promise.all([[1,slide1(d)],[2,staticSlide(2)],[3,staticSlide(3)],[4,staticSlide(4)],[5,staticSlide(5)],[6,slide6(d)],[7,staticSlide(7)],[8,assetSlide(8,d,'current')],[9,assetSlide(9,d,'reallocation')],[10,assetSlide(10,d,'with')],[11,slide11(d,1)],[12,slide11(d,2)],[15,slide11(d,3)],[13,slide13(d)],[14,slide14(d)]].map(async([no,promise])=>[no,await promise]));
+    const rendered=await renderSlides(d);
     for(const [no,bytes] of rendered)await replaceSlide(zip,no,bytes);
     await applyTransitionsToAllSlides(zip);
     return zip.generateAsync({type:'blob',compression:'DEFLATE'});
+  };
+  window.buildTemplatePdf=async d=>{
+    if(!window.PDFLib)throw new Error('A biblioteca de PDF não foi carregada.');
+    const rendered=await renderSlides(d),effectOnly=new Set([11,12]);
+    const pdf=await PDFLib.PDFDocument.create();
+    pdf.setTitle(`Gestão de Riscos - ${d.familyLabel||d.name}`);pdf.setAuthor('Alta Vista');pdf.setSubject('Planejamento sucessório');
+    for(const [no,bytes] of rendered){
+      if(effectOnly.has(no))continue;
+      const page=pdf.addPage([W,H]),image=await pdf.embedJpg(await pngToJpegBytes(bytes));page.drawImage(image,{x:0,y:0,width:W,height:H});
+    }
+    const bytes=await pdf.save({useObjectStreams:true});return new Blob([bytes],{type:'application/pdf'});
   };
 })();

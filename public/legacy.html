@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="assets/app.css" />
   <script src="assets/jszip.min.js"></script>
   <script src="assets/pptxgen.min.js"></script>
+  <script src="assets/pdflib/pdf-lib.min.js"></script>
 </head>
 <body>
   <main class="shell">
@@ -20,7 +21,8 @@
       <form class="card form-card" id="clientForm">
         <h2>Dados do cliente</h2>
         <div class="grid">
-          <div class="field"><label for="clientName">Nome do cliente principal</label><input id="clientName" required placeholder="Ex.: João da Silva" /></div>
+          <div class="field"><label for="clientFirstName">Nome</label><input id="clientFirstName" required placeholder="Ex.: João" autocomplete="given-name" /></div>
+          <div class="field"><label for="clientLastName">Sobrenome</label><input id="clientLastName" required placeholder="Ex.: Silva" autocomplete="family-name" /></div>
           <div class="field"><label for="consultant">Corretor responsável</label><select id="consultant" required><option value="fabio">Fabio Kenji Hassui</option><option value="alexandre">Alexandre Faustino</option><option value="moises">Moisés Santos</option></select></div>
           <div class="field full"><label>Composição familiar</label><div class="switch"><button type="button" class="active" data-status="single">Cliente solteiro</button><button type="button" data-status="couple">Cliente com cônjuge</button></div></div>
         </div>
@@ -59,8 +61,7 @@
           <div class="grid">
             <div class="field"><label for="successionLiabilityOutput">Passivo sucessório estimado</label><input id="successionLiabilityOutput" type="text" readonly value="R$ 0,00" /><span class="small-note">15% do patrimônio total, retirando a previdência privada.</span></div>
             <div class="field"><label for="recommendedInsurance">Cobertura total recomendada</label><input id="recommendedInsurance" type="text" readonly value="R$ 0,00" /></div>
-            <div class="field"><label for="coverageGap">Capital adicional a contratar</label><input id="coverageGap" type="text" readonly value="R$ 0,00" /><span class="small-note">Cobertura recomendada menos os seguros já contratados.</span></div>
-            <div class="field"><label for="healthProfile">Perfil de saúde</label><select id="healthProfile"><option>A preencher</option><option>Saudável</option><option>Com agravantes</option></select></div>
+            <div class="field"><label for="coverageGap">Capital adicional a contratar</label><input id="coverageGap" type="text" inputmode="decimal" data-money-input value="0,00" /><span class="small-note">Valor definido pelo consultor. Ele alimenta todos os cenários de seguro da apresentação.</span></div>
           </div>
         </section>
 
@@ -76,13 +77,27 @@
           </div>
           <div class="surrender-block">
             <div class="surrender-heading"><div><strong>Valores de resgate da cotação</strong><span>Uma coluna, como no Excel: um valor para cada ano da projeção.</span></div><span class="surrender-bulk-badge">Colagem em massa ativada</span></div>
+            <div id="surrenderPdfDrop" class="surrender-pdf-import">
+              <div class="surrender-pdf-icon" aria-hidden="true">PDF</div>
+              <div class="surrender-pdf-copy">
+                <strong>Importar cotação da seguradora</strong>
+                <span>Selecione ou arraste o PDF para preencher automaticamente a coluna de resgate.</span>
+                <small>O documento é processado somente neste navegador e não é enviado nem armazenado.</small>
+              </div>
+              <div class="surrender-pdf-actions">
+                <button id="surrenderPdfButton" class="surrender-pdf-button" type="button" aria-describedby="surrenderPdfFilename surrenderPdfStatus">Selecionar PDF</button>
+                <input id="surrenderPdfInput" type="file" accept="application/pdf,.pdf" hidden tabindex="-1" aria-hidden="true" />
+                <span id="surrenderPdfFilename" class="surrender-pdf-filename">Nenhum arquivo selecionado</span>
+              </div>
+            </div>
+            <div id="surrenderPdfStatus" class="surrender-pdf-status" role="status" aria-live="polite">Funciona com PDFs digitais que tenham uma tabela e um cabeçalho de resgate. A colagem manual continua disponível abaixo.</div>
             <div class="surrender-paste-guide"><strong>Como preencher de uma vez</strong><span>Copie a coluna de valores no Excel, clique na primeira célula abaixo e pressione <kbd>Ctrl</kbd> + <kbd>V</kbd>. Os números serão distribuídos automaticamente pelas linhas.</span></div>
             <div class="surrender-editor"><div class="surrender-editor-head"><span>Ano</span><span>Idade</span><span>Valor de resgate (R$)</span></div><div id="surrenderInputs" class="surrender-editor-body"></div></div>
             <div id="surrenderPasteStatus" class="surrender-paste-status" role="status" aria-live="polite">Você ainda pode editar qualquer célula individualmente.</div>
           </div>
         </section>
 
-        <div class="actions"><button class="btn primary" type="submit" id="generateBtn">Gerar apresentação PowerPoint</button></div>
+        <div class="actions"><button class="btn primary" type="submit" id="generatePptBtn">Gerar PowerPoint</button><button class="btn pdf" type="button" id="generatePdfBtn">Gerar PDF</button></div>
         <div class="status" id="status" role="status" aria-live="polite"></div>
       </form>
 
@@ -129,13 +144,14 @@
 
       <article class="preview-slide" id="previewPayback">
         <div class="slide-brand">GESTÃO DE RISCOS</div><h3>COMO <em>DIVERSIFICAR COM SEUS RENDIMENTOS</em></h3>
-        <div class="slide-panel payback-panel"><div class="chart-head"><span>CENÁRIO DE PAYBACK</span><strong>ATIVOS FINANCEIROS: <b id="paybackAssets">R$ 0,00</b></strong></div><canvas id="paybackChart" aria-label="Evolução dos rendimentos mensais comparada ao prêmio anual"></canvas></div><div class="payback-cards"><div><span>PRÊMIO ANUAL</span><strong id="paybackPremium">R$ 0,00</strong></div><div class="highlight"><span>RENDIMENTOS PAGAM A APÓLICE EM</span><strong id="paybackMonths">—</strong></div><div><span>PRÊMIO / PATRIMÔNIO TOTAL</span><strong id="premiumVsTotal">0%</strong></div><div><span>PERFIL DE SAÚDE</span><strong id="previewHealth">A preencher</strong></div></div>
+        <div class="slide-panel payback-panel"><div class="chart-head"><span>CENÁRIO DE PAYBACK</span><strong>ATIVOS FINANCEIROS: <b id="paybackAssets">R$ 0,00</b></strong></div><canvas id="paybackChart" aria-label="Evolução dos rendimentos mensais comparada ao prêmio anual"></canvas></div><div class="payback-cards"><div><span>PRÊMIO ANUAL</span><strong id="paybackPremium">R$ 0,00</strong></div><div class="highlight"><span>RENDIMENTOS PAGAM A APÓLICE EM</span><strong id="paybackMonths">—</strong></div><div><span>PRÊMIO / PATRIMÔNIO TOTAL</span><strong id="premiumVsTotal">0%</strong></div></div>
       </article>
     </section>
 
     <footer>Material informativo — os valores projetados dependem das premissas preenchidas e da cotação da seguradora.</footer>
   </main>
   <script src="assets/template-ppt.js"></script>
+  <script src="assets/surrender-pdf.js"></script>
   <script src="assets/app.js"></script>
 </body>
 </html>
