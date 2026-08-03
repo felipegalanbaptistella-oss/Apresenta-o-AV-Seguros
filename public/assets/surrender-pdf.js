@@ -4,7 +4,7 @@
   const MAX_FILE_BYTES = 25 * 1024 * 1024;
   const MAX_PAGES = 80;
   const MIN_CONFIDENT_ROWS = 5;
-  const HEADER_RE = /\b(?:RESGATE|CASH\s+VALUE|SURRENDER(?:\s+VALUE)?)\b/i;
+  const HEADER_RE = /\b(?:RESGATE|RESERVA\s+RESGAT(?:ÁVEL|AVEL|\?VEL)|RESERVA\s+FINANCEIRA|VALOR\s+DA\s+RESERVA|CASH\s+VALUE|SURRENDER(?:\s+VALUE)?)\b/i;
   const MONEY_RE = /(?:R\$|BRL|US\$)?\s*-?\(?(?:(?:\d{1,3}(?:[.\s]\d{3})+|\d+),\d{2}|(?:\d{1,3}(?:,\d{3})+|\d+)\.\d{2})\)?|(?:R\$|BRL|US\$)\s*-?\(?\d+\)?/gi;
   let pdfJsPromise;
 
@@ -90,7 +90,7 @@
   function headerCategory(text) {
     const normalized = normalizeText(text);
     if (HEADER_RE.test(normalized)) return "surrender";
-    if (/\b(?:ANO|YEAR)\b/.test(normalized)) return "year";
+    if (/\b(?:ANO|YEAR|TEMPO)\b/.test(normalized)) return "year";
     if (/\b(?:IDADE|AGE)\b/.test(normalized)) return "age";
     if (/\b(?:CAPITAL|COBERTURA|BENEFICIO)\b/.test(normalized)) return "capital";
     if (/\b(?:PREMIO|APORTE|PAGAMENTO)\b/.test(normalized)) return "premium";
@@ -113,7 +113,22 @@
       const anchors = new Map();
       const surrenderCandidates = [];
       for (const candidateLine of nearby) {
-        for (const item of candidateLine.items) {
+        const candidateItems = [...candidateLine.items];
+        for (let itemIndex = 0; itemIndex < candidateLine.items.length - 1; itemIndex += 1) {
+          const first = candidateLine.items[itemIndex];
+          const second = candidateLine.items[itemIndex + 1];
+          const combined = `${first.str} ${second.str}`;
+          if (HEADER_RE.test(normalizeText(combined))) {
+            candidateItems.push({
+              ...first,
+              str: combined,
+              x: first.x,
+              width: second.x + second.width - first.x,
+              center: (first.center + second.center) / 2,
+            });
+          }
+        }
+        for (const item of candidateItems) {
           const category = headerCategory(item.str);
           if (!category) continue;
           if (category === "surrender") surrenderCandidates.push({ center: item.center, text: item.str });
@@ -133,8 +148,15 @@
       const distinctSurrenderColumns = surrenderCandidates
         .sort((a, b) => a.center - b.center)
         .filter((candidate, index, all) => index === 0 || Math.abs(candidate.center - all[index - 1].center) > 35);
+      const lineSurrenderColumns = line.items
+        .filter(item => HEADER_RE.test(normalizeText(item.str)))
+        .map(item => ({ center: item.center, text: item.str }))
+        .sort((a, b) => a.center - b.center)
+        .filter((candidate, index, all) => index === 0 || Math.abs(candidate.center - all[index - 1].center) > 35);
       const nearbyText = normalizeText(nearby.map(candidate => candidate.text).join(" "));
       const ambiguous = distinctSurrenderColumns.length > 1 || (/BRUT/.test(nearbyText) && /LIQUID/.test(nearbyText));
+      const tableHeaderShape = ["year", "capital", "premium", "accumulated"].some(category => anchors.has(category));
+      const headerAmbiguous = tableHeaderShape && (lineSurrenderColumns.length > 1 || (/BRUT/.test(normalizeText(line.text)) && /LIQUID/.test(normalizeText(line.text))));
       const surrenderX = Number(surrender.center) || Number(surrender.x) || 0;
       const otherCenters = [...anchors.entries()]
         .filter(([category]) => category !== "surrender")
@@ -151,7 +173,7 @@
         right: next === undefined ? surrenderX + 170 : (next + surrenderX) / 2,
         yearX: anchors.get("year")?.center,
         ageX: anchors.get("age")?.center,
-        ambiguous,
+        ambiguous: headerAmbiguous,
         text: line.text,
       });
     });

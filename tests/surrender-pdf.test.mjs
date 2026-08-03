@@ -47,6 +47,54 @@ test("localiza a coluna de resgate sem confundir capital ou aporte", () => {
   assert.deepEqual(result.values, expected);
 });
 
+test("reconhece cabeçalho quebrado de reserva resgatável", () => {
+  const page = [
+    item("ANO DE VIGÊNCIA", 42, 720, 100),
+    item("IDADE", 170, 720, 42),
+    item("CONTRIBUIÇÕES", 250, 720, 90),
+    item("CAPITAL SEGURADO", 360, 720, 105),
+    item("RESERVA", 500, 720, 52),
+    item("RESGATAVEL", 555, 720, 70),
+  ];
+  [0, 0, 16002.84, 73702.09, 182149.43].forEach((value, index) => {
+    const y = 690 - index * 25;
+    page.push(
+      item(String(index + 1), 50, y, 14),
+      item(String(55 + index), 175, y, 18),
+      item("R$ 155.410,95", 250, y, 85),
+      item("R$ 2.720.000,00", 360, y, 95),
+      item(`R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, 505, y, 95),
+    );
+  });
+  const result = extractSurrenderValuesFromPages([page], { currentAge: 54, maxValues: 20 });
+  assert.equal(result.confidence, "high");
+  assert.deepEqual(result.values, [0, 0, 16002.84, 73702.09, 182149.43]);
+});
+
+test("reconhece a coluna reserva financeira da Omint", () => {
+  const page = [
+    item("IDADE", 50, 720, 42),
+    item("TEMPO", 110, 720, 48),
+    item("PRÊMIO ANUAL ACUMULADO", 180, 720, 150),
+    item("CAPITAL SEGURADO", 360, 720, 105),
+    item("RESERVA", 500, 720, 52),
+    item("FINANCEIRA", 555, 720, 75),
+  ];
+  [0, 0, 88527.42, 179697.81, 304112.04].forEach((value, index) => {
+    const y = 690 - index * 25;
+    page.push(
+      item(String(55 + index), 55, y, 18),
+      item(String(index + 1), 115, y, 14),
+      item("R$ 0,00", 220, y, 65),
+      item("R$ 2.720.000,00", 360, y, 95),
+      item(`R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, 505, y, 95),
+    );
+  });
+  const result = extractSurrenderValuesFromPages([page], { currentAge: 54, maxValues: 20 });
+  assert.equal(result.confidence, "high");
+  assert.deepEqual(result.values, [0, 0, 88527.42, 179697.81, 304112.04]);
+});
+
 test("usa a idade para ordenar quando a tabela não possui coluna de ano", () => {
   const page = [
     item("IDADE", 80, 700, 42),
