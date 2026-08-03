@@ -40,5 +40,7 @@ test("keeps the form and export contract wired", async () => {
   assert.match(app, /const coverageGap = Math\.max\(0, num\('coverageGap'\)\)/);
   assert.match(template, /window\.buildTemplatePpt/);
   assert.match(template, /window\.buildTemplatePdf/);
-  assert.match(template, /effectOnly=new Set\(\[11,12\]\)/);
+  assert.match(template, /effectOnly=new Set\(\[11,12,15\]\)/);
+  assert.match(template, /\[16,\(\)=>slide11\(d,3\)\]/);
+  assert.match(template, /if\(stage>=3\)\{rect\(ctx,48,footerY/);
 });

@@ -175,7 +175,7 @@
     heads.forEach((head,i)=>text(ctx,head,cols[i],119,cols[i+1]-cols[i],{size:17,color:WHITE,bold:true,align:'center'}));
     const top=142,rowH=Math.min(31.4,627/Math.max(rows.length,1));
     const milestone10=Math.min(9,Math.max(0,rows.length-1));
-    const activeRows=new Set([0]);if(stage>=2)activeRows.add(milestone10);if(stage>=3)activeRows.add(Math.max(0,rows.length-1));
+    const activeRows=new Set();if(stage>=1)activeRows.add(0);if(stage>=2)activeRows.add(milestone10);if(stage>=3)activeRows.add(Math.max(0,rows.length-1));
     rows.forEach((r,i)=>{
       const y=top+i*rowH,active=activeRows.has(i);
       rect(ctx,48,y,1057,rowH,i%2?'#082350':'#061743');
@@ -184,7 +184,7 @@
       cell.forEach((v,j)=>fitText(ctx,v,cols[j]+4,y+rowH/2,cols[j+1]-cols[j]-8,{size:active&&j>0?19:16,min:10,color:active&&(i===milestone10||i===rows.length-1)&&(j===1||j===4)?GREEN:WHITE,bold:active,align:'center'}));
     });
     const footerY=top+rows.length*rowH;
-    rect(ctx,48,footerY,1057,40,'#ad8a3c',0);text(ctx,'∞  C a p i t a l   S e g u r a d o   e   R e s g a t e   s e g u e m   v i t a l í c i o s  ∞',65,footerY+20,1025,{size:17,color:WHITE,align:'center',font:'Georgia'});
+    if(stage>=3){rect(ctx,48,footerY,1057,40,'#ad8a3c',0);text(ctx,'∞  C a p i t a l   S e g u r a d o   e   R e s g a t e   s e g u e m   v i t a l í c i o s  ∞',65,footerY+20,1025,{size:17,color:WHITE,align:'center',font:'Georgia'});}
 
     rect(ctx,1128,88,432,758,NAVY);
     benefitPanel(ctx,1148,94,405,204,'BENEFÍCIOS SECURITÁRIOS',['CONGELAMENTO DE RISCO','CONGELAMENTO DE IDADE'],stage>=1);
@@ -246,30 +246,29 @@
   }
   async function prepareProjectionStages(zip){
     const read=async path=>{const file=zip.file(path);if(!file)throw new Error(`Parte OOXML ausente: ${path}`);return file.async('string');};
-    if(zip.file('ppt/slides/slide15.xml'))throw new Error('O slide 15 já existe no modelo.');
+    if(zip.file('ppt/slides/slide15.xml')||zip.file('ppt/slides/slide16.xml'))throw new Error('Os slides adicionais de projeção já existem no modelo.');
 
     let slide12=await read('ppt/slides/slide12.xml');
     const slide12WasHidden=/<p:sld\b[^>]*\bshow="0"/.test(slide12);
     slide12=slide12.replace(/\s+show="0"(?=[\s>])/,'').replace(/<mc:AlternateContent\b[\s\S]*?<\/mc:AlternateContent>/g,'');
     zip.file('ppt/slides/slide12.xml',slide12);
 
-    let slide15=await read('ppt/slides/slide11.xml');
-    slide15=slide15.replace(/\s+show="0"(?=[\s>])/g,'').replace(/<mc:AlternateContent\b[\s\S]*?<\/mc:AlternateContent>/g,'').replace(/<p:transition\b[^>]*\/>/g,'').replace(/<p:transition\b[^>]*>[\s\S]*?<\/p:transition>/g,'').replace(/<p:timing\b[^>]*>[\s\S]*?<\/p:timing>/g,'').replace(/(<p14:creationId\b[^>]*\bval=")\d+("[^>]*\/>)/,(_,before,after)=>`${before}3662746429${after}`);
-    zip.file('ppt/slides/slide15.xml',slide15);
-    zip.file('ppt/slides/_rels/slide15.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/></Relationships>');
+    const cloneBase=(await read('ppt/slides/slide11.xml')).replace(/\s+show="0"(?=[\s>])/g,'').replace(/<mc:AlternateContent\b[\s\S]*?<\/mc:AlternateContent>/g,'').replace(/<p:transition\b[^>]*\/>/g,'').replace(/<p:transition\b[^>]*>[\s\S]*?<\/p:transition>/g,'').replace(/<p:timing\b[^>]*>[\s\S]*?<\/p:timing>/g,'');
+    const relXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/></Relationships>';
+    [15,16].forEach((no,index)=>{const xml=cloneBase.replace(/(<p14:creationId\b[^>]*\bval=")\d+("[^>]*\/>)/,(_,before,after)=>`${before}${3662746429+index}${after}`);zip.file(`ppt/slides/slide${no}.xml`,xml);zip.file(`ppt/slides/_rels/slide${no}.xml.rels`,relXml);});
 
     const relPath='ppt/_rels/presentation.xml.rels';let rels=await read(relPath);
     const slide12Tag=[...rels.matchAll(/<Relationship\b[^>]*\/>/g)].map(match=>match[0]).find(tag=>/\bTarget="slides\/slide12\.xml"/.test(tag));
     const slide12Rid=slide12Tag?.match(/\bId="([^"]+)"/)?.[1];if(!slide12Rid)throw new Error('Relacionamento do slide 12 não encontrado.');
-    const usedRids=[...rels.matchAll(/\bId="rId(\d+)"/g)].map(match=>Number(match[1]));const newRid=`rId${Math.max(0,...usedRids)+1}`;
-    rels=rels.replace('</Relationships>',`<Relationship Id="${newRid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide15.xml"/></Relationships>`);zip.file(relPath,rels);
+    const usedRids=[...rels.matchAll(/\bId="rId(\d+)"/g)].map(match=>Number(match[1]));const nextRid=Math.max(0,...usedRids)+1,newRid15=`rId${nextRid}`,newRid16=`rId${nextRid+1}`;
+    rels=rels.replace('</Relationships>',`<Relationship Id="${newRid15}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide15.xml"/><Relationship Id="${newRid16}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide16.xml"/></Relationships>`);zip.file(relPath,rels);
 
     let presentation=await read('ppt/presentation.xml');const ids=[...presentation.matchAll(/<p:sldId\b[^>]*\bid="(\d+)"/g)].map(match=>Number(match[1]));const newSlideId=Math.max(255,...ids)+1;
     const escapedRid=slide12Rid.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const slide12Pattern=new RegExp(`<p:sldId\\b(?=[^>]*\\br:id="${escapedRid}")[^>]*/>`);const slide12IdTag=presentation.match(slide12Pattern)?.[0];if(!slide12IdTag)throw new Error('sldId do slide 12 não encontrado.');
-    presentation=presentation.replace(slide12Pattern,`${slide12IdTag}<p:sldId id="${newSlideId}" r:id="${newRid}"/>`);zip.file('ppt/presentation.xml',presentation);
+    presentation=presentation.replace(slide12Pattern,`${slide12IdTag}<p:sldId id="${newSlideId}" r:id="${newRid15}"/><p:sldId id="${newSlideId+1}" r:id="${newRid16}"/>`);zip.file('ppt/presentation.xml',presentation);
 
-    let contentTypes=await read('[Content_Types].xml');contentTypes=contentTypes.replace('</Types>','<Override PartName="/ppt/slides/slide15.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>');zip.file('[Content_Types].xml',contentTypes);
-    const appFile=zip.file('docProps/app.xml');if(appFile){let app=await appFile.async('string');app=app.replace(/<Slides>(\d+)<\/Slides>/,(_,count)=>`<Slides>${Number(count)+1}</Slides>`);if(slide12WasHidden)app=app.replace(/<HiddenSlides>(\d+)<\/HiddenSlides>/,(_,count)=>`<HiddenSlides>${Math.max(0,Number(count)-1)}</HiddenSlides>`);app=app.replace(/(<vt:lpstr>Títulos de slides<\/vt:lpstr><\/vt:variant><vt:variant><vt:i4>)(\d+)(<\/vt:i4>)/,(_,before,count,after)=>`${before}${Number(count)+1}${after}`).replace(/(<TitlesOfParts><vt:vector\b[^>]*\bsize=")(\d+)("[^>]*>)([\s\S]*?)(<\/vt:vector><\/TitlesOfParts>)/,(_,before,size,middle,body,after)=>`${before}${Number(size)+1}${middle}${body}<vt:lpstr>Apresentação do PowerPoint</vt:lpstr>${after}`);zip.file('docProps/app.xml',app);}
+    let contentTypes=await read('[Content_Types].xml');contentTypes=contentTypes.replace('</Types>','<Override PartName="/ppt/slides/slide15.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/><Override PartName="/ppt/slides/slide16.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>');zip.file('[Content_Types].xml',contentTypes);
+    const appFile=zip.file('docProps/app.xml');if(appFile){let app=await appFile.async('string');app=app.replace(/<Slides>(\d+)<\/Slides>/,(_,count)=>`<Slides>${Number(count)+2}</Slides>`);if(slide12WasHidden)app=app.replace(/<HiddenSlides>(\d+)<\/HiddenSlides>/,(_,count)=>`<HiddenSlides>${Math.max(0,Number(count)-1)}</HiddenSlides>`);app=app.replace(/(<vt:lpstr>Títulos de slides<\/vt:lpstr><\/vt:variant><vt:variant><vt:i4>)(\d+)(<\/vt:i4>)/,(_,before,count,after)=>`${before}${Number(count)+2}${after}`).replace(/(<TitlesOfParts><vt:vector\b[^>]*\bsize=")(\d+)("[^>]*>)([\s\S]*?)(<\/vt:vector><\/TitlesOfParts>)/,(_,before,size,middle,body,after)=>`${before}${Number(size)+2}${middle}${body}<vt:lpstr>Apresentação do PowerPoint</vt:lpstr><vt:lpstr>Apresentação do PowerPoint</vt:lpstr>${after}`);zip.file('docProps/app.xml',app);}
   }
   async function applyTransitionsToAllSlides(zip){
     const transition='<p:transition spd="med" advClick="1"><p:fade/></p:transition>';
@@ -282,7 +281,7 @@
     }
   }
   async function renderSlides(d){
-    const tasks=[[1,()=>slide1(d)],[2,()=>staticSlide(2)],[3,()=>staticSlide(3)],[4,()=>staticSlide(4)],[5,()=>staticSlide(5)],[6,()=>slide6(d)],[7,()=>staticSlide(7)],[8,()=>assetSlide(8,d,'current')],[9,()=>assetSlide(9,d,'reallocation')],[10,()=>assetSlide(10,d,'with')],[11,()=>slide11(d,1)],[12,()=>slide11(d,2)],[15,()=>slide11(d,3)],[13,()=>slide13(d)],[14,()=>slide14(d)]];
+    const tasks=[[1,()=>slide1(d)],[2,()=>staticSlide(2)],[3,()=>staticSlide(3)],[4,()=>staticSlide(4)],[5,()=>staticSlide(5)],[6,()=>slide6(d)],[7,()=>staticSlide(7)],[8,()=>assetSlide(8,d,'current')],[9,()=>assetSlide(9,d,'reallocation')],[10,()=>assetSlide(10,d,'with')],[11,()=>slide11(d,0)],[12,()=>slide11(d,1)],[15,()=>slide11(d,2)],[16,()=>slide11(d,3)],[13,()=>slide13(d)],[14,()=>slide14(d)]];
     const rendered=[];for(const [no,render] of tasks)rendered.push([no,await render()]);return rendered;
   }
   window.buildTemplatePpt=async d=>{
@@ -297,7 +296,7 @@
   };
   window.buildTemplatePdf=async d=>{
     if(!window.PDFLib)throw new Error('A biblioteca de PDF não foi carregada.');
-    const rendered=await renderSlides(d),effectOnly=new Set([11,12]);
+    const rendered=await renderSlides(d),effectOnly=new Set([11,12,15]);
     const pdf=await PDFLib.PDFDocument.create();
     pdf.setTitle(`Gestão de Riscos - ${d.familyLabel||d.name}`);pdf.setAuthor('Alta Vista');pdf.setSubject('Planejamento sucessório');
     for(const [no,bytes] of rendered){
