@@ -311,22 +311,21 @@
     const appFile=zip.file('docProps/app.xml');if(appFile){let app=await appFile.async('string');app=app.replace(/<Slides>(\d+)<\/Slides>/,(_,n)=>`<Slides>${Number(n)+1}</Slides>`);app=app.replace(/(<vt:lpstr>Títulos de slides<\/vt:lpstr><\/vt:variant><vt:variant><vt:i4>)(\d+)(<\/vt:i4>)/,(_,a,n,b)=>`${a}${Number(n)+1}${b}`);zip.file('docProps/app.xml',app);}
   }
   async function renderSlides(d){
-    const tasks=[[1,()=>slide1(d)],[2,()=>planningStage0()],[17,()=>staticSlide(2)],[3,()=>staticSlide(3)],[4,()=>staticSlide(4)],[5,()=>staticSlide(5)],[6,()=>slide6(d)],[7,()=>staticSlide(7)],[8,()=>assetSlide(8,d,'current')],[9,()=>assetSlide(9,d,'reallocation')],[10,()=>assetSlide(10,d,'with')],[11,()=>slide11(d,0)],[12,()=>slide11(d,1)],[15,()=>slide11(d,2)],[16,()=>slide11(d,3)],[13,()=>slide13(d)],[14,()=>slide14(d)]];
+    const tasks=[[1,()=>slide1(d)],[3,()=>staticSlide(3)],[4,()=>staticSlide(4)],[5,()=>staticSlide(5)],[6,()=>slide6(d)],[7,()=>staticSlide(7)],[8,()=>assetSlide(8,d,'current')],[9,()=>assetSlide(9,d,'reallocation')],[10,()=>assetSlide(10,d,'with')],[11,()=>slide11(d,0)],[12,()=>slide11(d,1)],[15,()=>slide11(d,2)],[16,()=>slide11(d,3)],[13,()=>slide13(d)],[14,()=>slide14(d)]];
     const rendered=[];for(const [no,render] of tasks)rendered.push([no,await render()]);return rendered;
   }
   window.buildTemplatePpt=async d=>{
     if(!window.JSZip)throw new Error('A biblioteca JSZip não foi carregada.');
-    const response=await fetch('assets/modelo-base.pptx');if(!response.ok)throw new Error('O arquivo-modelo do PowerPoint não foi encontrado.');
+    const response=await fetch('assets/modelo-base.pptx?v=2');if(!response.ok)throw new Error('O arquivo-modelo do PowerPoint não foi encontrado.');
     const zip=await JSZip.loadAsync(await response.arrayBuffer());
     await prepareProjectionStages(zip);
-    await preparePlanningStages(zip);
     const rendered=await renderSlides(d);
     for(const [no,bytes] of rendered)await replaceSlide(zip,no,bytes);
     return zip.generateAsync({type:'blob',compression:'DEFLATE'});
   };
   window.buildTemplatePdf=async d=>{
     if(!window.PDFLib)throw new Error('A biblioteca de PDF não foi carregada.');
-    const rendered=await renderSlides(d),effectOnly=new Set([2,11,12,15]);
+    const rendered=await renderSlides(d);rendered.splice(1,0,[2,await staticSlide(2)]);const effectOnly=new Set([11,12,15]);
     const pdf=await PDFLib.PDFDocument.create();
     pdf.setTitle(`Gestão de Riscos - ${d.familyLabel||d.name}`);pdf.setAuthor('Alta Vista');pdf.setSubject('Planejamento sucessório');
     for(const [no,bytes] of rendered){

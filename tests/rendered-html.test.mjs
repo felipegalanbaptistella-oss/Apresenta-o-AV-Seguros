@@ -53,6 +53,7 @@ test("keeps the form and export contract wired", async () => {
   assert.match(appCss, /gauge-arc\{background:conic-gradient\(from 270deg at 50% 100%,#ff4848 0 2%,#70b544 2% 16%/);
   assert.match(appCss, /gauge-arc>span\{color:#fff/);
   assert.match(template, /window\.buildTemplatePpt/);
+  assert.match(template, /fetch\('assets\/modelo-base\.pptx\?v=2'\)/);
   assert.match(template, /window\.buildTemplatePdf/);
   assert.match(template, /d\.annualPremium\/d\.total\*100:0,proposedAllocation=d\.withoutInsurance\?d\.annualPremium\/d\.withoutInsurance\*100:0/);
   assert.match(template, /'#f28c28',4/);
@@ -60,7 +61,8 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /text\(ctx,'Ótimo',[\s\S]*?color:WHITE/);
   assert.match(template, /text\(ctx,'Recomendado',[\s\S]*?color:WHITE/);
   assert.match(template, /text\(ctx,'Alta exposição',[\s\S]*?color:WHITE/);
-  assert.match(template, /effectOnly=new Set\(\[2,11,12,15\]\)/);
+  assert.match(template, /rendered\.splice\(1,0,\[2,await staticSlide\(2\)\]\)/);
+  assert.match(template, /effectOnly=new Set\(\[11,12,15\]\)/);
   assert.match(template, /\[16,\(\)=>slide11\(d,3\)\]/);
   assert.match(template, /if\(stage>=3\)\{rect\(ctx,48,footerY/);
   assert.match(template, /RENDIMENTOS PAGAM A ALOCAÇÃO ANUAL EM/);
@@ -69,6 +71,9 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /const surname=\(d\.lastName\|\|d\.firstName\|\|'Cliente'\)/);
   assert.match(template, /const texture=document\.createElement\('canvas'\)/);
   assert.doesNotMatch(template, /applyTransitionsToAllSlides/);
+  assert.doesNotMatch(template, /await preparePlanningStages/);
+  assert.doesNotMatch(template, /\[2,\(\)=>planningStage0\(\)\]/);
+  assert.doesNotMatch(template, /\[17,\(\)=>staticSlide\(2\)\]/);
   assert.match(template, /const cloneBase=\(await read\('ppt\/slides\/slide11\.xml'\)\).*?<p:timing/);
   assert.match(template, /const sourceXml=\(await read\('ppt\/slides\/slide2\.xml'\)\).*?<p:timing/);
   assert.match(template, /const sourceRels=.*?\/notesSlide/);
@@ -88,6 +93,11 @@ test("keeps the presentation model transition sequence", () => {
 
   assert.doesNotMatch(slideXml(1), /<p:transition\b/);
   assert.match(slideXml(2), /<p:transition spd="med" p14:dur="700"><p:fade\/>/);
+  assert.match(slideXml(2), /<p:timing\b/);
+  assert.match(slideXml(2), /delay="250"/);
+  assert.match(slideXml(2), /delay="500"/);
+  assert.match(slideXml(2), /delay="750"/);
+  assert.match(slideXml(2), /delay="1000"/);
   assert.match(slideXml(5), /<p159:morph option="byObject"\/>/);
   assert.match(slideXml(6), /p14:dur="2000"><p159:morph option="byObject"\/>/);
   assert.match(slideXml(8), /<p:transition spd="slow"><p:wipe\/>/);
