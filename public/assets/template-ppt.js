@@ -279,10 +279,10 @@
 
     let slide12=await read('ppt/slides/slide12.xml');
     const slide12WasHidden=/<p:sld\b[^>]*\bshow="0"/.test(slide12);
-    slide12=slide12.replace(/\s+show="0"(?=[\s>])/,'').replace(/<mc:AlternateContent\b[\s\S]*?<\/mc:AlternateContent>/g,'');
+    slide12=slide12.replace(/\s+show="0"(?=[\s>])/,'');
     zip.file('ppt/slides/slide12.xml',slide12);
 
-    const cloneBase=(await read('ppt/slides/slide11.xml')).replace(/\s+show="0"(?=[\s>])/g,'').replace(/<mc:AlternateContent\b[\s\S]*?<\/mc:AlternateContent>/g,'').replace(/<p:transition\b[^>]*\/>/g,'').replace(/<p:transition\b[^>]*>[\s\S]*?<\/p:transition>/g,'').replace(/<p:timing\b[^>]*>[\s\S]*?<\/p:timing>/g,'');
+    const cloneBase=(await read('ppt/slides/slide11.xml')).replace(/\s+show="0"(?=[\s>])/g,'').replace(/<p:timing\b[^>]*>[\s\S]*?<\/p:timing>/g,'');
     const relXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/></Relationships>';
     [15,16].forEach((no,index)=>{const xml=cloneBase.replace(/(<p14:creationId\b[^>]*\bval=")\d+("[^>]*\/>)/,(_,before,after)=>`${before}${3662746429+index}${after}`);zip.file(`ppt/slides/slide${no}.xml`,xml);zip.file(`ppt/slides/_rels/slide${no}.xml.rels`,relXml);});
 
@@ -302,22 +302,13 @@
   async function preparePlanningStages(zip){
     if(zip.file('ppt/slides/slide17.xml'))throw new Error('O slide adicional de planejamento já existe no modelo.');
     const read=async path=>{const file=zip.file(path);if(!file)throw new Error(`Parte OOXML ausente: ${path}`);return file.async('string');};
-    const sourceXml=(await read('ppt/slides/slide2.xml')).replace(/\s+show="0"(?=[\s>])/g,'').replace(/<mc:AlternateContent\b[\s\S]*?<\/mc:AlternateContent>/g,'').replace(/<p:transition\b[^>]*\/>/g,'').replace(/<p:transition\b[^>]*>[\s\S]*?<\/p:transition>/g,'').replace(/<p:timing\b[^>]*>[\s\S]*?<\/p:timing>/g,'');
-    zip.file('ppt/slides/slide17.xml',sourceXml);zip.file('ppt/slides/_rels/slide17.xml.rels',await read('ppt/slides/_rels/slide2.xml.rels'));
+    const sourceXml=(await read('ppt/slides/slide2.xml')).replace(/\s+show="0"(?=[\s>])/g,'').replace(/<p:timing\b[^>]*>[\s\S]*?<\/p:timing>/g,'');
+    const sourceRels=(await read('ppt/slides/_rels/slide2.xml.rels')).replace(/<Relationship\b(?=[^>]*\bType="[^"]*\/notesSlide")[^>]*\/>/g,'');
+    zip.file('ppt/slides/slide17.xml',sourceXml);zip.file('ppt/slides/_rels/slide17.xml.rels',sourceRels);
     const relPath='ppt/_rels/presentation.xml.rels';let rels=await read(relPath);const used=[...rels.matchAll(/\bId="rId(\d+)"/g)].map(m=>Number(m[1]));const rid=`rId${Math.max(...used)+1}`;rels=rels.replace('</Relationships>',`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide17.xml"/></Relationships>`);zip.file(relPath,rels);
     let presentation=await read('ppt/presentation.xml');const ids=[...presentation.matchAll(/<p:sldId\b[^>]*\bid="(\d+)"/g)].map(m=>Number(m[1]));const newId=Math.max(255,...ids)+1;const slide2Tag=[...rels.matchAll(/<Relationship\b[^>]*\/>/g)].map(m=>m[0]).find(t=>/Target="slides\/slide2\.xml"/.test(t));const slide2Rid=slide2Tag?.match(/\bId="([^"]+)"/)?.[1];const pattern=new RegExp(`<p:sldId\\b(?=[^>]*\\br:id="${slide2Rid}")[^>]*/>`);const tag=presentation.match(pattern)?.[0];if(!tag)throw new Error('sldId do slide 2 não encontrado.');presentation=presentation.replace(pattern,`${tag}<p:sldId id="${newId}" r:id="${rid}"/>`);zip.file('ppt/presentation.xml',presentation);
     let types=await read('[Content_Types].xml');types=types.replace('</Types>','<Override PartName="/ppt/slides/slide17.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>');zip.file('[Content_Types].xml',types);
     const appFile=zip.file('docProps/app.xml');if(appFile){let app=await appFile.async('string');app=app.replace(/<Slides>(\d+)<\/Slides>/,(_,n)=>`<Slides>${Number(n)+1}</Slides>`);app=app.replace(/(<vt:lpstr>Títulos de slides<\/vt:lpstr><\/vt:variant><vt:variant><vt:i4>)(\d+)(<\/vt:i4>)/,(_,a,n,b)=>`${a}${Number(n)+1}${b}`);zip.file('docProps/app.xml',app);}
-  }
-  async function applyTransitionsToAllSlides(zip){
-    const transition='<p:transition spd="med" advClick="1"><p:fade/></p:transition>';
-    const files=Object.keys(zip.files).filter(name=>/^ppt\/slides\/slide\d+\.xml$/.test(name));
-    for(const name of files){
-      let xml=await zip.file(name).async('string');
-      xml=xml.replace(/<mc:AlternateContent\b[^>]*>[\s\S]*?<p:transition\b[\s\S]*?<\/mc:AlternateContent>/g,'').replace(/<p:transition\b[^>]*\/>/g,'').replace(/<p:transition\b[^>]*>[\s\S]*?<\/p:transition>/g,'');
-      xml=xml.includes('</p:clrMapOvr>')?xml.replace('</p:clrMapOvr>',`</p:clrMapOvr>${transition}`):xml.replace('</p:cSld>',`</p:cSld>${transition}`);
-      zip.file(name,xml);
-    }
   }
   async function renderSlides(d){
     const tasks=[[1,()=>slide1(d)],[2,()=>planningStage0()],[17,()=>staticSlide(2)],[3,()=>staticSlide(3)],[4,()=>staticSlide(4)],[5,()=>staticSlide(5)],[6,()=>slide6(d)],[7,()=>staticSlide(7)],[8,()=>assetSlide(8,d,'current')],[9,()=>assetSlide(9,d,'reallocation')],[10,()=>assetSlide(10,d,'with')],[11,()=>slide11(d,0)],[12,()=>slide11(d,1)],[15,()=>slide11(d,2)],[16,()=>slide11(d,3)],[13,()=>slide13(d)],[14,()=>slide14(d)]];
@@ -331,7 +322,6 @@
     await preparePlanningStages(zip);
     const rendered=await renderSlides(d);
     for(const [no,bytes] of rendered)await replaceSlide(zip,no,bytes);
-    await applyTransitionsToAllSlides(zip);
     return zip.generateAsync({type:'blob',compression:'DEFLATE'});
   };
   window.buildTemplatePdf=async d=>{

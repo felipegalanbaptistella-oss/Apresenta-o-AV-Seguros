@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 async function render() {
@@ -60,4 +62,32 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /monthsAtRate\(d,rate\)/);
   assert.match(template, /const surname=\(d\.lastName\|\|d\.firstName\|\|'Cliente'\)/);
   assert.match(template, /const texture=document\.createElement\('canvas'\)/);
+  assert.doesNotMatch(template, /applyTransitionsToAllSlides/);
+  assert.match(template, /const cloneBase=\(await read\('ppt\/slides\/slide11\.xml'\)\).*?<p:timing/);
+  assert.match(template, /const sourceXml=\(await read\('ppt\/slides\/slide2\.xml'\)\).*?<p:timing/);
+  assert.match(template, /const sourceRels=.*?\/notesSlide/);
+  assert.match(template, /slide17\.xml\.rels',sourceRels/);
+});
+
+test("keeps the presentation model transition sequence", () => {
+  const pptx = fileURLToPath(new URL("../public/assets/modelo-base.pptx", import.meta.url));
+  const slideXml = (number) => {
+    const result = spawnSync("tar", ["-xOf", pptx, `ppt/slides/slide${number}.xml`], {
+      encoding: "utf8",
+      maxBuffer: 4 * 1024 * 1024,
+    });
+    assert.equal(result.status, 0, result.stderr || `Could not inspect slide ${number}`);
+    return result.stdout;
+  };
+
+  assert.doesNotMatch(slideXml(1), /<p:transition\b/);
+  assert.match(slideXml(2), /<p:transition spd="med" p14:dur="700"><p:fade\/>/);
+  assert.match(slideXml(5), /<p159:morph option="byObject"\/>/);
+  assert.match(slideXml(6), /p14:dur="2000"><p159:morph option="byObject"\/>/);
+  assert.match(slideXml(8), /<p:transition spd="slow"><p:wipe\/>/);
+  assert.match(slideXml(9), /<p:transition spd="slow"><p:push dir="u"\/>/);
+  assert.match(slideXml(11), /<p:transition spd="slow"><p:wipe\/>/);
+  assert.match(slideXml(12), /p14:dur="800"><p:circle\/>/);
+  assert.match(slideXml(13), /<p:transition spd="slow"><p:push dir="u"\/>/);
+  assert.match(slideXml(14), /<p:transition spd="med" p14:dur="700"><p:fade\/>/);
 });
