@@ -321,7 +321,7 @@
     drawProjection(d);
     setText('paybackAssets',money(d.financial));setText('paybackPremium',money(d.annualPremium));
     [[.006,'paybackMonths06'],[.008,'paybackMonths08'],[.01,'paybackMonths10']].forEach(([rate,id])=>setText(id,monthLabel(paybackAtRate(d,rate))));
-    const currentAllocation=d.total?d.currentInsurance/d.total*100:0,proposedAllocation=d.withoutInsurance?d.coverageAfter/d.withoutInsurance*100:0;
+    const currentAllocation=d.total?d.annualPremium/d.total*100:0,proposedAllocation=d.withoutInsurance?d.annualPremium/d.withoutInsurance*100:0;
     setWebGauge('gaugeCurrent',currentAllocation);setWebGauge('gaugeProposed',proposedAllocation);drawPayback(d);
     document.querySelectorAll('.scenario-grid>div,.web-gauge').forEach(card=>setDashboardDetail(card,card.querySelector('span,h4')?.textContent||'Indicador',[card.querySelector('strong')?.textContent||'']));
   }

@@ -40,3 +40,5 @@
 @media(prefers-reduced-motion:reduce){.preview-slide,.dashboard-mark,.dashboard-tooltip{transition:none!important}.preview-slide:hover,.dashboard-mark:hover{transform:none!important}}
 .btn.pdf{background:#173c32;color:#c8efaf;border:1px solid #70b544}.btn.pdf:hover{background:#21503b}
 .payback-layout{height:83%;grid-template-rows:60% 38%;gap:2%}.payback-main,.payback-chart-column,.payback-scenarios,.scenario-grid,.scenario-grid>div,.payback-gauges,.web-gauge{min-height:0}.payback-scenarios{grid-template-rows:35% 20% 35%;gap:5%}
+/* Agulha dos velocímetros: prêmio anual sobre o patrimônio. */
+.gauge-arc:after{background:#f28c28}

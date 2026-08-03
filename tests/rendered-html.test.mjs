@@ -22,12 +22,13 @@ test("server-renders the consolidated generator", async () => {
 });
 
 test("keeps the form and export contract wired", async () => {
-  const [page, layout, legacy, app, template] = await Promise.all([
+  const [page, layout, legacy, app, template, appCss] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../public/legacy.html", import.meta.url), "utf8"),
     readFile(new URL("../public/assets/app.js", import.meta.url), "utf8"),
     readFile(new URL("../public/assets/template-ppt.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/assets/app.css", import.meta.url), "utf8"),
   ]);
   assert.match(page, /src="\/legacy\.html"/);
   assert.match(layout, /generateMetadata\(\): Promise<Metadata>/);
@@ -44,9 +45,13 @@ test("keeps the form and export contract wired", async () => {
   assert.match(legacy, /id="gaugeProposed"/);
   assert.match(app, /const coverageGap = Math\.max\(0, num\('coverageGap'\)\)/);
   assert.match(app, /const paybackAtRate=/);
-  assert.match(app, /setWebGauge\('gaugeCurrent',currentAllocation\)/);
+  assert.match(app, /currentAllocation=d\.total\?d\.annualPremium\/d\.total\*100:0/);
+  assert.match(app, /proposedAllocation=d\.withoutInsurance\?d\.annualPremium\/d\.withoutInsurance\*100:0/);
+  assert.match(appCss, /gauge-arc:after\{background:#f28c28\}/);
   assert.match(template, /window\.buildTemplatePpt/);
   assert.match(template, /window\.buildTemplatePdf/);
+  assert.match(template, /d\.annualPremium\/d\.total\*100:0,proposedAllocation=d\.withoutInsurance\?d\.annualPremium\/d\.withoutInsurance\*100:0/);
+  assert.match(template, /'#f28c28',4/);
   assert.match(template, /effectOnly=new Set\(\[2,11,12,15\]\)/);
   assert.match(template, /\[16,\(\)=>slide11\(d,3\)\]/);
   assert.match(template, /if\(stage>=3\)\{rect\(ctx,48,footerY/);

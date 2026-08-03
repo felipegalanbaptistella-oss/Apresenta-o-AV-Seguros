@@ -223,7 +223,7 @@
     ctx.save();ctx.lineWidth=48;ctx.lineCap='butt';zones.forEach(([a,b,color])=>{ctx.beginPath();ctx.arc(cx,cy,r,start+Math.PI*a,start+Math.PI*b);ctx.strokeStyle=color;ctx.stroke();});ctx.restore();
     ctx.beginPath();ctx.moveTo(cx-r+20,cy);ctx.arc(cx,cy,r-49,Math.PI,Math.PI*2);ctx.lineTo(cx+r-20,cy);ctx.closePath();ctx.fillStyle='#c7a466';ctx.fill();
     const normalized=Math.max(0,Math.min(1,value/10)),angle=start+Math.PI*normalized;
-    line(ctx,cx+Math.cos(angle)*(r-27),cy+Math.sin(angle)*(r-27),cx+Math.cos(angle)*(r+29),cy+Math.sin(angle)*(r+29),'#f4f5f8',4);
+    line(ctx,cx+Math.cos(angle)*(r-27),cy+Math.sin(angle)*(r-27),cx+Math.cos(angle)*(r+29),cy+Math.sin(angle)*(r+29),'#f28c28',4);
     text(ctx,'Ótimo',x+160,cy-76,120,{size:16,color:'#173c32',bold:true,align:'center'});
     text(ctx,'Recomendado',cx-140,y+82,280,{size:17,color:'#25342b',bold:true,align:'center'});
     text(ctx,'Alta exposição',x+w-265,cy-92,160,{size:16,color:'#2e2e2e',bold:true,align:'center',maxLines:2});
@@ -249,7 +249,7 @@
     rect(ctx,850,318,680,66,'#03143d',5,'#9d7624',2);text(ctx,'RENDIMENTOS PAGAM A ALOCAÇÃO ANUAL EM',870,351,640,{size:18,color:GOLD,bold:true,align:'center'});
     const rateMonths=monthlyRates.map(rate=>monthsAtRate(d,rate));const starColors=['#e9a2a5','#8bd05f','#f0c400'];
     monthlyRates.forEach((rate,i)=>{const x=850+i*230;rect(ctx,x,408,210,100,i===1?'#173c32':'#03143d',5,i===1?GREEN:'#9d7624',2);text(ctx,'★',x+18,438,34,{size:30,color:starColors[i],bold:true});text(ctx,`${(rate*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}% a.m.`,x+55,438,140,{size:18,color:i===1?GREEN:GOLD,bold:true});fitText(ctx,monthsText(rateMonths[i]),x+20,480,170,{size:28,min:20,color:i===1?GREEN:WHITE,bold:true,align:'center'});});
-    const currentAllocation=d.total?d.currentInsurance/d.total*100:0,proposedAllocation=d.withoutInsurance?d.coverageAfter/d.withoutInsurance*100:0;
+    const currentAllocation=d.total?d.annualPremium/d.total*100:0,proposedAllocation=d.withoutInsurance?d.annualPremium/d.withoutInsurance*100:0;
     gauge(ctx,40,600,750,275,'ALOCAÇÃO ATUAL VS PATRIMÔNIO TOTAL',currentAllocation);
     gauge(ctx,810,600,750,275,'ALOCAÇÃO PROPOSTA VS PATRIMÔNIO LÍQUIDO',proposedAllocation);
     return pngBytes(canvas);
