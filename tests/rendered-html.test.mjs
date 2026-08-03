@@ -74,6 +74,9 @@ test("keeps the form and export contract wired", async () => {
   assert.doesNotMatch(template, /await preparePlanningStages/);
   assert.doesNotMatch(template, /\[2,\(\)=>planningStage0\(\)\]/);
   assert.doesNotMatch(template, /\[17,\(\)=>staticSlide\(2\)\]/);
+  assert.doesNotMatch(template, /\[5,\(\)=>staticSlide\(5\)\]/);
+  assert.match(template, /arrowCenters=\[527,762,990\]/);
+  assert.match(template, /for\(let i=11;i<Math\.min\(18,rows\.length\);i\+\+\)/);
   assert.match(template, /const cloneBase=\(await read\('ppt\/slides\/slide11\.xml'\)\).*?<p:timing/);
   assert.match(template, /const sourceXml=\(await read\('ppt\/slides\/slide2\.xml'\)\).*?<p:timing/);
   assert.match(template, /const sourceRels=.*?\/notesSlide/);

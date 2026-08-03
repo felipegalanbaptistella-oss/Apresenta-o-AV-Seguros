@@ -205,6 +205,13 @@
       const cell=[r.age,brl(r.capital),brl(r.premium),brl(r.accumulated),brl(r.surrender)];
       cell.forEach((v,j)=>fitText(ctx,v,cols[j]+4,y+rowH/2,cols[j+1]-cols[j]-8,{size:active&&j>0?19:16,min:10,color:active&&(i===milestone10||i===rows.length-1)&&(j===1||j===4)?GREEN:WHITE,bold:active,align:'center'}));
     });
+    if(stage>=3){
+      const arrowCenters=[527,762,990];
+      for(let i=11;i<Math.min(18,rows.length);i++){
+        const ay=top+i*rowH+rowH*.48;
+        arrowCenters.forEach(ax=>{line(ctx,ax-22,ay-10,ax,ay+10,'#bc9440',4);line(ctx,ax,ay+10,ax+22,ay-10,'#bc9440',4);});
+      }
+    }
     const footerY=top+rows.length*rowH;
     if(stage>=3){rect(ctx,48,footerY,1057,40,'#ad8a3c',0);text(ctx,'∞  C a p i t a l   S e g u r a d o   e   R e s g a t e   s e g u e m   v i t a l í c i o s  ∞',65,footerY+20,1025,{size:17,color:WHITE,align:'center',font:'Georgia'});}
 
@@ -311,7 +318,7 @@
     const appFile=zip.file('docProps/app.xml');if(appFile){let app=await appFile.async('string');app=app.replace(/<Slides>(\d+)<\/Slides>/,(_,n)=>`<Slides>${Number(n)+1}</Slides>`);app=app.replace(/(<vt:lpstr>Títulos de slides<\/vt:lpstr><\/vt:variant><vt:variant><vt:i4>)(\d+)(<\/vt:i4>)/,(_,a,n,b)=>`${a}${Number(n)+1}${b}`);zip.file('docProps/app.xml',app);}
   }
   async function renderSlides(d){
-    const tasks=[[1,()=>slide1(d)],[3,()=>staticSlide(3)],[4,()=>staticSlide(4)],[5,()=>staticSlide(5)],[6,()=>slide6(d)],[7,()=>staticSlide(7)],[8,()=>assetSlide(8,d,'current')],[9,()=>assetSlide(9,d,'reallocation')],[10,()=>assetSlide(10,d,'with')],[11,()=>slide11(d,0)],[12,()=>slide11(d,1)],[15,()=>slide11(d,2)],[16,()=>slide11(d,3)],[13,()=>slide13(d)],[14,()=>slide14(d)]];
+    const tasks=[[1,()=>slide1(d)],[3,()=>staticSlide(3)],[4,()=>staticSlide(4)],[6,()=>slide6(d)],[7,()=>staticSlide(7)],[8,()=>assetSlide(8,d,'current')],[9,()=>assetSlide(9,d,'reallocation')],[10,()=>assetSlide(10,d,'with')],[11,()=>slide11(d,0)],[12,()=>slide11(d,1)],[15,()=>slide11(d,2)],[16,()=>slide11(d,3)],[13,()=>slide13(d)],[14,()=>slide14(d)]];
     const rendered=[];for(const [no,render] of tasks)rendered.push([no,await render()]);return rendered;
   }
   window.buildTemplatePpt=async d=>{
