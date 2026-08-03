@@ -219,14 +219,14 @@
     rect(ctx,x,y,w,h,'#03143d',12,'#9d7624',2);
     text(ctx,title,x+24,y+24,w-48,{size:18,color:GOLD,bold:true,align:'center',maxLines:2});
     const cx=x+w/2,cy=y+h-25,r=Math.min(170,w*.31),start=Math.PI;
-    const zones=[[0,.035,RED],[.035,.065,'#e98b35'],[.065,.28,GREEN],[.28,.56,'#c9e2ae'],[.56,1,'#f5df8d']];
+    const zones=[[0,.035,RED],[.035,.28,GREEN],[.28,.56,'#c9e2ae'],[.56,1,'#f5df8d']];
     ctx.save();ctx.lineWidth=48;ctx.lineCap='butt';zones.forEach(([a,b,color])=>{ctx.beginPath();ctx.arc(cx,cy,r,start+Math.PI*a,start+Math.PI*b);ctx.strokeStyle=color;ctx.stroke();});ctx.restore();
     ctx.beginPath();ctx.moveTo(cx-r+20,cy);ctx.arc(cx,cy,r-49,Math.PI,Math.PI*2);ctx.lineTo(cx+r-20,cy);ctx.closePath();ctx.fillStyle='#c7a466';ctx.fill();
     const normalized=Math.max(0,Math.min(1,value/10)),angle=start+Math.PI*normalized;
     line(ctx,cx+Math.cos(angle)*(r-27),cy+Math.sin(angle)*(r-27),cx+Math.cos(angle)*(r+29),cy+Math.sin(angle)*(r+29),'#f28c28',4);
-    text(ctx,'Ótimo',x+160,cy-76,120,{size:16,color:'#173c32',bold:true,align:'center'});
-    text(ctx,'Recomendado',cx-140,y+82,280,{size:17,color:'#25342b',bold:true,align:'center'});
-    text(ctx,'Alta exposição',x+w-265,cy-92,160,{size:16,color:'#2e2e2e',bold:true,align:'center',maxLines:2});
+    text(ctx,'Ótimo',x+160,cy-76,120,{size:16,color:WHITE,bold:true,align:'center'});
+    text(ctx,'Recomendado',cx-140,y+82,280,{size:17,color:WHITE,bold:true,align:'center'});
+    text(ctx,'Alta exposição',x+w-265,cy-92,160,{size:16,color:WHITE,bold:true,align:'center',maxLines:2});
     text(ctx,'Não se aplica',x+24,cy+10,150,{size:16,color:WHITE,bold:true,align:'center'});
     text(ctx,'Acima de 10%',x+w-180,cy+10,155,{size:16,color:WHITE,bold:true,align:'center'});
     fitText(ctx,pct(value),cx-105,cy-48,210,{size:38,min:27,color:WHITE,bold:true,align:'center'});

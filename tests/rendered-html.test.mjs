@@ -50,10 +50,16 @@ test("keeps the form and export contract wired", async () => {
   assert.match(app, /currentAllocation=d\.total\?d\.annualPremium\/d\.total\*100:0/);
   assert.match(app, /proposedAllocation=d\.withoutInsurance\?d\.annualPremium\/d\.withoutInsurance\*100:0/);
   assert.match(appCss, /gauge-arc:after\{background:#f28c28\}/);
+  assert.match(appCss, /gauge-arc\{background:conic-gradient\(from 270deg at 50% 100%,#ff4848 0 2%,#70b544 2% 16%/);
+  assert.match(appCss, /gauge-arc>span\{color:#fff/);
   assert.match(template, /window\.buildTemplatePpt/);
   assert.match(template, /window\.buildTemplatePdf/);
   assert.match(template, /d\.annualPremium\/d\.total\*100:0,proposedAllocation=d\.withoutInsurance\?d\.annualPremium\/d\.withoutInsurance\*100:0/);
   assert.match(template, /'#f28c28',4/);
+  assert.doesNotMatch(template, /#e98b35/);
+  assert.match(template, /text\(ctx,'Ótimo',[\s\S]*?color:WHITE/);
+  assert.match(template, /text\(ctx,'Recomendado',[\s\S]*?color:WHITE/);
+  assert.match(template, /text\(ctx,'Alta exposição',[\s\S]*?color:WHITE/);
   assert.match(template, /effectOnly=new Set\(\[2,11,12,15\]\)/);
   assert.match(template, /\[16,\(\)=>slide11\(d,3\)\]/);
   assert.match(template, /if\(stage>=3\)\{rect\(ctx,48,footerY/);
