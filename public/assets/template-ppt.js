@@ -76,6 +76,25 @@
   }
   async function staticSlide(no){const {canvas}=await canvasFor(no);return pngBytes(canvas);}
 
+  async function planningStage0(){
+    const {canvas,ctx}=await canvasFor(2);
+    const base=document.createElement('canvas');base.width=W;base.height=H;base.getContext('2d').drawImage(canvas,0,0);
+    // Mantém o cabeçalho do modelo e abre a sequência apenas com Gestão de Ativos.
+    ctx.save();ctx.globalAlpha=.9;ctx.fillStyle=NAVY;ctx.fillRect(180,180,1240,675);ctx.restore();
+    // Hexágono central e a face GA, no mesmo enquadramento do slide completo.
+    const center=[[785,416],[878,470],[878,579],[785,633],[692,579],[692,470]];
+    const ga=[[878,470],[985,416],[985,632],[878,579]];
+    const poly=(points,fill)=>{ctx.save();ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=WHITE;ctx.lineWidth=2;ctx.stroke();ctx.restore();};
+    poly(center,'#061743');poly(ga,'#383740');
+    // Reaproveita a marca dourada do próprio modelo no hexágono central.
+    ctx.drawImage(base,748,488,75,48,738,494,105,67);
+    text(ctx,'GA',895,526,76,{size:54,color:WHITE,bold:true,align:'center'});
+    text(ctx,'Gestão\nDe Ativos',1080,520,280,{size:34,color:WHITE,align:'center',maxLines:2});
+    line(ctx,1040,386,1375,386,GOLD,2);line(ctx,1040,656,1375,656,GOLD,2);
+    line(ctx,275,386,555,386,GOLD,2);line(ctx,275,656,555,656,GOLD,2);
+    return pngBytes(canvas);
+  }
+
   async function slide1(d){
     const {canvas,ctx}=await canvasFor(1);
     // A arte-base já contém o fundo, os logotipos e a tipografia do modelo aprovado.
@@ -280,6 +299,16 @@
     let contentTypes=await read('[Content_Types].xml');contentTypes=contentTypes.replace('</Types>','<Override PartName="/ppt/slides/slide15.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/><Override PartName="/ppt/slides/slide16.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>');zip.file('[Content_Types].xml',contentTypes);
     const appFile=zip.file('docProps/app.xml');if(appFile){let app=await appFile.async('string');app=app.replace(/<Slides>(\d+)<\/Slides>/,(_,count)=>`<Slides>${Number(count)+2}</Slides>`);if(slide12WasHidden)app=app.replace(/<HiddenSlides>(\d+)<\/HiddenSlides>/,(_,count)=>`<HiddenSlides>${Math.max(0,Number(count)-1)}</HiddenSlides>`);app=app.replace(/(<vt:lpstr>Títulos de slides<\/vt:lpstr><\/vt:variant><vt:variant><vt:i4>)(\d+)(<\/vt:i4>)/,(_,before,count,after)=>`${before}${Number(count)+2}${after}`).replace(/(<TitlesOfParts><vt:vector\b[^>]*\bsize=")(\d+)("[^>]*>)([\s\S]*?)(<\/vt:vector><\/TitlesOfParts>)/,(_,before,size,middle,body,after)=>`${before}${Number(size)+2}${middle}${body}<vt:lpstr>Apresentação do PowerPoint</vt:lpstr><vt:lpstr>Apresentação do PowerPoint</vt:lpstr>${after}`);zip.file('docProps/app.xml',app);}
   }
+  async function preparePlanningStages(zip){
+    if(zip.file('ppt/slides/slide17.xml'))throw new Error('O slide adicional de planejamento já existe no modelo.');
+    const read=async path=>{const file=zip.file(path);if(!file)throw new Error(`Parte OOXML ausente: ${path}`);return file.async('string');};
+    const sourceXml=(await read('ppt/slides/slide2.xml')).replace(/\s+show="0"(?=[\s>])/g,'').replace(/<mc:AlternateContent\b[\s\S]*?<\/mc:AlternateContent>/g,'').replace(/<p:transition\b[^>]*\/>/g,'').replace(/<p:transition\b[^>]*>[\s\S]*?<\/p:transition>/g,'').replace(/<p:timing\b[^>]*>[\s\S]*?<\/p:timing>/g,'');
+    zip.file('ppt/slides/slide17.xml',sourceXml);zip.file('ppt/slides/_rels/slide17.xml.rels',await read('ppt/slides/_rels/slide2.xml.rels'));
+    const relPath='ppt/_rels/presentation.xml.rels';let rels=await read(relPath);const used=[...rels.matchAll(/\bId="rId(\d+)"/g)].map(m=>Number(m[1]));const rid=`rId${Math.max(...used)+1}`;rels=rels.replace('</Relationships>',`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide17.xml"/></Relationships>`);zip.file(relPath,rels);
+    let presentation=await read('ppt/presentation.xml');const ids=[...presentation.matchAll(/<p:sldId\b[^>]*\bid="(\d+)"/g)].map(m=>Number(m[1]));const newId=Math.max(255,...ids)+1;const slide2Tag=[...rels.matchAll(/<Relationship\b[^>]*\/>/g)].map(m=>m[0]).find(t=>/Target="slides\/slide2\.xml"/.test(t));const slide2Rid=slide2Tag?.match(/\bId="([^"]+)"/)?.[1];const pattern=new RegExp(`<p:sldId\\b(?=[^>]*\\br:id="${slide2Rid}")[^>]*/>`);const tag=presentation.match(pattern)?.[0];if(!tag)throw new Error('sldId do slide 2 não encontrado.');presentation=presentation.replace(pattern,`${tag}<p:sldId id="${newId}" r:id="${rid}"/>`);zip.file('ppt/presentation.xml',presentation);
+    let types=await read('[Content_Types].xml');types=types.replace('</Types>','<Override PartName="/ppt/slides/slide17.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>');zip.file('[Content_Types].xml',types);
+    const appFile=zip.file('docProps/app.xml');if(appFile){let app=await appFile.async('string');app=app.replace(/<Slides>(\d+)<\/Slides>/,(_,n)=>`<Slides>${Number(n)+1}</Slides>`);app=app.replace(/(<vt:lpstr>Títulos de slides<\/vt:lpstr><\/vt:variant><vt:variant><vt:i4>)(\d+)(<\/vt:i4>)/,(_,a,n,b)=>`${a}${Number(n)+1}${b}`);zip.file('docProps/app.xml',app);}
+  }
   async function applyTransitionsToAllSlides(zip){
     const transition='<p:transition spd="med" advClick="1"><p:fade/></p:transition>';
     const files=Object.keys(zip.files).filter(name=>/^ppt\/slides\/slide\d+\.xml$/.test(name));
@@ -291,7 +320,7 @@
     }
   }
   async function renderSlides(d){
-    const tasks=[[1,()=>slide1(d)],[2,()=>staticSlide(2)],[3,()=>staticSlide(3)],[4,()=>staticSlide(4)],[5,()=>staticSlide(5)],[6,()=>slide6(d)],[7,()=>staticSlide(7)],[8,()=>assetSlide(8,d,'current')],[9,()=>assetSlide(9,d,'reallocation')],[10,()=>assetSlide(10,d,'with')],[11,()=>slide11(d,0)],[12,()=>slide11(d,1)],[15,()=>slide11(d,2)],[16,()=>slide11(d,3)],[13,()=>slide13(d)],[14,()=>slide14(d)]];
+    const tasks=[[1,()=>slide1(d)],[2,()=>planningStage0()],[17,()=>staticSlide(2)],[3,()=>staticSlide(3)],[4,()=>staticSlide(4)],[5,()=>staticSlide(5)],[6,()=>slide6(d)],[7,()=>staticSlide(7)],[8,()=>assetSlide(8,d,'current')],[9,()=>assetSlide(9,d,'reallocation')],[10,()=>assetSlide(10,d,'with')],[11,()=>slide11(d,0)],[12,()=>slide11(d,1)],[15,()=>slide11(d,2)],[16,()=>slide11(d,3)],[13,()=>slide13(d)],[14,()=>slide14(d)]];
     const rendered=[];for(const [no,render] of tasks)rendered.push([no,await render()]);return rendered;
   }
   window.buildTemplatePpt=async d=>{
@@ -299,6 +328,7 @@
     const response=await fetch('assets/modelo-base.pptx');if(!response.ok)throw new Error('O arquivo-modelo do PowerPoint não foi encontrado.');
     const zip=await JSZip.loadAsync(await response.arrayBuffer());
     await prepareProjectionStages(zip);
+    await preparePlanningStages(zip);
     const rendered=await renderSlides(d);
     for(const [no,bytes] of rendered)await replaceSlide(zip,no,bytes);
     await applyTransitionsToAllSlides(zip);
@@ -306,7 +336,7 @@
   };
   window.buildTemplatePdf=async d=>{
     if(!window.PDFLib)throw new Error('A biblioteca de PDF não foi carregada.');
-    const rendered=await renderSlides(d),effectOnly=new Set([11,12,15]);
+    const rendered=await renderSlides(d),effectOnly=new Set([2,11,12,15]);
     const pdf=await PDFLib.PDFDocument.create();
     pdf.setTitle(`Gestão de Riscos - ${d.familyLabel||d.name}`);pdf.setAuthor('Alta Vista');pdf.setSubject('Planejamento sucessório');
     for(const [no,bytes] of rendered){

@@ -47,7 +47,7 @@ test("keeps the form and export contract wired", async () => {
   assert.match(app, /setWebGauge\('gaugeCurrent',currentAllocation\)/);
   assert.match(template, /window\.buildTemplatePpt/);
   assert.match(template, /window\.buildTemplatePdf/);
-  assert.match(template, /effectOnly=new Set\(\[11,12,15\]\)/);
+  assert.match(template, /effectOnly=new Set\(\[2,11,12,15\]\)/);
   assert.match(template, /\[16,\(\)=>slide11\(d,3\)\]/);
   assert.match(template, /if\(stage>=3\)\{rect\(ctx,48,footerY/);
   assert.match(template, /RENDIMENTOS PAGAM A ALOCAÇÃO ANUAL EM/);
