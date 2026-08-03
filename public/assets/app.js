@@ -267,6 +267,7 @@
     const x=m=>left+(w-left-right)*m/months; const y=v=>h-bottom-(h-top-bottom)*v/maxY;
     rates.forEach((rate,i)=>drawLine(ctx,Array.from({length:months+1},(_,m)=>({x:x(m),y:y(d.financial*rate*m)})),colors[i%colors.length],2));
     if(d.annualPremium>0) drawLine(ctx,[{x:x(0),y:y(d.annualPremium)},{x:x(months),y:y(d.annualPremium)}],'#8bd05f',2,[8,6]);
+    if(d.financial>0&&d.annualPremium>0){rates.forEach((rate,i)=>{const crossing=Math.ceil(d.annualPremium/(d.financial*rate));if(crossing<0||crossing>months)return;ctx.save();ctx.fillStyle=i===1?'#8bd05f':i===0?'#e9a2a5':'#f0c400';ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='700 21px Segoe UI Symbol';ctx.strokeText('★',x(crossing),y(d.financial*rate*crossing));ctx.fillText('★',x(crossing),y(d.financial*rate*crossing));ctx.restore();});}
     ctx.fillStyle='#c5d0e5';ctx.font='10px Segoe UI';[0,2,4,6,8,10,12].forEach(m=>ctx.fillText(`M${m}`,x(m)-8,h-8));
     ctx.font='10px Segoe UI'; let lx=left; rates.forEach((rate,i)=>{ctx.fillStyle=colors[i%colors.length];ctx.fillRect(lx,4,12,3);ctx.fillStyle='#d9e0ec';const label=`${(rate*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}% a.m.`;ctx.fillText(label,lx+17,9);lx+=88;});
     if(Number.isInteger(activeMonth)){
@@ -276,6 +277,9 @@
     canvas.__dashboardMeta={d,left,right,w,months,rates};
     setDashboardDetail(canvas,'Cenário de payback',['Mova o cursor sobre o gráfico para comparar cada mês.']);
   }
+  const paybackAtRate=(d,rate)=>d.financial>0&&d.annualPremium>0?Math.ceil(d.annualPremium/(d.financial*rate)):0;
+  const monthLabel=months=>months?`${months} ${months===1?'MÊS':'MESES'}`:'—';
+  function setWebGauge(id,value){const gauge=$(id),safe=clamp(Number(value)||0,0,10);if(!gauge)return;gauge.style.setProperty('--gauge-value',safe);gauge.querySelector('.gauge-arc')?.style.setProperty('--needle',`${-90+safe*18}deg`);setText(`${id}Value`,`${(Number(value)||0).toLocaleString('pt-BR',{maximumFractionDigits:1})}%`);}
 
   function render() {
     const d=data();
@@ -315,8 +319,11 @@
     if(consultantPhone){consultantPhone.textContent=d.consultantData.phone;consultantPhone.href=`tel:${d.consultantData.phoneHref}`;}
     if(consultantEmail){consultantEmail.textContent=d.consultantData.email;consultantEmail.href=`mailto:${d.consultantData.email}`;}
     drawProjection(d);
-    setText('paybackAssets',money(d.financial));setText('paybackPremium',money(d.annualPremium));setText('paybackMonths',d.paybackMonths?`${d.paybackMonths} ${d.paybackMonths===1?'MÊS':'MESES'}`:'—');setText('premiumVsTotal',d.total?`${(d.annualPremium/d.total*100).toLocaleString('pt-BR',{maximumFractionDigits:2})}%`:'0%');drawPayback(d);
-    document.querySelectorAll('.payback-cards>div').forEach(card=>setDashboardDetail(card,card.querySelector('span')?.textContent||'Indicador',[card.querySelector('strong')?.textContent||'']));
+    setText('paybackAssets',money(d.financial));setText('paybackPremium',money(d.annualPremium));
+    [[.006,'paybackMonths06'],[.008,'paybackMonths08'],[.01,'paybackMonths10']].forEach(([rate,id])=>setText(id,monthLabel(paybackAtRate(d,rate))));
+    const currentAllocation=d.total?d.currentInsurance/d.total*100:0,proposedAllocation=d.withoutInsurance?d.coverageAfter/d.withoutInsurance*100:0;
+    setWebGauge('gaugeCurrent',currentAllocation);setWebGauge('gaugeProposed',proposedAllocation);drawPayback(d);
+    document.querySelectorAll('.scenario-grid>div,.web-gauge').forEach(card=>setDashboardDetail(card,card.querySelector('span,h4')?.textContent||'Indicador',[card.querySelector('strong')?.textContent||'']));
   }
 
   document.querySelectorAll('[data-status]').forEach(btn=>btn.addEventListener('click',()=>{mode=btn.dataset.status;document.querySelectorAll('[data-status]').forEach(b=>b.classList.toggle('active',b===btn));$('spouseBlock').classList.toggle('hidden',mode!=='couple');$('spouseAssets').classList.toggle('hidden',mode!=='couple');render();}));

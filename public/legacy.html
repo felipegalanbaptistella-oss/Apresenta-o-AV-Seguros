@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Gestão de Riscos — Gerador de apresentação</title>
-  <link rel="stylesheet" href="assets/app.css" />
+  <link rel="stylesheet" href="assets/app.css?v=6" />
   <script src="assets/jszip.min.js"></script>
   <script src="assets/pptxgen.min.js"></script>
   <script src="assets/pdflib/pdf-lib.min.js"></script>
@@ -144,14 +144,20 @@
 
       <article class="preview-slide" id="previewPayback">
         <div class="slide-brand">GESTÃO DE RISCOS</div><h3>COMO <em>DIVERSIFICAR COM SEUS RENDIMENTOS</em></h3>
-        <div class="slide-panel payback-panel"><div class="chart-head"><span>CENÁRIO DE PAYBACK</span><strong>ATIVOS FINANCEIROS: <b id="paybackAssets">R$ 0,00</b></strong></div><canvas id="paybackChart" aria-label="Evolução dos rendimentos mensais comparada ao prêmio anual"></canvas></div><div class="payback-cards"><div><span>PRÊMIO ANUAL</span><strong id="paybackPremium">R$ 0,00</strong></div><div class="highlight"><span>RENDIMENTOS PAGAM A APÓLICE EM</span><strong id="paybackMonths">—</strong></div><div><span>PRÊMIO / PATRIMÔNIO TOTAL</span><strong id="premiumVsTotal">0%</strong></div></div>
+        <div class="payback-layout">
+          <div class="slide-panel payback-main">
+            <div class="payback-chart-column"><div class="chart-head"><span>CENÁRIO DE PAYBACK</span><strong><small>ATIVOS FINANCEIROS</small><b id="paybackAssets">R$ 0,00</b></strong></div><canvas id="paybackChart" aria-label="Evolução dos rendimentos mensais comparada à alocação anual"></canvas></div>
+            <div class="payback-scenarios"><div class="annual-allocation"><span>ALOCAÇÃO ANUAL</span><strong id="paybackPremium">R$ 0,00</strong></div><div class="scenario-title">RENDIMENTOS PAGAM A ALOCAÇÃO ANUAL EM</div><div class="scenario-grid"><div><span>★ 0,6% a.m.</span><strong id="paybackMonths06">—</strong></div><div class="highlight"><span>★ 0,8% a.m.</span><strong id="paybackMonths08">—</strong></div><div><span>★ 1,0% a.m.</span><strong id="paybackMonths10">—</strong></div></div></div>
+          </div>
+          <div class="payback-gauges"><div class="web-gauge" id="gaugeCurrent"><h4>ALOCAÇÃO ATUAL VS<br>PATRIMÔNIO TOTAL</h4><div class="gauge-arc"><span class="gauge-optimal">Ótimo</span><span class="gauge-recommended">Recomendado</span><span class="gauge-high">Alta<br>exposição</span><strong id="gaugeCurrentValue">0%</strong></div><div class="gauge-scale"><span>Não se aplica</span><span>Acima de 10%</span></div></div><div class="web-gauge" id="gaugeProposed"><h4>ALOCAÇÃO PROPOSTA VS<br>PATRIMÔNIO LÍQUIDO</h4><div class="gauge-arc"><span class="gauge-optimal">Ótimo</span><span class="gauge-recommended">Recomendado</span><span class="gauge-high">Alta<br>exposição</span><strong id="gaugeProposedValue">0%</strong></div><div class="gauge-scale"><span>Não se aplica</span><span>Acima de 10%</span></div></div></div>
+        </div>
       </article>
     </section>
 
     <footer>Material informativo — os valores projetados dependem das premissas preenchidas e da cotação da seguradora.</footer>
   </main>
-  <script src="assets/template-ppt.js"></script>
+  <script src="assets/template-ppt.js?v=6"></script>
   <script src="assets/surrender-pdf.js"></script>
-  <script src="assets/app.js"></script>
+  <script src="assets/app.js?v=6"></script>
 </body>
 </html>

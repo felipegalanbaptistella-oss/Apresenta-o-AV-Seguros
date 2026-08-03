@@ -195,8 +195,8 @@
 
   function gauge(ctx,x,y,w,h,title,value){
     rect(ctx,x,y,w,h,'#03143d',12,'#9d7624',2);
-    text(ctx,title,x+24,y+25,w-48,{size:18,color:GOLD,bold:true,align:'center',maxLines:2});
-    const cx=x+w/2,cy=y+h-28,r=Math.min(165,w*.31),start=Math.PI;
+    text(ctx,title,x+24,y+24,w-48,{size:18,color:GOLD,bold:true,align:'center',maxLines:2});
+    const cx=x+w/2,cy=y+h-25,r=Math.min(170,w*.31),start=Math.PI;
     const zones=[[0,.035,RED],[.035,.065,'#e98b35'],[.065,.28,GREEN],[.28,.56,'#c9e2ae'],[.56,1,'#f5df8d']];
     ctx.save();ctx.lineWidth=48;ctx.lineCap='butt';zones.forEach(([a,b,color])=>{ctx.beginPath();ctx.arc(cx,cy,r,start+Math.PI*a,start+Math.PI*b);ctx.strokeStyle=color;ctx.stroke();});ctx.restore();
     ctx.beginPath();ctx.moveTo(cx-r+20,cy);ctx.arc(cx,cy,r-49,Math.PI,Math.PI*2);ctx.lineTo(cx+r-20,cy);ctx.closePath();ctx.fillStyle='#c7a466';ctx.fill();
@@ -209,20 +209,27 @@
     text(ctx,'Acima de 10%',x+w-180,cy+10,155,{size:16,color:WHITE,bold:true,align:'center'});
     fitText(ctx,pct(value),cx-105,cy-48,210,{size:38,min:27,color:WHITE,bold:true,align:'center'});
   }
+  const monthsAtRate=(d,rate)=>d.financial>0&&d.annualPremium>0?Math.ceil(d.annualPremium/(d.financial*rate)):0;
+  const monthsText=months=>months?`${months} ${months===1?'MÊS':'MESES'}`:'—';
   async function slide13(d){
-    const {canvas,ctx}=await canvasFor(13);rect(ctx,0,582,W,H-582,NAVY);rect(ctx,62,160,1475,420,'#03143d');text(ctx,'CENÁRIO DE PAYBACK',92,185,330,{size:18,color:GOLD,bold:true});
-    fitText(ctx,brl(d.financial),1220,190,265,{size:28,min:20,color:WHITE,bold:true,align:'center'});
+    const {canvas,ctx}=await canvasFor(13);rect(ctx,0,150,W,H-150,NAVY);rect(ctx,40,160,1520,420,'#03143d',14,'#9d7624',2);text(ctx,'CENÁRIO DE PAYBACK',75,188,300,{size:18,color:GOLD,bold:true});
+    rect(ctx,500,171,300,58,'#bc985d',10);text(ctx,'ATIVOS FINANCEIROS',515,184,270,{size:14,color:WHITE,align:'center'});fitText(ctx,brl(d.financial),515,208,270,{size:28,min:19,color:WHITE,bold:true,align:'center'});
     const monthlyRates=[.006,.008,.01],colors=['#7d6a36','#b88700','#d6a700'];
-    const x0=250,y0=500,x1=1440,y1=230,max=Math.max(d.annualPremium*1.2,d.financial*.01*12,1);
-    for(let i=0;i<=5;i++){const y=y0-(y0-y1)*i/5;line(ctx,x0,y,x1,y,'#1d3764',1);fitText(ctx,brl(max*i/5),75,y,145,{size:14,min:10,color:WHITE,bold:true,align:'right'});}
-    for(let m=0;m<=12;m++){const x=x0+(x1-x0)*m/12;line(ctx,x,y0,x,y1,'#1d3764',1);text(ctx,`MÊS ${m}`,x-35,y0+28,70,{size:13,color:WHITE,bold:true,align:'center'});}
+    const x0=170,y0=500,x1=805,y1=245,max=Math.max(d.annualPremium*1.25,d.financial*.01*12,1);
+    for(let i=0;i<=5;i++){const y=y0-(y0-y1)*i/5;line(ctx,x0,y,x1,y,'#1d3764',1);fitText(ctx,brl(max*i/5),55,y,100,{size:12,min:9,color:WHITE,bold:true,align:'right'});}
+    for(let m=0;m<=12;m++){const x=x0+(x1-x0)*m/12;line(ctx,x,y0,x,y1,'#1d3764',1);text(ctx,`MÊS ${m}`,x-28,y0+24,56,{size:10,color:WHITE,bold:true,align:'center'});}
     monthlyRates.forEach((rate,i)=>{ctx.save();ctx.strokeStyle=colors[i];ctx.lineWidth=4;ctx.beginPath();for(let m=0;m<=12;m++){const x=x0+(x1-x0)*m/12,y=y0-(y0-y1)*(d.financial*rate*m/max);m?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();ctx.restore();});
-    const py=y0-(y0-y1)*(d.annualPremium/max);line(ctx,x0,py,x1,py,GREEN,4,[16,12]);fitText(ctx,brl(d.annualPremium),1220,py-25,240,{size:23,min:17,color:WHITE,bold:true,align:'center'});
+    const py=y0-(y0-y1)*(d.annualPremium/max);line(ctx,x0,py,x1,py,GREEN,4,[16,12]);fitText(ctx,brl(d.annualPremium),640,py-24,150,{size:19,min:14,color:WHITE,bold:true,align:'center'});
+    monthlyRates.forEach((rate,i)=>{const month=monthsAtRate(d,rate);if(month<0||month>12)return;const mx=x0+(x1-x0)*month/12,my=y0-(y0-y1)*(d.financial*rate*month/max);text(ctx,'★',mx-18,my,36,{size:34,color:i===1?'#8bd05f':i===0?'#e9a2a5':'#f0c400',bold:true,align:'center'});});
     const legendItems=[{label:'VALOR DO SEGURO',color:GREEN,dash:true},...monthlyRates.map((rate,i)=>({label:`Rentabilidade ${(rate*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}% a.m.`,color:colors[i]}))];
-    legendItems.forEach((item,i)=>{const lx=300+i*285;line(ctx,lx,548,lx+34,548,item.color,4,item.dash?[12,8]:[]);text(ctx,item.label,lx+45,548,220,{size:14,color:WHITE,bold:item.dash});});
-    const cardY=600,cardW=720,insuredAllocation=d.total?d.coverageGap/d.total*100:0;
-    gauge(ctx,55,cardY,cardW,270,'ALOCAÇÃO ATUAL · SEM O NOVO SEGURO',0);
-    gauge(ctx,825,cardY,cardW,270,'ALOCAÇÃO PROPOSTA · CAPITAL ADICIONAL / PATRIMÔNIO TOTAL',insuredAllocation);
+    legendItems.forEach((item,i)=>{const lx=95+i*185;line(ctx,lx,552,lx+25,552,item.color,3,item.dash?[10,7]:[]);text(ctx,item.label,lx+33,552,145,{size:11,color:WHITE,bold:item.dash});});
+    rect(ctx,850,177,680,120,'#03143d',5,'#9d7624',2);text(ctx,'ALOCAÇÃO ANUAL',875,203,630,{size:18,color:GOLD,bold:true,align:'center'});fitText(ctx,brl(d.annualPremium),875,257,630,{size:44,min:30,color:'#8bd05f',bold:true,align:'center'});
+    rect(ctx,850,318,680,66,'#03143d',5,'#9d7624',2);text(ctx,'RENDIMENTOS PAGAM A ALOCAÇÃO ANUAL EM',870,351,640,{size:18,color:GOLD,bold:true,align:'center'});
+    const rateMonths=monthlyRates.map(rate=>monthsAtRate(d,rate));const starColors=['#e9a2a5','#8bd05f','#f0c400'];
+    monthlyRates.forEach((rate,i)=>{const x=850+i*230;rect(ctx,x,408,210,100,i===1?'#173c32':'#03143d',5,i===1?GREEN:'#9d7624',2);text(ctx,'★',x+18,438,34,{size:30,color:starColors[i],bold:true});text(ctx,`${(rate*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}% a.m.`,x+55,438,140,{size:18,color:i===1?GREEN:GOLD,bold:true});fitText(ctx,monthsText(rateMonths[i]),x+20,480,170,{size:28,min:20,color:i===1?GREEN:WHITE,bold:true,align:'center'});});
+    const currentAllocation=d.total?d.currentInsurance/d.total*100:0,proposedAllocation=d.withoutInsurance?d.coverageAfter/d.withoutInsurance*100:0;
+    gauge(ctx,40,600,750,275,'ALOCAÇÃO ATUAL VS PATRIMÔNIO TOTAL',currentAllocation);
+    gauge(ctx,810,600,750,275,'ALOCAÇÃO PROPOSTA VS PATRIMÔNIO LÍQUIDO',proposedAllocation);
     return pngBytes(canvas);
   }
   async function slide14(d){
