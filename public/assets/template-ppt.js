@@ -332,7 +332,7 @@
   };
   window.buildTemplatePdf=async d=>{
     if(!window.PDFLib)throw new Error('A biblioteca de PDF não foi carregada.');
-    const rendered=await renderSlides(d);rendered.splice(1,0,[2,await staticSlide(2)]);const effectOnly=new Set([11,12,15]);
+    const rendered=await renderSlides(d);rendered.splice(1,0,[2,await staticSlide(2)]);rendered.splice(4,0,[5,await staticSlide(5)]);const effectOnly=new Set([11,12,15]);
     const pdf=await PDFLib.PDFDocument.create();
     pdf.setTitle(`Gestão de Riscos - ${d.familyLabel||d.name}`);pdf.setAuthor('Alta Vista');pdf.setSubject('Planejamento sucessório');
     for(const [no,bytes] of rendered){
