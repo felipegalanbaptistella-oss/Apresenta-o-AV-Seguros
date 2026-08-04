@@ -7,6 +7,7 @@
   const HEADER_RE = /\b(?:RESGATE|RESERVA\s+RESGAT(?:ÁVEL|AVEL|\?VEL)|RESERVA\s+FINANCEIRA|VALOR\s+DA\s+RESERVA|CASH\s+VALUE|SURRENDER(?:\s+VALUE)?)\b/i;
   const MONEY_RE = /(?:R\$|BRL|US\$)?\s*-?\(?(?:(?:\d{1,3}(?:[.\s]\d{3})+|\d+),\d{2}|(?:\d{1,3}(?:,\d{3})+|\d+)\.\d{2})\)?|(?:R\$|BRL|US\$)\s*-?\(?\d+\)?/gi;
   let pdfJsPromise;
+  let ocrWorkerPromise;
 
   class SurrenderPdfError extends Error {
     constructor(code, message) {
@@ -35,6 +36,13 @@
     const lastComma = numeric.lastIndexOf(",");
     const lastDot = numeric.lastIndexOf(".");
     let decimalSeparator = "";
+    const malformedBrazilian = lastComma < 0 && lastDot >= 0 && /^(?:\d{1,3})(?:\.\d{3})+\d{2}$/.test(numeric);
+    if (malformedBrazilian) {
+      const digits = numeric.replace(/\D/g, "");
+      numeric = `${digits.slice(0, -2)}.${digits.slice(-2)}`;
+      const parsed = Number(numeric);
+      return Number.isFinite(parsed) ? (negative ? -parsed : parsed) : null;
+    }
     if (lastComma >= 0 && lastDot >= 0) {
       decimalSeparator = lastComma > lastDot ? "," : ".";
     } else {
@@ -183,6 +191,13 @@
   function moneyCandidates(line) {
     const candidates = [];
     for (const item of line.items) {
+      if (/(?:R\$|BRL|US\$)/i.test(item.str) && (item.str.match(/\d/g) || []).length >= 4) {
+        const wholeValue = parseMoneyToken(item.str);
+        if (wholeValue !== null) {
+          candidates.push({ value: wholeValue, center: item.center, raw: item.str });
+          continue;
+        }
+      }
       MONEY_RE.lastIndex = 0;
       let match;
       while ((match = MONEY_RE.exec(item.str)) !== null) {
@@ -210,6 +225,22 @@
     return ordered[0] && ordered[0].distance <= maxDistance ? ordered[0].value : null;
   }
 
+  function inferAgeOffset(lines, header, options = {}) {
+    if (!Number.isFinite(options.currentAge) || !Number.isFinite(header.ageX) || !Number.isFinite(header.yearX)) return null;
+    const offsets = [];
+    for (let index = header.lineIndex + 1; index < Math.min(lines.length, header.lineIndex + 14); index += 1) {
+      const integers = integerCandidates(lines[index]);
+      const year = nearestInteger(integers, header.yearX);
+      const age = nearestInteger(integers, header.ageX);
+      if (!Number.isInteger(year) || !Number.isInteger(age) || year < 1 || year > 80 || age < 18 || age > 130 || year === age) continue;
+      offsets.push(age - Number(options.currentAge) - (year - 1));
+    }
+    if (!offsets.length) return null;
+    const counts = new Map();
+    offsets.forEach(offset => counts.set(offset, (counts.get(offset) || 0) + 1));
+    return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  }
+
   function sequenceQuality(indices) {
     if (!indices.length) return 0;
     const unique = [...new Set(indices)].sort((a, b) => a - b);
@@ -219,6 +250,7 @@
   function parseTableAfterHeader(lines, header, options = {}) {
     const rows = [];
     let missesAfterRows = 0;
+    const ageOffset = inferAgeOffset(lines, header, options);
     for (let index = header.lineIndex + 1; index < lines.length; index += 1) {
       const line = lines[index];
       if (HEADER_RE.test(normalizeText(line.text))) break;
@@ -242,9 +274,9 @@
       const year = nearestInteger(integers, header.yearX);
       const age = nearestInteger(integers, header.ageX);
       let rowIndex = Number.isInteger(year) && year >= 1 && year <= 80 ? year - 1 : null;
-      if (rowIndex === null && Number.isInteger(age) && Number.isFinite(options.currentAge)) {
-        const ageIndex = age - Number(options.currentAge);
-        if (ageIndex >= 0 && ageIndex <= 80) rowIndex = ageIndex;
+      if (Number.isInteger(age) && Number.isFinite(options.currentAge)) {
+        const ageIndex = age - Number(options.currentAge) - (Number.isFinite(ageOffset) ? ageOffset : 0);
+        if (ageIndex >= 0 && ageIndex <= 80 && (rowIndex === null || Math.abs(rowIndex - ageIndex) > 2)) rowIndex = ageIndex;
       }
       if (rowIndex === null && !Number.isFinite(header.yearX) && !Number.isFinite(header.ageX)) {
         const possibleYear = integers.filter(item => item.center < header.left).map(item => item.value).find(value => value >= 1 && value <= 80);
@@ -323,6 +355,74 @@
     return new URL(".", ownScript?.src || document.baseURI);
   }
 
+  function ocrAssetsBaseUrl() {
+    const base = scriptBaseUrl();
+    return base ? new URL("ocr/", base) : null;
+  }
+
+  async function loadOcrWorker(options = {}) {
+    if (!global.Tesseract?.createWorker) {
+      throw new SurrenderPdfError("ocr_unavailable", "O OCR local nao esta disponivel neste navegador.");
+    }
+    if (!ocrWorkerPromise) {
+      const base = ocrAssetsBaseUrl();
+      if (!base) throw new SurrenderPdfError("ocr_unavailable", "O OCR local nao esta disponivel neste navegador.");
+      ocrWorkerPromise = global.Tesseract.createWorker("por", 1, {
+        workerPath: new URL("worker.min.js", base).href,
+        corePath: new URL("tesseract-core.wasm.js", base).href,
+        langPath: base.href,
+        gzip: true,
+        logger: message => options.onProgress?.(message),
+      }).catch(error => {
+        ocrWorkerPromise = undefined;
+        throw error;
+      });
+    }
+    return ocrWorkerPromise;
+  }
+
+  async function recognizePageWithOcr(pdfPage, options = {}) {
+    if (typeof document === "undefined") throw new SurrenderPdfError("ocr_unavailable", "O OCR local nao esta disponivel neste navegador.");
+    const scale = Number(options.scale) || 1.7;
+    const viewport = pdfPage.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    await pdfPage.render({ canvasContext: context, viewport }).promise;
+    const worker = await loadOcrWorker(options);
+    const result = await worker.recognize(canvas, {}, { text: true, blocks: true });
+    const words = [];
+    const collectWords = node => {
+      if (!node) return;
+      if (Array.isArray(node)) {
+        node.forEach(collectWords);
+        return;
+      }
+      if (Array.isArray(node.words)) {
+        words.push(...node.words);
+        return;
+      }
+      [node.blocks, node.paragraphs, node.lines, node.layoutBlocks].forEach(collectWords);
+    };
+    collectWords(result?.data);
+    const items = words.map(word => {
+      const text = String(word?.text || "").trim();
+      const bbox = word?.bbox || {};
+      const x = Number(bbox.x0) || 0;
+      const yTop = Number(bbox.y0) || 0;
+      const yBottom = Number(bbox.y1) || yTop + 1;
+      return {
+        str: text,
+        width: Math.max((Number(bbox.x1) || x + Math.max(1, text.length * 8)) - x, 1),
+        transform: [1, 0, 0, 1, x, canvas.height - (yTop + yBottom) / 2],
+      };
+    }).filter(item => item.str);
+    canvas.width = 1;
+    canvas.height = 1;
+    return items;
+  }
+
   async function loadPdfJs() {
     if (!pdfJsPromise) {
       const base = scriptBaseUrl();
@@ -364,7 +464,21 @@
         pages.push(content.items || []);
         page.cleanup();
       }
-      return { ...extractSurrenderValuesFromPages(pages, options), pageCount: pdf.numPages, filename };
+      const textResult = extractSurrenderValuesFromPages(pages, options);
+      if (textResult.reason !== "no_text") {
+        return { ...textResult, pageCount: pdf.numPages, filename, source: "text" };
+      }
+
+      options.onProgress?.({ status: "ocr", progress: 0 });
+      const ocrPages = [];
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+        const page = await pdf.getPage(pageNumber);
+        options.onProgress?.({ status: "recognizing", page: pageNumber, total: pdf.numPages, progress: pageNumber / pdf.numPages });
+        ocrPages.push(await recognizePageWithOcr(page, options));
+        page.cleanup();
+      }
+      const ocrResult = extractSurrenderValuesFromPages(ocrPages, options);
+      return { ...ocrResult, pageCount: pdf.numPages, filename, source: "ocr" };
     } catch (error) {
       if (error instanceof SurrenderPdfError) throw error;
       const name = String(error?.name || "");

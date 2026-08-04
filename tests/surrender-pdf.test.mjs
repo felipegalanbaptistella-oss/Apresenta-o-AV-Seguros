@@ -19,6 +19,7 @@ test("interpreta valores monetários brasileiros e americanos", () => {
   assert.equal(parseMoneyToken("1234.56"), 1234.56);
   assert.equal(parseMoneyToken("0,00"), 0);
   assert.equal(parseMoneyToken("(R$ 1.000,00)"), -1000);
+  assert.equal(parseMoneyToken("R$1.901.88683"), 1901886.83);
 });
 
 test("localiza a coluna de resgate sem confundir capital ou aporte", () => {
@@ -93,6 +94,25 @@ test("reconhece a coluna reserva financeira da Omint", () => {
   const result = extractSurrenderValuesFromPages([page], { currentAge: 54, maxValues: 20 });
   assert.equal(result.confidence, "high");
   assert.deepEqual(result.values, [0, 0, 88527.42, 179697.81, 304112.04]);
+});
+
+test("usa a idade quando o OCR confunde ou perde o tempo", () => {
+  const page = [
+    item("IDADE", 50, 720, 42),
+    item("TEMPO", 110, 720, 48),
+    item("RESERVA FINANCEIRA", 430, 720, 130),
+  ];
+  [1000, 2500, 4000, 5750, 7300].forEach((value, index) => {
+    const y = 690 - index * 25;
+    page.push(
+      item(String(64 + index), 55, y, 18),
+      item(index === 1 ? "nn" : String(10 + index), 115, y, 18),
+      item(`R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, 470, y, 80),
+    );
+  });
+  const result = extractSurrenderValuesFromPages([page], { currentAge: 54, maxValues: 20 });
+  assert.equal(result.confidence, "medium");
+  assert.deepEqual(result.values.slice(9), [1000, 2500, 4000, 5750, 7300]);
 });
 
 test("usa a idade para ordenar quando a tabela não possui coluna de ano", () => {

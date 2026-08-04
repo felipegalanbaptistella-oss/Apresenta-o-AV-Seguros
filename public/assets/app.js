@@ -118,6 +118,7 @@
 
   function pdfRecognitionMessage(reason){
     const messages={
+      ocr_unavailable:'Este PDF Ã© uma digitalizaÃ§Ã£o. O OCR local nÃ£o estÃ¡ disponÃ­vel; use a colagem manual ou conecte-se Ã  internet e tente novamente.',
       no_text:'Este PDF parece ser uma imagem ou digitalização. Use a colagem manual ou envie uma versão com texto pesquisável.',
       no_header:'Não encontrei um cabeçalho de resgate no PDF. Os valores atuais foram preservados.',
       ambiguous_surrender_columns:'O PDF possui mais de uma coluna de resgate e não há uma regra definida para escolher entre elas. Os valores atuais foram preservados.',
@@ -140,7 +141,10 @@
     setSurrenderPdfStatus('Lendo a cotação e procurando a coluna de resgate…','loading');
     try{
       if(!window.SurrenderPdf?.extractSurrenderValues)throw new Error('O leitor de PDF não foi carregado. Atualize a página e tente novamente.');
-      const result=await window.SurrenderPdf.extractSurrenderValues(file,{currentAge:initial.age,maxValues:80});
+      const result=await window.SurrenderPdf.extractSurrenderValues(file,{currentAge:initial.age,maxValues:80,onProgress:progress=>{
+        if(progress?.status==='ocr')setSurrenderPdfStatus('PDF sem texto: ativando OCR local. O arquivo continua somente neste navegador...','loading');
+        if(progress?.status==='recognizing')setSurrenderPdfStatus(`OCR local lendo a pagina ${progress.page} de ${progress.total}...`,'loading');
+      }});
       if(result.confidence!=='high'){
         setSurrenderPdfStatus(pdfRecognitionMessage(result.reason),'warning');
         return;
