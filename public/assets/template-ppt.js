@@ -223,7 +223,26 @@
     return pngBytes(canvas);
   }
 
-  function studyTag(ctx,d){rect(ctx,1180,42,355,48,'rgba(3,20,61,.92)',10,'#9d7624',2);fitText(ctx,`${d.studyLabel||'Estudo individual'} · ${d.name}`.toLocaleUpperCase('pt-BR'),1200,66,315,{size:16,min:11,color:GOLD,bold:true,align:'center'});}
+  function studyTag(ctx,d){
+    const x=1095,y=14,w=460,h=44,pad=18;
+    const label=`${d.studyLabel||'Estudo individual'} · ${d.name}`.toLocaleUpperCase('pt-BR');
+    // Alguns fundos do modelo ainda carregam o selo anterior como imagem.
+    // Limpa toda a faixa antes de redesenhar para evitar resíduos entre etapas.
+    rect(ctx,x-12,0,w+24,72,NAVY);
+    rect(ctx,x,y,w,h,'rgba(3,20,61,.92)',9,'#9d7624',2);
+    let size=14;
+    ctx.save();
+    do{
+      ctx.font=`700 ${size}px Arial`;
+      if(ctx.measureText(label).width<=w-pad*2)break;
+      size-=.5;
+    }while(size>8);
+    ctx.fillStyle=GOLD;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(label,x+w/2,y+h/2,w-pad*2);
+    ctx.restore();
+  }
   async function slide7(d){const {canvas,ctx}=await canvasFor(7);studyTag(ctx,d);return pngBytes(canvas);}
 
   function gauge(ctx,x,y,w,h,title,value){
