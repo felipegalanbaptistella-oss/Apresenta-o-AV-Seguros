@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Gestão de Riscos — Gerador de apresentação</title>
-  <link rel="stylesheet" href="assets/app.css?v=7" />
+  <link rel="stylesheet" href="assets/app.css?v=8" />
   <script src="assets/jszip.min.js"></script>
   <script src="assets/pptxgen.min.js"></script>
   <script src="assets/pdflib/pdf-lib.min.js"></script>
@@ -14,7 +14,7 @@
     <header class="page-header">
       <div class="brand"><span class="brand-symbol"><img src="assets/logo-alta-vista.png" alt="Alta Vista" /></span><span>GESTÃO DE RISCOS</span></div>
       <h1>Gerador de apresentação comercial</h1>
-      <p>Preencha os dados uma única vez. Os custos sucessórios, a cobertura recomendada e todos os gráficos são calculados automaticamente antes da geração do PowerPoint.</p>
+      <p>Preencha os dados de cada pessoa. Quando houver cônjuge, o site calcula dois estudos independentes e os reúne na mesma apresentação familiar.</p>
     </header>
 
     <div class="layout">
@@ -29,11 +29,11 @@
 
         <div id="spouseBlock" class="couple hidden">
           <p class="person-title">Dados do cônjuge</p>
-          <div class="grid"><div class="field"><label for="spouseName">Nome do cônjuge</label><input id="spouseName" placeholder="Ex.: Ana da Silva" /></div><div class="field"><label for="spouseInsurance">Seguro já contratado pelo cônjuge (R$)</label><input id="spouseInsurance" type="text" inputmode="decimal" data-money-input value="0,00" /></div></div>
+          <div class="grid"><div class="field"><label for="spouseName">Nome do cônjuge</label><input id="spouseName" placeholder="Ex.: Ana" autocomplete="given-name" /></div></div>
         </div>
 
-        <section class="section">
-          <h3>Patrimônio do cliente principal</h3>
+        <section class="section primary-study-section">
+          <div class="study-section-heading"><div><span>ESTUDO 1</span><h3>Diagnóstico individual do titular</h3></div><small>Os dados abaixo pertencem somente ao cliente principal.</small></div>
           <p class="small-note">A previdência privada aparece no patrimônio, mas é retirada da base do custo sucessório.</p>
           <div class="grid">
             <div class="field"><label for="xp">Investimentos na XP (R$)</label><input id="xp" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
@@ -46,13 +46,39 @@
         </section>
 
         <section id="spouseAssets" class="section couple hidden">
-          <h3>Patrimônio do cônjuge</h3>
+          <div class="study-section-heading"><div><span>ESTUDO 2</span><h3>Diagnóstico individual do cônjuge</h3></div><small>Patrimônio, seguro, prêmio e resgate separados do titular.</small></div>
           <div class="grid">
             <div class="field"><label for="spouseXp">Investimentos na XP (R$)</label><input id="spouseXp" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
             <div class="field"><label for="spouseOther">Outras instituições (R$)</label><input id="spouseOther" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
             <div class="field"><label for="spousePension">Previdência privada (R$)</label><input id="spousePension" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
             <div class="field"><label for="spouseRealEstate">Imóveis e ativos físicos (R$)</label><input id="spouseRealEstate" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
             <div class="field"><label for="spouseHoldings">Participações societárias / holdings (R$)</label><input id="spouseHoldings" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+            <div class="field"><label for="spouseInsurance">Seguro de vida já contratado (R$)</label><input id="spouseInsurance" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+          </div>
+          <div class="grid study-diagnosis-grid">
+            <div class="field"><label for="spouseSuccessionLiabilityOutput">Passivo sucessório estimado</label><input id="spouseSuccessionLiabilityOutput" type="text" readonly value="R$ 0,00" /></div>
+            <div class="field"><label for="spouseRecommendedInsurance">Cobertura total recomendada</label><input id="spouseRecommendedInsurance" type="text" readonly value="R$ 0,00" /></div>
+            <div class="field"><label for="spouseCoverageGap">Capital adicional a contratar</label><input id="spouseCoverageGap" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+          </div>
+          <h4 class="subsection-title">Dados da cotação do cônjuge</h4>
+          <div class="grid three">
+            <div class="field"><label for="spouseAge">Idade atual</label><input id="spouseAge" type="number" min="18" max="100" step="1" placeholder="Informe a idade" /></div>
+            <div class="field"><label for="spouseAnnualPremium">Prêmio anual da apólice (R$)</label><input id="spouseAnnualPremium" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+            <div class="field"><label for="spouseIpca">Reajuste projetado (% a.a.)</label><input id="spouseIpca" type="text" inputmode="decimal" data-decimal-input value="5,00" /></div>
+            <div class="field"><label for="spouseProjectionYears">Horizonte visível (anos)</label><input id="spouseProjectionYears" type="number" min="12" max="40" step="1" value="20" /></div>
+            <div class="field"><label for="spouseAnnualReturn">Rentabilidade atuarial (% a.a.)</label><input id="spouseAnnualReturn" type="text" inputmode="decimal" data-decimal-input value="3,00" /></div>
+          </div>
+          <div class="surrender-block spouse-surrender-block">
+            <div class="surrender-heading"><div><strong>Valores de resgate da cotação do cônjuge</strong><span>Esta tabela alimenta somente o estudo do cônjuge.</span></div><span class="surrender-bulk-badge">ESTUDO SEPARADO</span></div>
+            <div id="spouseSurrenderPdfDrop" class="surrender-pdf-import">
+              <div class="surrender-pdf-icon" aria-hidden="true">PDF</div>
+              <div class="surrender-pdf-copy"><strong>Importar cotação do cônjuge</strong><span>Selecione ou arraste o PDF para preencher a coluna individual de resgate.</span><small>O documento é processado somente neste navegador.</small></div>
+              <div class="surrender-pdf-actions"><button id="spouseSurrenderPdfButton" class="surrender-pdf-button" type="button">Selecionar PDF</button><input id="spouseSurrenderPdfInput" type="file" accept="application/pdf,.pdf" hidden tabindex="-1" aria-hidden="true" /><span id="spouseSurrenderPdfFilename" class="surrender-pdf-filename">Nenhum arquivo selecionado</span></div>
+            </div>
+            <div id="spouseSurrenderPdfStatus" class="surrender-pdf-status" role="status" aria-live="polite">A leitura e a colagem manual afetam apenas o estudo do cônjuge.</div>
+            <div class="surrender-paste-guide"><strong>Colagem em massa</strong><span>Cole a coluna do Excel na primeira célula; os valores serão distribuídos pelas linhas.</span></div>
+            <div class="surrender-editor"><div class="surrender-editor-head"><span>Ano</span><span>Idade</span><span>Valor de resgate (R$)</span></div><div id="spouseSurrenderInputs" class="surrender-editor-body"></div></div>
+            <div id="spouseSurrenderPasteStatus" class="surrender-paste-status" role="status" aria-live="polite">Você ainda pode editar qualquer célula individualmente.</div>
           </div>
         </section>
 
@@ -103,6 +129,8 @@
 
       <aside class="card summary">
         <h2>Resumo calculado</h2>
+        <div id="summaryStudySwitch" class="study-switch couple hidden"><button type="button" class="active" data-study="primary">Titular</button><button type="button" data-study="spouse">Cônjuge</button></div>
+        <p id="summaryStudyName" class="summary-study-name">Estudo individual do titular</p>
         <div class="metric"><span>Patrimônio total</span><strong id="sumTotal">R$ 0,00</strong></div>
         <div class="metric"><span>Previdência fora do inventário</span><strong id="sumPension">R$ 0,00</strong></div>
         <div class="metric danger"><span>Custo sucessório estimado</span><strong id="sumLiability">R$ 0,00</strong></div>
@@ -111,15 +139,15 @@
         <div class="metric total"><span>Capital adicional WL10</span><strong id="sumGap">R$ 0,00</strong></div>
         <div class="payback-callout"><span>Tempo estimado para pagar o prêmio somente com rendimentos</span><strong id="paybackSummary">—</strong></div>
         <div class="consultant-summary"><span>Corretor responsável</span><strong id="consultantSummaryName">Fabio Kenji Hassui</strong><a id="consultantSummaryPhone" href="tel:+5511992700538">(11) 99270-0538</a><a id="consultantSummaryEmail" href="mailto:fabio.hassui@altavistainvest.com.br">fabio.hassui@altavistainvest.com.br</a></div>
-        <div class="note">A comparação usa a mesma fotografia patrimonial nos dois cenários. O que muda é a entrada da cobertura de vida, deixando visível o efeito sobre o valor transmitido à família.</div>
+        <div class="note">Cada estudo usa somente o patrimônio, o seguro, o prêmio e a cotação da pessoa selecionada. Os dados do casal não são somados nos gráficos individuais.</div>
       </aside>
     </div>
 
     <section class="preview-section" aria-labelledby="previewTitle">
-      <div class="preview-heading"><div><span class="eyebrow">PRÉVIA EM TEMPO REAL</span><h2 id="previewTitle">Os gráficos que irão para a apresentação</h2></div><p>As cinco telas abaixo mudam junto com os campos de entrada.</p></div>
+      <div class="preview-heading"><div><span class="eyebrow">PRÉVIA EM TEMPO REAL</span><h2 id="previewTitle">Os gráficos que irão para a apresentação</h2></div><div><p>Visualize separadamente o estudo de cada pessoa.</p><div id="previewStudySwitch" class="study-switch couple hidden"><button type="button" class="active" data-study="primary">Titular</button><button type="button" data-study="spouse">Cônjuge</button></div></div></div>
 
       <article class="preview-slide" id="previewCosts">
-        <div class="slide-brand">GESTÃO DE RISCOS</div><h3>CUSTOS DA SUCESSÃO</h3>
+        <div class="slide-brand">GESTÃO DE RISCOS</div><span class="study-person-label" data-study-label>ESTUDO INDIVIDUAL</span><h3>CUSTOS DA SUCESSÃO</h3>
         <div class="cost-layout">
           <div class="slide-panel asset-map"><h4>MAPEAMENTO DE ATIVOS INVENTARIÁVEIS</h4><div id="assetRows"></div><div class="asset-total"><span>TOTAL INVENTARIÁVEL</span><strong id="previewInventoriable">R$ 0,00</strong></div></div>
           <div class="cost-right"><div class="succession-box"><div><h4>ENCARGOS DA SUCESSÃO</h4><p>ITCMD | Honorários | Custas processuais | Cartório</p></div><strong>15%</strong><div class="erosion"><span>EROSÃO PATRIMONIAL ESTIMADA</span><b id="previewLiability">-R$ 0,00</b></div></div><div class="transmitted"><span>PATRIMÔNIO LÍQUIDO TRANSMITIDO</span><strong id="previewNet">R$ 0,00</strong><small>A família receberá menos patrimônio sem liquidez planejada</small></div></div>
@@ -127,12 +155,12 @@
       </article>
 
       <article class="preview-slide" id="previewWithout">
-        <div class="slide-brand">GESTÃO DE RISCOS</div><h3>PATRIMÔNIO ATUAL — SEM SEGURO</h3>
+        <div class="slide-brand">GESTÃO DE RISCOS</div><span class="study-person-label" data-study-label>ESTUDO INDIVIDUAL</span><h3>PATRIMÔNIO ATUAL — SEM SEGURO</h3>
         <div class="wealth-layout"><div><div class="slide-panel donut-panel"><h4>ATIVOS FINANCEIROS</h4><div class="donut-row"><div class="donut" id="donutWithout"><span id="donutWithoutCenter">0%</span></div><div class="chart-legend" id="legendWithout"></div></div></div><div class="value-list"><div><span>Ativos financeiros</span><strong id="withoutFinancial">R$ 0,00</strong></div><div><span>Patrimônio imobilizado</span><strong id="withoutIlliquid">R$ 0,00</strong></div></div></div><div class="slide-panel wealth-panel"><h4>PATRIMÔNIO TOTAL</h4><div class="wealth-bar-wrap"><div class="wealth-bar"><div class="wealth-financial" id="withoutBarFinancial"></div><div class="wealth-illiquid" id="withoutBarIlliquid"></div><div class="wealth-cost" id="withoutBarCost"></div></div><div class="bar-labels"><span class="red">■ PASSIVO SUCESSÓRIO</span><span>■ PATRIMÔNIO IMOBILIZADO</span><span class="gold">■ ATIVOS FINANCEIROS</span></div></div></div></div>
       </article>
 
       <article class="preview-slide" id="previewWith">
-        <div class="slide-brand">GESTÃO DE RISCOS</div><h3>PATRIMÔNIO <em>COM SEGURO DE VIDA RESGATÁVEL</em></h3>
+        <div class="slide-brand">GESTÃO DE RISCOS</div><span class="study-person-label" data-study-label>ESTUDO INDIVIDUAL</span><h3>PATRIMÔNIO <em>COM SEGURO DE VIDA RESGATÁVEL</em></h3>
         <div class="wealth-layout"><div><div class="slide-panel donut-panel"><h4>ATIVOS E PROTEÇÃO</h4><div class="donut-row"><div class="donut" id="donutWith"><span id="donutWithCenter">0%</span></div><div class="chart-legend" id="legendWith"></div></div></div><div class="value-list green-list"><div><span>Seguro de vida</span><strong id="withInsurance">R$ 0,00</strong></div><div><span>Patrimônio transmitido</span><strong id="withTransmitted">R$ 0,00</strong></div></div></div><div class="slide-panel wealth-panel"><h4>PATRIMÔNIO PROTEGIDO</h4><div class="wealth-bar-wrap"><div class="wealth-bar protected"><div class="wealth-insurance" id="withBarInsurance"></div><div class="wealth-financial" id="withBarFinancial"></div><div class="wealth-illiquid" id="withBarIlliquid"></div><div class="wealth-cost covered" id="withBarCost"></div></div><div class="bar-labels"><span class="green">■ SEGURO DE VIDA</span><span>■ PATRIMÔNIO IMOBILIZADO</span><span class="gold">■ ATIVOS FINANCEIROS</span><span class="red">■ PASSIVO SUCESSÓRIO</span></div></div></div></div>
       </article>
 
@@ -143,7 +171,7 @@
       </article>
 
       <article class="preview-slide" id="previewPayback">
-        <div class="slide-brand">GESTÃO DE RISCOS</div><h3>COMO <em>DIVERSIFICAR COM SEUS RENDIMENTOS</em></h3>
+        <div class="slide-brand">GESTÃO DE RISCOS</div><span class="study-person-label" data-study-label>ESTUDO INDIVIDUAL</span><h3>COMO <em>DIVERSIFICAR COM SEUS RENDIMENTOS</em></h3>
         <div class="payback-layout">
           <div class="slide-panel payback-main">
             <div class="payback-chart-column"><div class="chart-head"><span>CENÁRIO DE PAYBACK</span><strong><small>ATIVOS FINANCEIROS</small><b id="paybackAssets">R$ 0,00</b></strong></div><canvas id="paybackChart" aria-label="Evolução dos rendimentos mensais comparada à alocação anual"></canvas></div>
@@ -156,8 +184,9 @@
 
     <footer>Material informativo — os valores projetados dependem das premissas preenchidas e da cotação da seguradora.</footer>
   </main>
-  <script src="assets/template-ppt.js?v=13"></script>
+  <script src="assets/template-ppt.js?v=14"></script>
   <script src="assets/surrender-pdf.js"></script>
-  <script src="assets/app.js?v=6"></script>
+  <script src="assets/study-model.js?v=1"></script>
+  <script src="assets/app.js?v=7"></script>
 </body>
 </html>

@@ -36,6 +36,12 @@ test("keeps the form and export contract wired", async () => {
   assert.match(layout, /generateMetadata\(\): Promise<Metadata>/);
   assert.match(legacy, /id="clientFirstName"/);
   assert.match(legacy, /id="clientLastName"/);
+  assert.match(legacy, /id="spouseCoverageGap"[^>]*data-money-input/);
+  assert.match(legacy, /id="spouseAnnualPremium"[^>]*data-money-input/);
+  assert.match(legacy, /id="spouseSurrenderInputs"/);
+  assert.match(legacy, /src="assets\/study-model\.js\?v=1"/);
+  assert.match(legacy, /data-study="primary"/);
+  assert.match(legacy, /data-study="spouse"/);
   assert.match(legacy, /id="coverageGap"[^>]*data-money-input/);
   assert.match(legacy, /id="generatePptBtn"/);
   assert.match(legacy, /id="generatePdfBtn"/);
@@ -45,7 +51,11 @@ test("keeps the form and export contract wired", async () => {
   assert.match(legacy, /id="paybackMonths10"/);
   assert.match(legacy, /id="gaugeCurrent"/);
   assert.match(legacy, /id="gaugeProposed"/);
-  assert.match(app, /const coverageGap = Math\.max\(0, num\('coverageGap'\)\)/);
+  assert.match(app, /const surrenderValuesByStudy = \{primary:\[\],spouse:\[\]\}/);
+  assert.match(app, /function personData\(role='primary'\)/);
+  assert.match(app, /window\.RiskStudy\.calculatePerson/);
+  assert.match(app, /function exportData\(\)/);
+  assert.match(app, /studies=hasSpouse\?\[primary,personData\('spouse'\)\]:\[primary\]/);
   assert.match(app, /const paybackAtRate=/);
   assert.match(app, /currentAllocation=d\.total\?d\.annualPremium\/d\.total\*100:0/);
   assert.match(app, /proposedAllocation=d\.withoutInsurance\?d\.annualPremium\/d\.withoutInsurance\*100:0/);
@@ -61,7 +71,9 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /text\(ctx,'Ótimo',[\s\S]*?color:WHITE/);
   assert.match(template, /text\(ctx,'Recomendado',[\s\S]*?color:WHITE/);
   assert.match(template, /text\(ctx,'Alta exposição',[\s\S]*?color:WHITE/);
-  assert.match(template, /rendered\.splice\(1,0,\[2,await staticSlide\(2\)\]\)/);
+  assert.match(template, /const studySlideNumbers=\[6,7,8,9,10,11,12,15,16,13\]/);
+  assert.match(template, /async function cloneStudySlides\(zip\)/);
+  assert.match(template, /if\(studies\.length>1\)\{const mapping=await cloneStudySlides\(zip\)/);
   assert.match(template, /effectOnly=new Set\(\[11,12,15\]\)/);
   assert.match(template, /\[16,\(\)=>slide11\(d,3\)\]/);
   assert.match(template, /if\(stage>=3\)\{rect\(ctx,48,footerY/);
@@ -74,8 +86,8 @@ test("keeps the form and export contract wired", async () => {
   assert.doesNotMatch(template, /await preparePlanningStages/);
   assert.doesNotMatch(template, /\[2,\(\)=>planningStage0\(\)\]/);
   assert.doesNotMatch(template, /\[17,\(\)=>staticSlide\(2\)\]/);
-  assert.doesNotMatch(template, /\[5,\(\)=>staticSlide\(5\)\]/);
-  assert.match(template, /rendered\.splice\(4,0,\[5,await staticSlide\(5\)\]\)/);
+  assert.match(template, /\[5,await staticSlide\(5\)\]/);
+  assert.match(template, /for\(const study of studies\)rendered\.push\(\.\.\.await renderStudySlides\(study\)\)/);
   assert.match(template, /arrowCenters=\[405,645,876\]/);
   assert.match(template, /for\(let i=11;i<Math\.min\(18,rows\.length\);i\+\+\)/);
   assert.match(template, /const cloneBase=\(await read\('ppt\/slides\/slide11\.xml'\)\).*?<p:timing/);

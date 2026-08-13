@@ -22,12 +22,13 @@
     moises:{name:'Moisés Santos',phone:'(51) 99644-5044',phoneHref:'+5551996445044',email:'moises.santos@altavistainvest.com.br'}
   };
   let mode = 'single';
-  let surrenderValues = [];
-  let surrenderPdfImportBusy = false;
+  let activeStudy = 'primary';
+  const surrenderValuesByStudy = {primary:[],spouse:[]};
+  const surrenderPdfImportBusy = {primary:false,spouse:false};
 
-  const moneyInputIds = ['xp','otherInvestments','privatePension','realEstate','holdings','currentInsurance','spouseXp','spouseOther','spousePension','spouseRealEstate','spouseHoldings','spouseInsurance','coverageGap','annualPremium'];
-  const decimalInputIds = ['ipca','annualReturn'];
-  const inputIds = ['clientFirstName','clientLastName','xp','otherInvestments','privatePension','realEstate','holdings','currentInsurance','spouseXp','spouseOther','spousePension','spouseRealEstate','spouseHoldings','spouseInsurance','coverageGap','clientAge','annualPremium','ipca','projectionYears','annualReturn','consultant'];
+  const moneyInputIds = ['xp','otherInvestments','privatePension','realEstate','holdings','currentInsurance','spouseXp','spouseOther','spousePension','spouseRealEstate','spouseHoldings','spouseInsurance','coverageGap','annualPremium','spouseCoverageGap','spouseAnnualPremium'];
+  const decimalInputIds = ['ipca','annualReturn','spouseIpca','spouseAnnualReturn'];
+  const inputIds = ['clientFirstName','clientLastName','spouseName','xp','otherInvestments','privatePension','realEstate','holdings','currentInsurance','spouseXp','spouseOther','spousePension','spouseRealEstate','spouseHoldings','spouseInsurance','coverageGap','clientAge','annualPremium','ipca','projectionYears','annualReturn','spouseCoverageGap','spouseAge','spouseAnnualPremium','spouseIpca','spouseProjectionYears','spouseAnnualReturn','consultant'];
 
   function formatMoneyWhileTyping(input){
     const raw=input.value.replace(/\./g,'').replace(/[^\d,]/g,'');
@@ -37,43 +38,33 @@
   }
   function finishMoneyFormat(input){input.value=parseNumericValue(input.value).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
-  function data() {
-    const spouse = mode === 'couple';
-    const xp = num('xp') + (spouse ? num('spouseXp') : 0);
-    const other = num('otherInvestments') + (spouse ? num('spouseOther') : 0);
-    const pension = num('privatePension') + (spouse ? num('spousePension') : 0);
-    const realEstate = num('realEstate') + (spouse ? num('spouseRealEstate') : 0);
-    const holdings = num('holdings') + (spouse ? num('spouseHoldings') : 0);
-    const currentInsurance = num('currentInsurance') + (spouse ? num('spouseInsurance') : 0);
-    const financial = xp + other + pension;
-    const illiquid = realEstate + holdings;
-    const total = financial + illiquid;
-    const inventoriable = Math.max(0, total - pension);
-    const liability = inventoriable * 0.15;
-    const recommended = liability;
-    const coverageGap = Math.max(0, num('coverageGap'));
-    const coverageAfter = currentInsurance + coverageGap;
-    const withoutInsurance = Math.max(0, total - liability);
-    const withInsurance = Math.max(0, total - liability + coverageAfter);
-    const annualPremium = num('annualPremium');
-    const annualReturn = num('annualReturn') / 100;
-    const monthlyReturn = annualReturn / 12;
-    const paybackRaw = financial > 0 && monthlyReturn > 0 && annualPremium > 0 ? annualPremium / (financial * monthlyReturn) : 0;
-    const paybackMonths = paybackRaw ? Math.ceil(paybackRaw) : 0;
+  function personData(role='primary') {
+    const isSpouse = role === 'spouse';
+    const ids=isSpouse?{xp:'spouseXp',other:'spouseOther',pension:'spousePension',realEstate:'spouseRealEstate',holdings:'spouseHoldings',insurance:'spouseInsurance',coverage:'spouseCoverageGap',age:'spouseAge',premium:'spouseAnnualPremium',ipca:'spouseIpca',years:'spouseProjectionYears',annualReturn:'spouseAnnualReturn'}:{xp:'xp',other:'otherInvestments',pension:'privatePension',realEstate:'realEstate',holdings:'holdings',insurance:'currentInsurance',coverage:'coverageGap',age:'clientAge',premium:'annualPremium',ipca:'ipca',years:'projectionYears',annualReturn:'annualReturn'};
+    if(!window.RiskStudy?.calculatePerson)throw new Error('O módulo de cálculo dos estudos não foi carregado.');
+    const calculated=window.RiskStudy.calculatePerson({xp:num(ids.xp),other:num(ids.other),pension:num(ids.pension),realEstate:num(ids.realEstate),holdings:num(ids.holdings),currentInsurance:num(ids.insurance),coverageGap:num(ids.coverage),annualPremium:num(ids.premium),annualReturn:num(ids.annualReturn)/100});
     const consultantData = CONSULTANTS[$('consultant').value] || CONSULTANTS.fabio;
-    const ageValue = num('clientAge');
+    const ageValue = num(ids.age);
     const age = ageValue ? clamp(ageValue, 18, 100) : null;
-    const projectionYears = clamp(num('projectionYears') || 20, 12, 40);
-    const firstName = $('clientFirstName').value.trim();
+    const projectionYears = clamp(num(ids.years) || 20, 12, 40);
+    const primaryFirstName = $('clientFirstName').value.trim();
     const lastName = $('clientLastName').value.trim();
-    const name = [firstName,lastName].filter(Boolean).join(' ') || 'Cliente';
-    const familyLabel = `Família ${lastName || firstName || 'Cliente'}`;
+    const spouseGivenName = $('spouseName').value.trim();
+    const firstName = isSpouse ? spouseGivenName : primaryFirstName;
+    const alreadyHasSurname=lastName&&firstName.toLocaleLowerCase('pt-BR').endsWith(lastName.toLocaleLowerCase('pt-BR'));
+    const name = isSpouse ? ([firstName,alreadyHasSurname?'':lastName].filter(Boolean).join(' ') || 'Cônjuge') : ([firstName,lastName].filter(Boolean).join(' ') || 'Cliente');
+    const familyLabel = `Família ${lastName || primaryFirstName || 'Cliente'}`;
     return {
-      firstName, lastName, name, familyLabel, spouseName: $('spouseName').value || 'Cônjuge', consultant: consultantData.name, consultantData, spouse,
-      xp, other, pension, realEstate, holdings, financial, illiquid, total, inventoriable, liability, recommended, currentInsurance, coverageGap, coverageAfter,
-      withoutInsurance, withInsurance, annualPremium, annualReturn, monthlyReturn, paybackRaw, paybackMonths,
-      age, ipca: num('ipca') || 5, projectionYears, surrenderValues:Array.from({length:projectionYears},(_,i)=>Number(surrenderValues[i])||0)
+      firstName, lastName, name, familyLabel, spouseName: spouseGivenName || 'Cônjuge', consultant: consultantData.name, consultantData, spouse:false, role, studyLabel:isSpouse?'Estudo individual do cônjuge':'Estudo individual do titular',
+      ...calculated,
+      age, ipca: num(ids.ipca) || 5, projectionYears, surrenderValues:Array.from({length:projectionYears},(_,i)=>Number(surrenderValuesByStudy[role][i])||0)
     };
+  }
+
+  function data(role=activeStudy){return personData(role);}
+  function exportData(){
+    const primary=personData('primary'),hasSpouse=mode==='couple',studies=hasSpouse?[primary,personData('spouse')]:[primary];
+    return {...primary,spouse:hasSpouse,spouseName:studies[1]?.name||'Cônjuge',studies};
   }
 
   function wlProjection(d) {
@@ -93,24 +84,25 @@
     };});
   }
 
-  function syncSurrenderInputs(d) {
-    const container=$('surrenderInputs'); if(!container) return;
+  const surrenderUi=role=>role==='spouse'?{inputs:'spouseSurrenderInputs',pdfStatus:'spouseSurrenderPdfStatus',pdfButton:'spouseSurrenderPdfButton',pdfDrop:'spouseSurrenderPdfDrop',pdfFilename:'spouseSurrenderPdfFilename',pdfInput:'spouseSurrenderPdfInput',pasteStatus:'spouseSurrenderPasteStatus'}:{inputs:'surrenderInputs',pdfStatus:'surrenderPdfStatus',pdfButton:'surrenderPdfButton',pdfDrop:'surrenderPdfDrop',pdfFilename:'surrenderPdfFilename',pdfInput:'surrenderPdfInput',pasteStatus:'surrenderPasteStatus'};
+  function syncSurrenderInputs(d,role='primary') {
+    const container=$(surrenderUi(role).inputs); if(!container) return;
     const signature=`${d.age??'empty'}:${d.projectionYears}`;
     if(container.dataset.signature===signature) return;
     container.dataset.signature=signature;
-    container.innerHTML=Array.from({length:d.projectionYears},(_,i)=>{const age=d.age===null?'—':`${d.age+i} anos`,value=(Number(surrenderValues[i])||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});return `<label class="surrender-row"><strong>${i+1}º</strong><span>${age}</span><input type="text" inputmode="decimal" data-money-input data-surrender-index="${i}" value="${value}" aria-label="Valor de resgate no ${i+1}º ano, ${d.age===null?'idade a preencher':`idade ${d.age+i}`}" /></label>`;}).join('');
+    container.innerHTML=Array.from({length:d.projectionYears},(_,i)=>{const age=d.age===null?'—':`${d.age+i} anos`,value=(Number(surrenderValuesByStudy[role][i])||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});return `<label class="surrender-row"><strong>${i+1}º</strong><span>${age}</span><input type="text" inputmode="decimal" data-money-input data-study="${role}" data-surrender-index="${i}" value="${value}" aria-label="Valor de resgate no ${i+1}º ano, ${d.age===null?'idade a preencher':`idade ${d.age+i}`}" /></label>`;}).join('');
   }
 
-  function refreshSurrenderInputs(){
-    const container=$('surrenderInputs');
+  function refreshSurrenderInputs(role='primary'){
+    const container=$(surrenderUi(role).inputs);
     const scrollTop=container?.scrollTop||0;
     if(container)delete container.dataset.signature;
     render();
     if(container)container.scrollTop=scrollTop;
   }
 
-  function setSurrenderPdfStatus(message,state=''){
-    const status=$('surrenderPdfStatus');
+  function setSurrenderPdfStatus(message,state='',role='primary'){
+    const status=$(surrenderUi(role).pdfStatus);
     if(!status)return;
     status.className=`surrender-pdf-status ${state}`.trim();
     status.textContent=message;
@@ -128,47 +120,47 @@
     return messages[reason]||'Não consegui reconhecer a coluna de resgate com segurança. Os valores atuais foram preservados.';
   }
 
-  async function importSurrenderPdf(file){
-    const button=$('surrenderPdfButton'),drop=$('surrenderPdfDrop'),filename=$('surrenderPdfFilename'),input=$('surrenderPdfInput');
-    if(surrenderPdfImportBusy){setSurrenderPdfStatus('Já existe uma cotação sendo processada. Aguarde a conclusão.','warning');return;}
-    surrenderPdfImportBusy=true;
-    const initial=data(),horizon=initial.projectionYears,previousValues=[...surrenderValues],previousSignature=JSON.stringify(previousValues);
+  async function importSurrenderPdf(file,role='primary'){
+    const ui=surrenderUi(role),button=$(ui.pdfButton),drop=$(ui.pdfDrop),filename=$(ui.pdfFilename),input=$(ui.pdfInput);
+    if(surrenderPdfImportBusy[role]){setSurrenderPdfStatus('Já existe uma cotação sendo processada. Aguarde a conclusão.','warning',role);return;}
+    surrenderPdfImportBusy[role]=true;
+    const initial=data(role),horizon=initial.projectionYears,previousValues=[...surrenderValuesByStudy[role]],previousSignature=JSON.stringify(previousValues);
     let mutationApplied=false;
     if(filename)filename.textContent=file?.name||'Nenhum arquivo selecionado';
     if(button){button.disabled=true;button.textContent='Lendo PDF…';}
     drop?.classList.add('loading');
-    setSurrenderPdfStatus('Lendo a cotação e procurando a coluna de resgate…','loading');
+    setSurrenderPdfStatus('Lendo a cotação e procurando a coluna de resgate…','loading',role);
     try{
       if(!window.SurrenderPdf?.extractSurrenderValues)throw new Error('O leitor de PDF não foi carregado. Atualize a página e tente novamente.');
       const result=await window.SurrenderPdf.extractSurrenderValues(file,{currentAge:initial.age,maxValues:80});
       if(result.confidence!=='high'){
-        setSurrenderPdfStatus(pdfRecognitionMessage(result.reason),'warning');
+        setSurrenderPdfStatus(pdfRecognitionMessage(result.reason),'warning',role);
         return;
       }
-      const current=data();
-      if(current.age!==initial.age||current.projectionYears!==horizon||JSON.stringify(surrenderValues)!==previousSignature){
-        setSurrenderPdfStatus('A idade, o horizonte ou a tabela foram alterados durante a leitura. O PDF não foi aplicado; selecione-o novamente.','warning');
+      const current=data(role);
+      if(current.age!==initial.age||current.projectionYears!==horizon||JSON.stringify(surrenderValuesByStudy[role])!==previousSignature){
+        setSurrenderPdfStatus('A idade, o horizonte ou a tabela foram alterados durante a leitura. O PDF não foi aplicado; selecione-o novamente.','warning',role);
         return;
       }
       const presentIndices=(result.presentIndices||result.values.map((_,index)=>index)).filter(Number.isInteger);
       const nextValues=Array.from({length:horizon},(_,index)=>Number(previousValues[index])||0);
       presentIndices.forEach(index=>{if(index>=0&&index<horizon)nextValues[index]=Number(result.values[index])||0;});
-      surrenderValues=nextValues;
+      surrenderValuesByStudy[role]=nextValues;
       mutationApplied=true;
-      refreshSurrenderInputs();
+      refreshSurrenderInputs(role);
       const imported=presentIndices.filter(index=>index>=0&&index<horizon).length,ignored=presentIndices.filter(index=>index>=horizon).length,missing=Math.max(0,horizon-imported);
       const details=[`${imported} ${imported===1?'valor importado':'valores importados'} de ${result.pageCount} ${result.pageCount===1?'página':'páginas'}`];
       if(ignored)details.push(`${ignored} ${ignored===1?'linha excedeu':'linhas excederam'} o horizonte e ${ignored===1?'foi ignorada':'foram ignoradas'}`);
       if(missing)details.push(`${missing} ${missing===1?'linha não identificada permaneceu':'linhas não identificadas permaneceram'} como estava${missing===1?'':'m'}`);
       details.push('Revise os valores antes de gerar a apresentação');
-      setSurrenderPdfStatus(`${details.join('. ')}.`,'success');
+      setSurrenderPdfStatus(`${details.join('. ')}.`,'success',role);
       if(button)button.textContent='Selecionar outro PDF';
     }catch(error){
-      if(mutationApplied){surrenderValues=previousValues;try{refreshSurrenderInputs();}catch(_){/* sem ação */}}
-      setSurrenderPdfStatus(error?.message||'Não foi possível ler esta cotação. Os valores atuais foram preservados.','error');
+      if(mutationApplied){surrenderValuesByStudy[role]=previousValues;try{refreshSurrenderInputs(role);}catch(_){/* sem ação */}}
+      setSurrenderPdfStatus(error?.message||'Não foi possível ler esta cotação. Os valores atuais foram preservados.','error',role);
       if(filename)filename.textContent='Nenhum arquivo importado';
     }finally{
-      surrenderPdfImportBusy=false;
+      surrenderPdfImportBusy[role]=false;
       drop?.classList.remove('loading');
       if(button){button.disabled=false;if(button.textContent==='Lendo PDF…')button.textContent='Selecionar PDF';}
       if(input)input.value='';
@@ -185,11 +177,11 @@
     });
     if(!values.length)return;
     event.preventDefault();
-    const start=Number(input.dataset.surrenderIndex)||0,limit=data().projectionYears;
+    const role=input.dataset.study==='spouse'?'spouse':'primary',start=Number(input.dataset.surrenderIndex)||0,limit=data(role).projectionYears;
     const applied=values.slice(0,Math.max(0,limit-start));
-    applied.forEach((value,offset)=>{surrenderValues[start+offset]=value;const field=document.querySelector(`[data-surrender-index="${start+offset}"]`);if(field)field.value=value.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});});
+    applied.forEach((value,offset)=>{surrenderValuesByStudy[role][start+offset]=value;const field=document.querySelector(`[data-study="${role}"][data-surrender-index="${start+offset}"]`);if(field)field.value=value.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});});
     render();
-    const status=$('surrenderPasteStatus');
+    const status=$(surrenderUi(role).pasteStatus);
     if(status){const ignored=values.length-applied.length;status.className=`surrender-paste-status ${ignored?'warning':'success'}`;status.textContent=`${applied.length} ${applied.length===1?'valor colado':'valores colados'} a partir do ${start+1}º ano${ignored?`. ${ignored} excederam o horizonte e foram ignorados.`:'.'}`;}
   }
 
@@ -282,10 +274,14 @@
   function setWebGauge(id,value){const gauge=$(id),safe=clamp(Number(value)||0,0,10);if(!gauge)return;gauge.style.setProperty('--gauge-value',safe);gauge.querySelector('.gauge-arc')?.style.setProperty('--needle',`${-90+safe*18}deg`);setText(`${id}Value`,`${(Number(value)||0).toLocaleString('pt-BR',{maximumFractionDigits:1})}%`);}
 
   function render() {
-    const d=data();
-    syncSurrenderInputs(d);
+    const primary=personData('primary'),spouse=personData('spouse'),d=activeStudy==='spouse'&&mode==='couple'?spouse:primary;
+    syncSurrenderInputs(primary,'primary');if(mode==='couple')syncSurrenderInputs(spouse,'spouse');
     setText('sumTotal',money(d.total)); setText('sumPension',money(d.pension)); setText('sumLiability',money(d.liability)); setText('sumWithoutInsurance',money(d.withoutInsurance)); setText('sumWithInsurance',money(d.withInsurance)); setText('sumGap',money(d.coverageGap));
-    $('successionLiabilityOutput').value=money(d.liability); $('recommendedInsurance').value=money(d.recommended);
+    $('successionLiabilityOutput').value=money(primary.liability); $('recommendedInsurance').value=money(primary.recommended);
+    if($('spouseSuccessionLiabilityOutput'))$('spouseSuccessionLiabilityOutput').value=money(spouse.liability);if($('spouseRecommendedInsurance'))$('spouseRecommendedInsurance').value=money(spouse.recommended);
+    setText('summaryStudyName',`${d.studyLabel} · ${d.name}`);
+    document.querySelectorAll('[data-study="primary"]').forEach(button=>button.textContent=primary.firstName||'Titular');document.querySelectorAll('[data-study="spouse"]').forEach(button=>button.textContent=spouse.firstName||'Cônjuge');
+    document.querySelectorAll('[data-study-label]').forEach(label=>label.textContent=`${d.studyLabel.toLocaleUpperCase('pt-BR')} · ${d.name.toLocaleUpperCase('pt-BR')}`);
     setText('paybackSummary',d.paybackMonths?`${d.paybackMonths} ${d.paybackMonths===1?'mês':'meses'}`:'Informe o prêmio');
 
     $('assetRows').innerHTML=[['Investimentos na XP',d.xp],['Outras instituições',d.other],['Imóveis e ativos físicos',d.realEstate],['Participações societárias / holdings',d.holdings],['Previdência privada (fora da base)',-d.pension]].map((a,i)=>`<div class="asset-row ${i===4?'pension':''}"><span>${a[0]}</span><strong>${a[1]<0?'-':''}${money(Math.abs(a[1]))}</strong></div>`).join('');
@@ -309,7 +305,7 @@
 
     const projection=wlProjection(d);
     setText('projectionIpca',`IPCA: ${d.ipca.toLocaleString('pt-BR')}% a.a.`);
-    setText('projectionClientName',(d.spouse?`${d.name} e ${d.spouseName}`:d.name).toLocaleUpperCase('pt-BR'));
+    setText('projectionClientName',d.name.toLocaleUpperCase('pt-BR'));
     setText('capitalStart',money(d.coverageGap));setText('premiumTenth',money(projection[9]?.premium||0));
     const wlTableBody=$('wlTableBody');
     if(wlTableBody) wlTableBody.innerHTML=projection.map((row,index)=>`<tr class="${index===0||index===9||index===projection.length-1?'highlight ':''}${index===9?'payoff ':''}${index>=10?'paid':''}"><td>${row.age??'—'}</td><td>${money(row.capital)}</td><td>${money(row.premium)}</td><td>${money(row.accumulatedDisplay)}</td><td>${money(row.surrender)}</td></tr>`).join('');
@@ -326,18 +322,10 @@
     document.querySelectorAll('.scenario-grid>div,.web-gauge').forEach(card=>setDashboardDetail(card,card.querySelector('span,h4')?.textContent||'Indicador',[card.querySelector('strong')?.textContent||'']));
   }
 
-  document.querySelectorAll('[data-status]').forEach(btn=>btn.addEventListener('click',()=>{mode=btn.dataset.status;document.querySelectorAll('[data-status]').forEach(b=>b.classList.toggle('active',b===btn));$('spouseBlock').classList.toggle('hidden',mode!=='couple');$('spouseAssets').classList.toggle('hidden',mode!=='couple');render();}));
+  document.querySelectorAll('[data-status]').forEach(btn=>btn.addEventListener('click',()=>{mode=btn.dataset.status;if(mode!=='couple')activeStudy='primary';document.querySelectorAll('[data-status]').forEach(b=>b.classList.toggle('active',b===btn));document.querySelectorAll('.couple').forEach(el=>el.classList.toggle('hidden',mode!=='couple'));document.querySelectorAll('[data-study]').forEach(b=>b.classList.toggle('active',b.dataset.study===activeStudy));render();}));
+  document.querySelectorAll('[data-study]').forEach(btn=>btn.addEventListener('click',()=>{activeStudy=btn.dataset.study==='spouse'&&mode==='couple'?'spouse':'primary';document.querySelectorAll('[data-study]').forEach(b=>b.classList.toggle('active',b.dataset.study===activeStudy));render();document.querySelector('.summary')?.scrollIntoView({behavior:'smooth',block:'start'});}));
   inputIds.forEach(id=>{const input=$(id);if(!input)return;if(moneyInputIds.includes(id)||decimalInputIds.includes(id)){finishMoneyFormat(input);input.addEventListener('focus',()=>{if(parseNumericValue(input.value)===0)input.select();});input.addEventListener('input',()=>{formatMoneyWhileTyping(input);render();});input.addEventListener('blur',()=>{finishMoneyFormat(input);render();});return;}input.addEventListener(id==='consultant'?'change':'input',render);});
-  const surrenderPdfInput=$('surrenderPdfInput'),surrenderPdfButton=$('surrenderPdfButton'),surrenderPdfDrop=$('surrenderPdfDrop');
-  surrenderPdfButton?.addEventListener('click',()=>surrenderPdfInput?.click());
-  surrenderPdfInput?.addEventListener('change',()=>{const file=surrenderPdfInput.files?.[0];if(file)importSurrenderPdf(file);});
-  ['dragenter','dragover'].forEach(type=>surrenderPdfDrop?.addEventListener(type,event=>{event.preventDefault();event.stopPropagation();surrenderPdfDrop.classList.add('dragover');}));
-  ['dragleave','drop'].forEach(type=>surrenderPdfDrop?.addEventListener(type,event=>{event.preventDefault();event.stopPropagation();surrenderPdfDrop.classList.remove('dragover');}));
-  surrenderPdfDrop?.addEventListener('drop',event=>{const file=event.dataTransfer?.files?.[0];if(file)importSurrenderPdf(file);});
-  $('surrenderInputs')?.addEventListener('focusin',event=>{const input=event.target.closest('[data-surrender-index]');if(input&&parseNumericValue(input.value)===0)input.select();});
-  $('surrenderInputs')?.addEventListener('paste',event=>{const input=event.target.closest('[data-surrender-index]');if(input)pasteSurrenderColumn(event,input);});
-  $('surrenderInputs')?.addEventListener('input',event=>{const input=event.target.closest('[data-surrender-index]');if(!input)return;formatMoneyWhileTyping(input);surrenderValues[Number(input.dataset.surrenderIndex)]=parseNumericValue(input.value);render();});
-  $('surrenderInputs')?.addEventListener('focusout',event=>{const input=event.target.closest('[data-surrender-index]');if(!input)return;finishMoneyFormat(input);surrenderValues[Number(input.dataset.surrenderIndex)]=parseNumericValue(input.value);render();});
+  ['primary','spouse'].forEach(role=>{const ui=surrenderUi(role),pdfInput=$(ui.pdfInput),pdfButton=$(ui.pdfButton),pdfDrop=$(ui.pdfDrop),container=$(ui.inputs);pdfButton?.addEventListener('click',()=>pdfInput?.click());pdfInput?.addEventListener('change',()=>{const file=pdfInput.files?.[0];if(file)importSurrenderPdf(file,role);});['dragenter','dragover'].forEach(type=>pdfDrop?.addEventListener(type,event=>{event.preventDefault();event.stopPropagation();pdfDrop.classList.add('dragover');}));['dragleave','drop'].forEach(type=>pdfDrop?.addEventListener(type,event=>{event.preventDefault();event.stopPropagation();pdfDrop.classList.remove('dragover');}));pdfDrop?.addEventListener('drop',event=>{const file=event.dataTransfer?.files?.[0];if(file)importSurrenderPdf(file,role);});container?.addEventListener('focusin',event=>{const input=event.target.closest('[data-surrender-index]');if(input&&parseNumericValue(input.value)===0)input.select();});container?.addEventListener('paste',event=>{const input=event.target.closest('[data-surrender-index]');if(input)pasteSurrenderColumn(event,input);});container?.addEventListener('input',event=>{const input=event.target.closest('[data-surrender-index]');if(!input)return;formatMoneyWhileTyping(input);surrenderValuesByStudy[role][Number(input.dataset.surrenderIndex)]=parseNumericValue(input.value);render();});container?.addEventListener('focusout',event=>{const input=event.target.closest('[data-surrender-index]');if(!input)return;finishMoneyFormat(input);surrenderValuesByStudy[role][Number(input.dataset.surrenderIndex)]=parseNumericValue(input.value);render();});});
   document.addEventListener('pointermove',event=>{
     const target=event.target.closest?.('[data-dashboard-title]');if(!target)return;
     if(target.id==='paybackChart'&&target.__dashboardMeta){
@@ -380,10 +368,12 @@
   async function generateOutput(kind){
     const form=$('clientForm');if(!form.reportValidity())return;
     const status=$('status'),pptBtn=$('generatePptBtn'),pdfBtn=$('generatePdfBtn');
+    if(mode==='couple'&&!$('spouseName').value.trim()){status.textContent='Informe o nome do cônjuge para gerar os dois estudos separados.';$('spouseName').focus();return;}
+    if(mode==='couple'&&!personData('spouse').age){status.textContent='Informe a idade do cônjuge para montar a projeção individual.';$('spouseAge').focus();return;}
     pptBtn.disabled=true;pdfBtn.disabled=true;
     status.textContent=kind==='pdf'?'Montando o PDF sem os slides duplicados de efeito…':'Personalizando o PowerPoint e aplicando as transições…';
     try{
-      const d=data();
+      const d=exportData();
       const blob=kind==='pdf'?await window.buildTemplatePdf(d):await window.buildTemplatePpt(d);
       const safe=d.familyLabel.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'');
       downloadBlob(blob,`Gestao-de-Riscos-${safe||'Familia'}.${kind==='pdf'?'pdf':'pptx'}`);
@@ -393,5 +383,6 @@
   }
   $('clientForm').addEventListener('submit',event=>{event.preventDefault();generateOutput('pptx');});
   $('generatePdfBtn').addEventListener('click',()=>generateOutput('pdf'));
+  const spouseStudySection=$('spouseAssets'),primaryQuoteSection=$('surrenderInputs')?.closest('section');if(spouseStudySection&&primaryQuoteSection)primaryQuoteSection.after(spouseStudySection);
   render();
 })();
