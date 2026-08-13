@@ -74,8 +74,15 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /text\(ctx,'Recomendado',[\s\S]*?color:WHITE/);
   assert.match(template, /text\(ctx,'Alta exposição',[\s\S]*?color:WHITE/);
   assert.match(template, /const studySlideNumbers=\[6,7,8,9,10,11,12,15,16,13\]/);
-  assert.match(template, /async function cloneStudySlides\(zip\)/);
-  assert.match(template, /if\(studies\.length>1\)\{const mapping=await cloneStudySlides\(zip\)/);
+  assert.match(template, /const projectionSlideNumbers=\[11,12,15,16\]/);
+  assert.match(template, /function combineStudiesForPpt\(d,studies\)/);
+  assert.match(template, /studyLabel:'Estudo familiar consolidado'/);
+  assert.match(template, /async function cloneHiddenProjectionSlides\(zip\)/);
+  assert.match(template, /replace\(\/\\s\+show="0"[\s\S]*?'<p:sld show="0"'/);
+  assert.match(template, /addSlideJumpHotspot\(zip,source,hiddenTargets\[0\]/);
+  assert.match(template, /hiddenTargets\[index\+1\]\|\|13/);
+  assert.match(template, /Target="slide\$\{targetSlide\}\.xml"/);
+  assert.match(template, /for\(const study of studies\)rendered\.push\(\.\.\.await renderStudySlides\(study\)\)/);
   assert.match(template, /effectOnly=new Set\(\[11,12,15\]\)/);
   assert.match(template, /\[16,\(\)=>slide11\(d,3\)\]/);
   assert.match(template, /if\(stage>=3\)\{rect\(ctx,48,footerY/);

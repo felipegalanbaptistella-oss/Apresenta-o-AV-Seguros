@@ -297,11 +297,23 @@
   }
 
   const fullSlidePic=()=>`<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr><p:pic><p:nvPicPr><p:cNvPr id="2" name="Slide personalizado"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rId999"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="12192000" cy="6858000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic></p:spTree>`;
-  async function replaceSlide(zip,no,bytes){
+  async function replaceSlide(zip,no,bytes,{hidden=false}={}){
     const xmlPath=`ppt/slides/slide${no}.xml`,relsPath=`ppt/slides/_rels/slide${no}.xml.rels`,mediaPath=`ppt/media/custom-slide${no}.png`;
-    let xml=await zip.file(xmlPath).async('string');xml=xml.replace(/(<p:sld\b[^>]*?)\s+show="0"/,'$1').replace(/<p:spTree\b[^>]*>[\s\S]*?<\/p:spTree>/,fullSlidePic()).replace(/<p:timing\b[^>]*>[\s\S]*?<\/p:timing>/g,'');
+    let xml=await zip.file(xmlPath).async('string');xml=xml.replace(/\s+show="0"(?=[\s>])/g,'').replace(/<p:spTree\b[^>]*>[\s\S]*?<\/p:spTree>/,fullSlidePic()).replace(/<p:timing\b[^>]*>[\s\S]*?<\/p:timing>/g,'');
+    if(hidden)xml=xml.replace(/<p:sld\b/,'<p:sld show="0"');
     let rels=await zip.file(relsPath).async('string');rels=rels.replace(/<Relationship\b[^>]*\bId="rId999"[^>]*\/>/g,'').replace('</Relationships>',`<Relationship Id="rId999" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/custom-slide${no}.png"/></Relationships>`);
     zip.file(xmlPath,xml);zip.file(relsPath,rels);zip.file(mediaPath,bytes);
+  }
+
+  async function addSlideJumpHotspot(zip,sourceSlide,targetSlide,{x=0,y=0,w=12192000,h=6858000,name='Atalho interno'}={}){
+    const xmlPath=`ppt/slides/slide${sourceSlide}.xml`,relsPath=`ppt/slides/_rels/slide${sourceSlide}.xml.rels`;
+    let xml=await zip.file(xmlPath).async('string'),rels=await zip.file(relsPath).async('string');
+    const relNumbers=[...rels.matchAll(/\bId="rId(\d+)"/g)].map(match=>Number(match[1])),rid=`rId${Math.max(0,...relNumbers)+1}`;
+    const shapeIds=[...xml.matchAll(/<p:cNvPr\b[^>]*\bid="(\d+)"/g)].map(match=>Number(match[1])),shapeId=Math.max(2,...shapeIds)+1;
+    const hotspot=`<p:sp><p:nvSpPr><p:cNvPr id="${shapeId}" name="${name}"><a:hlinkClick r:id="${rid}" action="ppaction://hlinksldjump"/></p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${w}" cy="${h}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="FFFFFF"><a:alpha val="0"/></a:srgbClr></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p/></p:txBody></p:sp>`;
+    xml=xml.replace('</p:spTree>',`${hotspot}</p:spTree>`);
+    rels=rels.replace('</Relationships>',`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slide${targetSlide}.xml"/></Relationships>`);
+    zip.file(xmlPath,xml);zip.file(relsPath,rels);
   }
   async function prepareProjectionStages(zip){
     const read=async path=>{const file=zip.file(path);if(!file)throw new Error(`Parte OOXML ausente: ${path}`);return file.async('string');};
@@ -340,21 +352,32 @@
     let types=await read('[Content_Types].xml');types=types.replace('</Types>','<Override PartName="/ppt/slides/slide17.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>');zip.file('[Content_Types].xml',types);
     const appFile=zip.file('docProps/app.xml');if(appFile){let app=await appFile.async('string');app=app.replace(/<Slides>(\d+)<\/Slides>/,(_,n)=>`<Slides>${Number(n)+1}</Slides>`);app=app.replace(/(<vt:lpstr>Títulos de slides<\/vt:lpstr><\/vt:variant><vt:variant><vt:i4>)(\d+)(<\/vt:i4>)/,(_,a,n,b)=>`${a}${Number(n)+1}${b}`);zip.file('docProps/app.xml',app);}
   }
+  const projectionSlideNumbers=[11,12,15,16];
   const studySlideNumbers=[6,7,8,9,10,11,12,15,16,13];
   async function renderCommonSlides(d){const tasks=[[1,()=>slide1(d)],[3,()=>staticSlide(3)],[4,()=>staticSlide(4)],[14,()=>slide14(d)]];const rendered=[];for(const [no,render] of tasks)rendered.push([no,await render()]);return rendered;}
-  async function renderStudySlides(d){const tasks=[[6,()=>slide6(d)],[7,()=>slide7(d)],[8,()=>assetSlide(8,d,'current')],[9,()=>assetSlide(9,d,'reallocation')],[10,()=>assetSlide(10,d,'with')],[11,()=>slide11(d,0)],[12,()=>slide11(d,1)],[15,()=>slide11(d,2)],[16,()=>slide11(d,3)],[13,()=>slide13(d)]];const rendered=[];for(const [no,render] of tasks)rendered.push([no,await render()]);return rendered;}
-  async function cloneStudySlides(zip){
+  async function renderOverviewSlides(d){const tasks=[[6,()=>slide6(d)],[7,()=>slide7(d)],[8,()=>assetSlide(8,d,'current')],[9,()=>assetSlide(9,d,'reallocation')],[10,()=>assetSlide(10,d,'with')],[13,()=>slide13(d)]];const rendered=[];for(const [no,render] of tasks)rendered.push([no,await render()]);return rendered;}
+  async function renderProjectionSlides(d){const tasks=[[11,()=>slide11(d,0)],[12,()=>slide11(d,1)],[15,()=>slide11(d,2)],[16,()=>slide11(d,3)]];const rendered=[];for(const [no,render] of tasks)rendered.push([no,await render()]);return rendered;}
+  async function renderStudySlides(d){const overview=new Map(await renderOverviewSlides(d)),projectionSlides=new Map(await renderProjectionSlides(d));return studySlideNumbers.map(no=>[no,overview.get(no)||projectionSlides.get(no)]);}
+  function combineStudiesForPpt(d,studies){
+    if(studies.length<2)return studies[0]||d;
+    const sum=key=>studies.reduce((total,study)=>total+(Number(study?.[key])||0),0);
+    const input={xp:sum('xp'),other:sum('other'),pension:sum('pension'),realEstate:sum('realEstate'),holdings:sum('holdings'),currentInsurance:sum('currentInsurance'),coverageGap:sum('coverageGap'),annualPremium:sum('annualPremium'),annualReturn:Number(studies[0]?.annualReturn)||0};
+    const calculated=window.RiskStudy?.calculatePerson?window.RiskStudy.calculatePerson(input):{...input,financial:input.xp+input.other+input.pension,illiquid:input.realEstate+input.holdings};
+    if(!calculated.total){calculated.total=calculated.financial+calculated.illiquid;calculated.inventoriable=Math.max(0,calculated.total-input.pension);calculated.liability=calculated.inventoriable*.15;calculated.recommended=calculated.liability;calculated.coverageAfter=input.currentInsurance+input.coverageGap;calculated.withoutInsurance=Math.max(0,calculated.total-calculated.liability);calculated.withInsurance=Math.max(0,calculated.total-calculated.liability+calculated.coverageAfter);calculated.monthlyReturn=input.annualReturn/12;calculated.paybackMonths=calculated.financial&&calculated.monthlyReturn&&input.annualPremium?Math.ceil(input.annualPremium/(calculated.financial*calculated.monthlyReturn)):0;}
+    return {...studies[0],...calculated,name:d.familyLabel||studies[0].familyLabel||studies[0].name,studyLabel:'Estudo familiar consolidado'};
+  }
+  async function cloneHiddenProjectionSlides(zip){
     const read=async path=>{const file=zip.file(path);if(!file)throw new Error(`Parte OOXML ausente: ${path}`);return file.async('string');};
     const existing=Object.keys(zip.files).map(path=>path.match(/^ppt\/slides\/slide(\d+)\.xml$/)?.[1]).filter(Boolean).map(Number),firstNew=Math.max(...existing)+1;
     const relPath='ppt/_rels/presentation.xml.rels';let rels=await read(relPath);const usedRids=[...rels.matchAll(/\bId="rId(\d+)"/g)].map(match=>Number(match[1])),firstRid=Math.max(...usedRids)+1;
     let presentation=await read('ppt/presentation.xml'),types=await read('[Content_Types].xml');const ids=[...presentation.matchAll(/<p:sldId\b[^>]*\bid="(\d+)"/g)].map(match=>Number(match[1]));let nextId=Math.max(255,...ids)+1;
     const slide14Rel=[...rels.matchAll(/<Relationship\b[^>]*\/>/g)].map(match=>match[0]).find(tag=>/Target="slides\/slide14\.xml"/.test(tag));const slide14Rid=slide14Rel?.match(/\bId="([^"]+)"/)?.[1];if(!slide14Rid)throw new Error('Relacionamento do slide final não encontrado.');const slide14Pattern=new RegExp(`<p:sldId\\b(?=[^>]*\\br:id="${slide14Rid}")[^>]*/>`);const slide14Tag=presentation.match(slide14Pattern)?.[0];if(!slide14Tag)throw new Error('Posição do slide final não encontrada.');
     const mapping=[];let inserted='';
-    for(let index=0;index<studySlideNumbers.length;index++){
-      const source=studySlideNumbers[index],target=firstNew+index,rid=`rId${firstRid+index}`;let xml=await read(`ppt/slides/slide${source}.xml`),slideRels=await read(`ppt/slides/_rels/slide${source}.xml.rels`);xml=xml.replace(/(<p14:creationId\b[^>]*\bval=")\d+("[^>]*\/>)/,(_,before,after)=>`${before}${4100000000-index}${after}`);slideRels=slideRels.replace(/<Relationship\b(?=[^>]*\bType="[^"]*\/notesSlide")[^>]*\/>/g,'');zip.file(`ppt/slides/slide${target}.xml`,xml);zip.file(`ppt/slides/_rels/slide${target}.xml.rels`,slideRels);rels=rels.replace('</Relationships>',`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${target}.xml"/></Relationships>`);types=types.replace('</Types>',`<Override PartName="/ppt/slides/slide${target}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>`);inserted+=`<p:sldId id="${nextId++}" r:id="${rid}"/>`;mapping.push([source,target]);
+    for(let index=0;index<projectionSlideNumbers.length;index++){
+      const source=projectionSlideNumbers[index],target=firstNew+index,rid=`rId${firstRid+index}`;let xml=await read(`ppt/slides/slide${source}.xml`),slideRels=await read(`ppt/slides/_rels/slide${source}.xml.rels`);xml=xml.replace(/\s+show="0"(?=[\s>])/g,'').replace(/<p:sld\b/,'<p:sld show="0"').replace(/(<p14:creationId\b[^>]*\bval=")\d+("[^>]*\/>)/,(_,before,after)=>`${before}${4100000000-index}${after}`);slideRels=slideRels.replace(/<Relationship\b(?=[^>]*\bType="[^"]*\/notesSlide")[^>]*\/>/g,'');zip.file(`ppt/slides/slide${target}.xml`,xml);zip.file(`ppt/slides/_rels/slide${target}.xml.rels`,slideRels);rels=rels.replace('</Relationships>',`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${target}.xml"/></Relationships>`);types=types.replace('</Types>',`<Override PartName="/ppt/slides/slide${target}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>`);inserted+=`<p:sldId id="${nextId++}" r:id="${rid}"/>`;mapping.push([source,target]);
     }
     presentation=presentation.replace(slide14Pattern,`${inserted}${slide14Tag}`);zip.file(relPath,rels);zip.file('ppt/presentation.xml',presentation);zip.file('[Content_Types].xml',types);
-    const appFile=zip.file('docProps/app.xml');if(appFile){let app=await appFile.async('string'),count=mapping.length;app=app.replace(/<Slides>(\d+)<\/Slides>/,(_,n)=>`<Slides>${Number(n)+count}</Slides>`).replace(/(<TitlesOfParts><vt:vector\b[^>]*\bsize=")(\d+)("[^>]*>)([\s\S]*?)(<\/vt:vector><\/TitlesOfParts>)/,(_,before,size,middle,body,after)=>`${before}${Number(size)+count}${middle}${body}${'<vt:lpstr>Apresentação do PowerPoint</vt:lpstr>'.repeat(count)}${after}`);zip.file('docProps/app.xml',app);}
+    const appFile=zip.file('docProps/app.xml');if(appFile){let app=await appFile.async('string'),count=mapping.length;app=app.replace(/<Slides>(\d+)<\/Slides>/,(_,n)=>`<Slides>${Number(n)+count}</Slides>`);if(/<HiddenSlides>\d+<\/HiddenSlides>/.test(app))app=app.replace(/<HiddenSlides>\d+<\/HiddenSlides>/,`<HiddenSlides>${count}</HiddenSlides>`);else app=app.replace(/(<Slides>\d+<\/Slides>)/,`$1<HiddenSlides>${count}</HiddenSlides>`);app=app.replace(/(<TitlesOfParts><vt:vector\b[^>]*\bsize=")(\d+)("[^>]*>)([\s\S]*?)(<\/vt:vector><\/TitlesOfParts>)/,(_,before,size,middle,body,after)=>`${before}${Number(size)+count}${middle}${body}${'<vt:lpstr>Projeção do cônjuge</vt:lpstr>'.repeat(count)}${after}`);zip.file('docProps/app.xml',app);}
     return mapping;
   }
   window.buildTemplatePpt=async d=>{
@@ -364,8 +387,15 @@
     await prepareProjectionStages(zip);
     const studies=Array.isArray(d.studies)&&d.studies.length?d.studies:[d];
     for(const [no,bytes] of await renderCommonSlides(d))await replaceSlide(zip,no,bytes);
-    for(const [no,bytes] of await renderStudySlides(studies[0]))await replaceSlide(zip,no,bytes);
-    if(studies.length>1){const mapping=await cloneStudySlides(zip),spouseSlides=await renderStudySlides(studies[1]),bySource=new Map(spouseSlides);for(const [source,target] of mapping)await replaceSlide(zip,target,bySource.get(source));}
+    const combined=combineStudiesForPpt(d,studies);
+    for(const [no,bytes] of await renderOverviewSlides(combined))await replaceSlide(zip,no,bytes);
+    for(const [no,bytes] of await renderProjectionSlides(studies[0]))await replaceSlide(zip,no,bytes);
+    if(studies.length>1){
+      const mapping=await cloneHiddenProjectionSlides(zip),spouseSlides=new Map(await renderProjectionSlides(studies[1])),hiddenTargets=mapping.map(([,target])=>target);
+      for(const [source,target] of mapping)await replaceSlide(zip,target,spouseSlides.get(source),{hidden:true});
+      for(const source of projectionSlideNumbers)await addSlideJumpHotspot(zip,source,hiddenTargets[0],{x:11320000,y:0,w:780000,h:650000,name:'Abrir projeção do cônjuge'});
+      for(let index=0;index<hiddenTargets.length;index++)await addSlideJumpHotspot(zip,hiddenTargets[index],hiddenTargets[index+1]||13,{name:index===hiddenTargets.length-1?'Retornar ao estudo familiar':'Avançar projeção do cônjuge'});
+    }
     return zip.generateAsync({type:'blob',compression:'DEFLATE'});
   };
   window.buildTemplatePdf=async d=>{
