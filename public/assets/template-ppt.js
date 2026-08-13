@@ -119,7 +119,7 @@
     rect(ctx,882,198,686,390,'#2b102d',20,RED,2);
     text(ctx,'ENCARGOS DA SUCESSÃO',914,247,430,{size:21,color:WHITE,bold:true});
     ['ITCMD | 2% à 8%','Honorários (Tabela OAB) | 6% à 8%','Custas processuais | 1%','Cartório | 1%'].forEach((label,i)=>text(ctx,label,914,305+i*37,410,{size:20,color:'#e3dce6'}));
-    line(ctx,1336,302,1336,430,'#63203d',1);text(ctx,'15%',1355,365,185,{size:72,color:RED,bold:true,align:'center'});
+    line(ctx,1336,302,1336,430,'#63203d',1);fitText(ctx,'15% - 20%',1345,365,205,{size:54,min:28,color:RED,bold:true,align:'center'});
     line(ctx,914,450,1538,450,'#63203d',1);text(ctx,'EROSÃO PATRIMONIAL ESTIMADA',940,486,570,{size:22,color:RED,bold:true,align:'center'});fitText(ctx,`-${brl(d.liability)}`,930,540,590,{size:40,min:27,color:RED,bold:true,align:'center'});
 
     rect(ctx,882,610,686,214,'#c3a067',20,'#9d7624',2);

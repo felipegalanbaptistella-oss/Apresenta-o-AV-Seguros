@@ -51,6 +51,7 @@ test("keeps the form and export contract wired", async () => {
   assert.match(legacy, /id="paybackMonths10"/);
   assert.match(legacy, /id="gaugeCurrent"/);
   assert.match(legacy, /id="gaugeProposed"/);
+  assert.match(legacy, /class="succession-range">15% - 20%<\/strong>/);
   assert.match(app, /const surrenderValuesByStudy = \{primary:\[\],spouse:\[\]\}/);
   assert.match(app, /function personData\(role='primary'\)/);
   assert.match(app, /window\.RiskStudy\.calculatePerson/);
@@ -65,6 +66,7 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /window\.buildTemplatePpt/);
   assert.match(template, /fetch\('assets\/modelo-base\.pptx\?v=2'\)/);
   assert.match(template, /window\.buildTemplatePdf/);
+  assert.match(template, /fitText\(ctx,'15% - 20%'/);
   assert.match(template, /d\.annualPremium\/d\.total\*100:0,proposedAllocation=d\.withoutInsurance\?d\.annualPremium\/d\.withoutInsurance\*100:0/);
   assert.match(template, /'#f28c28',4/);
   assert.doesNotMatch(template, /#e98b35/);
