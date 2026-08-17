@@ -319,6 +319,14 @@
     rels=rels.replace('</Relationships>',`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slide${targetSlide}.xml"/></Relationships>`);
     zip.file(xmlPath,xml);zip.file(relsPath,rels);
   }
+  async function ensureRiskNavigation(zip){
+    const xmlPath='ppt/slides/slide2.xml',relsPath='ppt/slides/_rels/slide2.xml.rels';
+    const xml=await zip.file(xmlPath).async('string'),rels=await zip.file(relsPath).async('string');
+    const targetRelation=[...rels.matchAll(/<Relationship\b[^>]*\/>/g)].map(match=>match[0]).find(tag=>/\bType="[^"]*\/slide"/.test(tag)&&/\bTarget="slide3\.xml"/.test(tag));
+    const targetRid=targetRelation?.match(/\bId="([^"]+)"/)?.[1];
+    if(targetRid&&new RegExp(`<a:hlinkClick\\b[^>]*\\br:id="${targetRid.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}"`).test(xml))return;
+    await addSlideJumpHotspot(zip,2,3,{x:6551001,y:5529625,w:3237251,h:954107,name:'Abrir risco da não acumulação'});
+  }
   async function prepareProjectionStages(zip){
     const read=async path=>{const file=zip.file(path);if(!file)throw new Error(`Parte OOXML ausente: ${path}`);return file.async('string');};
     if(zip.file('ppt/slides/slide15.xml')||zip.file('ppt/slides/slide16.xml'))throw new Error('Os slides adicionais de projeção já existem no modelo.');
@@ -381,7 +389,7 @@
       const source=projectionSlideNumbers[index],target=firstNew+index,rid=`rId${firstRid+index}`;let xml=await read(`ppt/slides/slide${source}.xml`),slideRels=await read(`ppt/slides/_rels/slide${source}.xml.rels`);xml=xml.replace(/\s+show="0"(?=[\s>])/g,'').replace(/<p:sld\b/,'<p:sld show="0"').replace(/(<p14:creationId\b[^>]*\bval=")\d+("[^>]*\/>)/,(_,before,after)=>`${before}${4100000000-index}${after}`);slideRels=slideRels.replace(/<Relationship\b(?=[^>]*\bType="[^"]*\/notesSlide")[^>]*\/>/g,'');zip.file(`ppt/slides/slide${target}.xml`,xml);zip.file(`ppt/slides/_rels/slide${target}.xml.rels`,slideRels);rels=rels.replace('</Relationships>',`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${target}.xml"/></Relationships>`);types=types.replace('</Types>',`<Override PartName="/ppt/slides/slide${target}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>`);inserted+=`<p:sldId id="${nextId++}" r:id="${rid}"/>`;mapping.push([source,target]);
     }
     presentation=presentation.replace(slide14Pattern,`${inserted}${slide14Tag}`);zip.file(relPath,rels);zip.file('ppt/presentation.xml',presentation);zip.file('[Content_Types].xml',types);
-    const appFile=zip.file('docProps/app.xml');if(appFile){let app=await appFile.async('string'),count=mapping.length;app=app.replace(/<Slides>(\d+)<\/Slides>/,(_,n)=>`<Slides>${Number(n)+count}</Slides>`);if(/<HiddenSlides>\d+<\/HiddenSlides>/.test(app))app=app.replace(/<HiddenSlides>\d+<\/HiddenSlides>/,`<HiddenSlides>${count}</HiddenSlides>`);else app=app.replace(/(<Slides>\d+<\/Slides>)/,`$1<HiddenSlides>${count}</HiddenSlides>`);app=app.replace(/(<TitlesOfParts><vt:vector\b[^>]*\bsize=")(\d+)("[^>]*>)([\s\S]*?)(<\/vt:vector><\/TitlesOfParts>)/,(_,before,size,middle,body,after)=>`${before}${Number(size)+count}${middle}${body}${'<vt:lpstr>Projeção do cônjuge</vt:lpstr>'.repeat(count)}${after}`);zip.file('docProps/app.xml',app);}
+    const appFile=zip.file('docProps/app.xml');if(appFile){let app=await appFile.async('string'),count=mapping.length;app=app.replace(/<Slides>(\d+)<\/Slides>/,(_,n)=>`<Slides>${Number(n)+count}</Slides>`);if(/<HiddenSlides>\d+<\/HiddenSlides>/.test(app))app=app.replace(/<HiddenSlides>(\d+)<\/HiddenSlides>/,(_,hiddenCount)=>`<HiddenSlides>${Number(hiddenCount)+count}</HiddenSlides>`);else app=app.replace(/(<Slides>\d+<\/Slides>)/,`$1<HiddenSlides>${count}</HiddenSlides>`);app=app.replace(/(<TitlesOfParts><vt:vector\b[^>]*\bsize=")(\d+)("[^>]*>)([\s\S]*?)(<\/vt:vector><\/TitlesOfParts>)/,(_,before,size,middle,body,after)=>`${before}${Number(size)+count}${middle}${body}${'<vt:lpstr>Projeção do cônjuge</vt:lpstr>'.repeat(count)}${after}`);zip.file('docProps/app.xml',app);}
     return mapping;
   }
   window.buildTemplatePpt=async d=>{
@@ -390,7 +398,8 @@
     const zip=await JSZip.loadAsync(await response.arrayBuffer());
     await prepareProjectionStages(zip);
     const studies=Array.isArray(d.studies)&&d.studies.length?d.studies:[d];
-    for(const [no,bytes] of await renderCommonSlides(d))await replaceSlide(zip,no,bytes);
+    for(const [no,bytes] of await renderCommonSlides(d))await replaceSlide(zip,no,bytes,{hidden:no===3});
+    await ensureRiskNavigation(zip);
     const combined=combineStudiesForPpt(d,studies);
     for(const [no,bytes] of await renderOverviewSlides(combined))await replaceSlide(zip,no,bytes);
     for(const [no,bytes] of await renderProjectionSlides(studies[0]))await replaceSlide(zip,no,bytes);

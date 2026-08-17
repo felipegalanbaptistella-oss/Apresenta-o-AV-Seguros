@@ -88,6 +88,11 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /function combineStudiesForPpt\(d,studies\)/);
   assert.match(template, /studyLabel:'Estudo familiar consolidado'/);
   assert.match(template, /async function cloneHiddenProjectionSlides\(zip\)/);
+  assert.match(template, /async function ensureRiskNavigation\(zip\)/);
+  assert.match(template, /addSlideJumpHotspot\(zip,2,3,/);
+  assert.match(template, /replaceSlide\(zip,no,bytes,\{hidden:no===3\}\)/);
+  assert.match(template, /await ensureRiskNavigation\(zip\)/);
+  assert.match(template, /Number\(hiddenCount\)\+count/);
   assert.match(template, /replace\(\/\\s\+show="0"[\s\S]*?'<p:sld show="0"'/);
   assert.match(template, /addSlideJumpHotspot\(zip,source,hiddenTargets\[0\]/);
   assert.match(template, /hiddenTargets\[index\+1\]\|\|13/);
