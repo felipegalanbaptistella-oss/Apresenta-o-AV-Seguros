@@ -197,9 +197,16 @@
     el.style.display=amount>0||!hideWhenZero?'grid':'none';
   }
   function setDonut(id, values, colors, centerText) {
-    const el = $(id); const total = values.reduce((a,b)=>a+Math.max(0,b),0) || 1;
-    let cursor = 0; const stops = values.map((value, i) => { const start = cursor; cursor += Math.max(0,value) / total * 100; return `${colors[i]} ${start}% ${cursor}%`; });
-    el.style.background = `conic-gradient(${stops.join(',')})`; el.querySelector('span').textContent = centerText;
+    const el=$(id),safeValues=values.map(value=>Math.max(0,Number(value)||0)),total=safeValues.reduce((a,b)=>a+b,0)||1;
+    let cursor=0;const stops=safeValues.map((value,i)=>{const start=cursor;cursor+=value/total*100;return `${colors[i]} ${start}% ${cursor}%`;});
+    el.style.background=`conic-gradient(${stops.join(',')})`;el.querySelector('.donut-center').textContent=centerText;
+    el.querySelectorAll('.donut-label').forEach(label=>label.remove());
+    let shareCursor=0;
+    safeValues.forEach((value,index)=>{
+      const share=value/total;if(!share)return;
+      const middle=(shareCursor+share/2)*Math.PI*2-Math.PI/2,radius=share<.08?49:39;
+      const label=document.createElement('span');label.className='donut-label';label.textContent=`${(share*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}%`;label.style.left=`${50+Math.cos(middle)*radius}%`;label.style.top=`${50+Math.sin(middle)*radius}%`;label.setAttribute('aria-label',`Fatia ${index+1}: ${label.textContent}`);el.appendChild(label);shareCursor+=share;
+    });
   }
   function legendHtml(items) { const total=items.reduce((sum,item)=>sum+Math.max(0,Number(item.value)||0),0)||1;return items.map(item => `<div class="legend-item"><span class="legend-swatch" style="background:${item.color}"></span><span>${item.label}<br><strong>${money(item.value)} · ${((Math.max(0,Number(item.value)||0)/total)*100).toLocaleString('pt-BR',{maximumFractionDigits:2})}%</strong></span></div>`).join(''); }
 

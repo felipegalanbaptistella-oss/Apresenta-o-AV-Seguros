@@ -53,11 +53,15 @@ test("keeps the form and export contract wired", async () => {
   assert.match(legacy, /id="gaugeProposed"/);
   assert.match(legacy, /class="succession-range">15% - 20%<\/strong>/);
   assert.match(legacy, /id="previewTotalCapital"/);
+  assert.match(legacy, /class="donut-center" id="donutWithoutCenter"/);
+  assert.match(legacy, /class="donut-center" id="donutWithCenter"/);
   assert.match(app, /const surrenderValuesByStudy = \{primary:\[\],spouse:\[\]\}/);
   assert.match(app, /function personData\(role='primary'\)/);
   assert.match(app, /window\.RiskStudy\.calculatePerson/);
   assert.match(app, /function exportData\(\)/);
   assert.match(app, /setText\('previewTotalCapital',money\(d\.total\)\)/);
+  assert.match(app, /label\.className='donut-label'/);
+  assert.match(app, /share\*100\)\.toLocaleString\('pt-BR'/);
   assert.match(app, /studies=hasSpouse\?\[primary,personData\('spouse'\)\]:\[primary\]/);
   assert.match(app, /const paybackAtRate=/);
   assert.match(app, /currentAllocation=d\.total\?d\.annualPremium\/d\.total\*100:0/);
@@ -71,6 +75,8 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /fitText\(ctx,'15% - 20%'/);
   assert.match(template, /text\(ctx,'CAPITAL TOTAL DO CLIENTE'/);
   assert.match(template, /fitText\(ctx,brl\(d\.total\),455,794/);
+  assert.match(template, /const label=pct\(actualShares\[i\]\*100\)/);
+  assert.match(template, /rect\(ctx,lx-40,ly-15,80,30/);
   assert.match(template, /d\.annualPremium\/d\.total\*100:0,proposedAllocation=d\.withoutInsurance\?d\.annualPremium\/d\.withoutInsurance\*100:0/);
   assert.match(template, /'#f28c28',4/);
   assert.doesNotMatch(template, /#e98b35/);

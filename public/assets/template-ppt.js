@@ -50,11 +50,11 @@
       ctx.fillStyle=colors[i];ctx.fill();
       if(emphasized){ctx.strokeStyle='#e1f5d5';ctx.lineWidth=4;ctx.stroke();}
       ctx.restore();
-      if(!emphasized){angle=next;return;}
       const label=pct(actualShares[i]*100);
       if(actualShares[i]>=.075){
         const rr=(r+inner)/2;
         const lx=cx+Math.cos(mid)*rr,ly=cy+Math.sin(mid)*rr;
+        rect(ctx,lx-40,ly-15,80,30,'rgba(2,14,56,.78)',8,'rgba(255,255,255,.45)',1);
         text(ctx,label,lx-42,ly,84,{size:17,color:WHITE,bold:true,align:'center'});
       }else{
         const sx=cx+Math.cos(mid)*(r+8),sy=cy+Math.sin(mid)*(r+8);
@@ -62,6 +62,7 @@
         if(emphasized){const elbowX=cx+12,elbowY=cy-r-18;ex=cx+62;ey=cy-r-28;right=true;line(ctx,sx,sy,elbowX,elbowY,GREEN,2);line(ctx,elbowX,elbowY,ex,ey,GREEN,2);}
         else line(ctx,sx,sy,ex,ey,'#d5dced',2);
         const tx=right?ex+7:ex-87;
+        rect(ctx,tx-4,ey-14,88,28,'rgba(2,14,56,.86)',8,emphasized?GREEN:'rgba(255,255,255,.45)',1);
         text(ctx,label,tx,ey,80,{size:emphasized?18:15,color:emphasized?GREEN:WHITE,bold:true,align:right?'left':'right'});
       }
       angle=next;
