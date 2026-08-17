@@ -289,8 +289,8 @@
     setText('paybackSummary',d.paybackMonths?`${d.paybackMonths} ${d.paybackMonths===1?'mês':'meses'}`:'Informe o prêmio');
 
     $('assetRows').innerHTML=[['Investimentos na XP',d.xp],['Outras instituições',d.other],['Imóveis e ativos físicos',d.realEstate],['Participações societárias / holdings',d.holdings],['Previdência privada (fora da base)',-d.pension]].map((a,i)=>`<div class="asset-row ${i===4?'pension':''}"><span>${a[0]}</span><strong>${a[1]<0?'-':''}${money(Math.abs(a[1]))}</strong></div>`).join('');
-    setText('previewInventoriable',money(d.inventoriable)); setText('previewLiability','-'+money(d.liability)); setText('previewNet',money(d.withoutInsurance));
-    setDashboardDetail(document.querySelector('#previewCosts .asset-map'),'Patrimônio inventariável',[`Base sujeita à sucessão: ${money(d.inventoriable)}`,`Previdência fora da base: ${money(d.pension)}`]);
+    setText('previewInventoriable',money(d.inventoriable)); setText('previewTotalCapital',money(d.total)); setText('previewLiability','-'+money(d.liability)); setText('previewNet',money(d.withoutInsurance));
+    setDashboardDetail(document.querySelector('#previewCosts .asset-map'),'Capital total do cliente',[`Capital total: ${money(d.total)}`,`Base sujeita à sucessão: ${money(d.inventoriable)}`,`Previdência fora da base: ${money(d.pension)}`]);
     setDashboardDetail(document.querySelector('#previewCosts .succession-box'),'Custo estimado da sucessão',[`15% do patrimônio inventariável`,money(d.liability)]);
     setDashboardDetail(document.querySelector('#previewCosts .transmitted'),'Patrimônio líquido transmitido',[`Família recebe sem seguro: ${money(d.withoutInsurance)}`]);
 

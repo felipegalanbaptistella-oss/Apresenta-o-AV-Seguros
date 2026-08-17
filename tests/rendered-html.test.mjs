@@ -52,10 +52,12 @@ test("keeps the form and export contract wired", async () => {
   assert.match(legacy, /id="gaugeCurrent"/);
   assert.match(legacy, /id="gaugeProposed"/);
   assert.match(legacy, /class="succession-range">15% - 20%<\/strong>/);
+  assert.match(legacy, /id="previewTotalCapital"/);
   assert.match(app, /const surrenderValuesByStudy = \{primary:\[\],spouse:\[\]\}/);
   assert.match(app, /function personData\(role='primary'\)/);
   assert.match(app, /window\.RiskStudy\.calculatePerson/);
   assert.match(app, /function exportData\(\)/);
+  assert.match(app, /setText\('previewTotalCapital',money\(d\.total\)\)/);
   assert.match(app, /studies=hasSpouse\?\[primary,personData\('spouse'\)\]:\[primary\]/);
   assert.match(app, /const paybackAtRate=/);
   assert.match(app, /currentAllocation=d\.total\?d\.annualPremium\/d\.total\*100:0/);
@@ -67,6 +69,8 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /fetch\('assets\/modelo-base\.pptx\?v=2'\)/);
   assert.match(template, /window\.buildTemplatePdf/);
   assert.match(template, /fitText\(ctx,'15% - 20%'/);
+  assert.match(template, /text\(ctx,'CAPITAL TOTAL DO CLIENTE'/);
+  assert.match(template, /fitText\(ctx,brl\(d\.total\),455,794/);
   assert.match(template, /d\.annualPremium\/d\.total\*100:0,proposedAllocation=d\.withoutInsurance\?d\.annualPremium\/d\.withoutInsurance\*100:0/);
   assert.match(template, /'#f28c28',4/);
   assert.doesNotMatch(template, /#e98b35/);

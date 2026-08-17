@@ -114,7 +114,10 @@
     text(ctx,'MAPEAMENTO DE ATIVOS INVENTARIÁVEIS',52,262,760,{size:21,color:GOLD,bold:true});
     const values=[['Posição em investimentos (XP)',d.xp],['Posição em outras instituições',d.other],['Bens imóveis e ativos físicos',d.realEstate],['Participações societárias/Holdings',d.holdings],['Previdência Privada (Isenta de inventário)',-d.pension]];
     values.forEach(([label,v],i)=>{const y=318+i*79,color=i===4?GREEN:MUTED;text(ctx,label,52,y,485,{size:23,color});fitText(ctx,`${v<0?'-':''}${brl(Math.abs(v))}`,548,y,285,{size:27,min:18,color,bold:true,align:'right'});line(ctx,65,y+34,820,y+34,'#1d3766',1);});
-    line(ctx,65,713,820,713,'#9d7624',1);text(ctx,'TOTAL INVENTARIÁVEL',52,770,390,{size:22,color:WHITE,bold:true});fitText(ctx,brl(d.inventoriable),455,770,378,{size:33,min:22,color:GOLD,bold:true,align:'right'});
+    line(ctx,65,700,820,700,'#9d7624',1);
+    text(ctx,'TOTAL INVENTARIÁVEL',52,730,390,{size:19,color:MUTED,bold:true});fitText(ctx,brl(d.inventoriable),455,730,378,{size:27,min:18,color:MUTED,bold:true,align:'right'});
+    line(ctx,65,756,820,756,'#1d3766',1);
+    text(ctx,'CAPITAL TOTAL DO CLIENTE',52,794,390,{size:21,color:WHITE,bold:true});fitText(ctx,brl(d.total),455,794,378,{size:31,min:20,color:GOLD,bold:true,align:'right'});
 
     rect(ctx,882,198,686,390,'#2b102d',20,RED,2);
     text(ctx,'ENCARGOS DA SUCESSÃO',914,247,430,{size:21,color:WHITE,bold:true});
