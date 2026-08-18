@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Gestão de Riscos — Gerador de apresentação</title>
-  <link rel="stylesheet" href="assets/app.css?v=12" />
+  <link rel="stylesheet" href="assets/app.css?v=13" />
   <script src="assets/jszip.min.js"></script>
   <script src="assets/pptxgen.min.js"></script>
   <script src="assets/pdflib/pdf-lib.min.js"></script>
@@ -43,6 +43,7 @@
             <div class="field"><label for="realEstate">Imóveis e ativos físicos (R$)</label><input id="realEstate" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
             <div class="field"><label for="holdings">Participações societárias / holdings (R$)</label><input id="holdings" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
             <div class="field"><label for="currentInsurance">Seguro de vida já contratado (R$)</label><input id="currentInsurance" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+            <div class="field full"><label for="healthProfile">Perfil de saúde</label><input id="healthProfile" maxlength="60" placeholder="Ex.: Bom, sem comorbidades" /></div>
           </div>
         </section>
 
@@ -55,6 +56,7 @@
             <div class="field"><label for="spouseRealEstate">Imóveis e ativos físicos (R$)</label><input id="spouseRealEstate" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
             <div class="field"><label for="spouseHoldings">Participações societárias / holdings (R$)</label><input id="spouseHoldings" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
             <div class="field"><label for="spouseInsurance">Seguro de vida já contratado (R$)</label><input id="spouseInsurance" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
+            <div class="field full"><label for="spouseHealthProfile">Perfil de saúde do cônjuge</label><input id="spouseHealthProfile" maxlength="60" placeholder="Ex.: Bom, sem comorbidades" /></div>
           </div>
           <div class="grid study-diagnosis-grid">
             <div class="field"><label for="spouseSuccessionLiabilityOutput">Passivo sucessório estimado</label><input id="spouseSuccessionLiabilityOutput" type="text" readonly value="R$ 0,00" /></div>
@@ -178,16 +180,16 @@
             <div class="payback-chart-column"><div class="chart-head"><span>CENÁRIO DE PAYBACK</span><strong><small>ATIVOS FINANCEIROS</small><b id="paybackAssets">R$ 0,00</b></strong></div><canvas id="paybackChart" aria-label="Evolução dos rendimentos mensais comparada à alocação anual"></canvas></div>
             <div class="payback-scenarios"><div class="annual-allocation"><span>ALOCAÇÃO ANUAL</span><strong id="paybackPremium">R$ 0,00</strong></div><div class="scenario-title">RENDIMENTOS PAGAM A ALOCAÇÃO ANUAL EM</div><div class="scenario-grid"><div><span>★ 0,6% a.m.</span><strong id="paybackMonths06">—</strong></div><div class="highlight"><span>★ 0,8% a.m.</span><strong id="paybackMonths08">—</strong></div><div><span>★ 1,0% a.m.</span><strong id="paybackMonths10">—</strong></div></div></div>
           </div>
-          <div class="payback-gauges"><div class="web-gauge" id="gaugeCurrent"><h4>ALOCAÇÃO ATUAL VS<br>PATRIMÔNIO TOTAL</h4><div class="gauge-arc"><span class="gauge-optimal">Ótimo</span><span class="gauge-recommended">Recomendado</span><span class="gauge-high">Alta<br>exposição</span><strong id="gaugeCurrentValue">0%</strong></div><div class="gauge-scale"><span>Não se aplica</span><span>Acima de 10%</span></div></div><div class="web-gauge" id="gaugeProposed"><h4>ALOCAÇÃO PROPOSTA VS<br>PATRIMÔNIO LÍQUIDO</h4><div class="gauge-arc"><span class="gauge-optimal">Ótimo</span><span class="gauge-recommended">Recomendado</span><span class="gauge-high">Alta<br>exposição</span><strong id="gaugeProposedValue">0%</strong></div><div class="gauge-scale"><span>Não se aplica</span><span>Acima de 10%</span></div></div></div>
+          <div class="payback-gauges"><div class="web-gauge" id="gaugeCurrent"><h4>ALOCAÇÃO ATUAL VS<br>PATRIMÔNIO TOTAL</h4><div class="gauge-arc"><span class="gauge-optimal">Ótimo</span><span class="gauge-recommended">Recomendado</span><span class="gauge-high">Alta<br>exposição</span><strong id="gaugeCurrentValue">0%</strong></div><div class="gauge-scale"><span>Não se aplica</span><span>Acima de 10%</span></div></div><div class="web-gauge" id="gaugeProposed"><h4>ALOCAÇÃO PROPOSTA VS<br>PATRIMÔNIO LÍQUIDO</h4><div class="gauge-arc"><span class="gauge-optimal">Ótimo</span><span class="gauge-recommended">Recomendado</span><span class="gauge-high">Alta<br>exposição</span><strong id="gaugeProposedValue">0%</strong></div><div class="gauge-scale"><span>Não se aplica</span><span>Acima de 10%</span></div></div><div class="health-profile-card" id="healthProfileCard"><h4>PERFIL DE SAÚDE</h4><strong id="previewHealthProfile">?</strong><small id="previewHealthStatus">A PREENCHER</small></div></div>
         </div>
       </article>
     </section>
 
     <footer>Material informativo — os valores projetados dependem das premissas preenchidas e da cotação da seguradora.</footer>
   </main>
-  <script src="assets/template-ppt.js?v=21"></script>
+  <script src="assets/template-ppt.js?v=22"></script>
   <script src="assets/surrender-pdf.js?v=8"></script>
   <script src="assets/study-model.js?v=1"></script>
-  <script src="assets/app.js?v=10"></script>
+  <script src="assets/app.js?v=11"></script>
 </body>
 </html>

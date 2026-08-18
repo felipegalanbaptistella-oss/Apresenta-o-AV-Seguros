@@ -28,7 +28,7 @@
 
   const moneyInputIds = ['xp','otherInvestments','privatePension','realEstate','holdings','currentInsurance','spouseXp','spouseOther','spousePension','spouseRealEstate','spouseHoldings','spouseInsurance','coverageGap','annualPremium','spouseCoverageGap','spouseAnnualPremium'];
   const decimalInputIds = ['ipca','annualReturn','spouseIpca','spouseAnnualReturn'];
-  const inputIds = ['clientFirstName','clientLastName','spouseName','xp','otherInvestments','privatePension','realEstate','holdings','currentInsurance','spouseXp','spouseOther','spousePension','spouseRealEstate','spouseHoldings','spouseInsurance','coverageGap','clientAge','annualPremium','ipca','projectionYears','annualReturn','spouseCoverageGap','spouseAge','spouseAnnualPremium','spouseIpca','spouseProjectionYears','spouseAnnualReturn','consultant'];
+  const inputIds = ['clientFirstName','clientLastName','spouseName','healthProfile','spouseHealthProfile','xp','otherInvestments','privatePension','realEstate','holdings','currentInsurance','spouseXp','spouseOther','spousePension','spouseRealEstate','spouseHoldings','spouseInsurance','coverageGap','clientAge','annualPremium','ipca','projectionYears','annualReturn','spouseCoverageGap','spouseAge','spouseAnnualPremium','spouseIpca','spouseProjectionYears','spouseAnnualReturn','consultant'];
 
   function formatMoneyWhileTyping(input){
     const raw=input.value.replace(/\./g,'').replace(/[^\d,]/g,'');
@@ -40,7 +40,7 @@
 
   function personData(role='primary') {
     const isSpouse = role === 'spouse';
-    const ids=isSpouse?{xp:'spouseXp',other:'spouseOther',pension:'spousePension',realEstate:'spouseRealEstate',holdings:'spouseHoldings',insurance:'spouseInsurance',coverage:'spouseCoverageGap',age:'spouseAge',premium:'spouseAnnualPremium',ipca:'spouseIpca',years:'spouseProjectionYears',annualReturn:'spouseAnnualReturn'}:{xp:'xp',other:'otherInvestments',pension:'privatePension',realEstate:'realEstate',holdings:'holdings',insurance:'currentInsurance',coverage:'coverageGap',age:'clientAge',premium:'annualPremium',ipca:'ipca',years:'projectionYears',annualReturn:'annualReturn'};
+    const ids=isSpouse?{xp:'spouseXp',other:'spouseOther',pension:'spousePension',realEstate:'spouseRealEstate',holdings:'spouseHoldings',insurance:'spouseInsurance',coverage:'spouseCoverageGap',age:'spouseAge',premium:'spouseAnnualPremium',ipca:'spouseIpca',years:'spouseProjectionYears',annualReturn:'spouseAnnualReturn',health:'spouseHealthProfile'}:{xp:'xp',other:'otherInvestments',pension:'privatePension',realEstate:'realEstate',holdings:'holdings',insurance:'currentInsurance',coverage:'coverageGap',age:'clientAge',premium:'annualPremium',ipca:'ipca',years:'projectionYears',annualReturn:'annualReturn',health:'healthProfile'};
     if(!window.RiskStudy?.calculatePerson)throw new Error('O módulo de cálculo dos estudos não foi carregado.');
     const calculated=window.RiskStudy.calculatePerson({xp:num(ids.xp),other:num(ids.other),pension:num(ids.pension),realEstate:num(ids.realEstate),holdings:num(ids.holdings),currentInsurance:num(ids.insurance),coverageGap:num(ids.coverage),annualPremium:num(ids.premium),annualReturn:num(ids.annualReturn)/100});
     const consultantData = CONSULTANTS[$('consultant').value] || CONSULTANTS.fabio;
@@ -57,7 +57,7 @@
     return {
       firstName, lastName, name, familyLabel, spouseName: spouseGivenName || 'Cônjuge', consultant: consultantData.name, consultantData, spouse:false, role, studyLabel:isSpouse?'Estudo individual do cônjuge':'Estudo individual do titular',
       ...calculated,
-      age, ipca: num(ids.ipca) || 5, projectionYears, surrenderValues:Array.from({length:projectionYears},(_,i)=>Number(surrenderValuesByStudy[role][i])||0)
+      age, healthProfile:$(ids.health)?.value.trim()||'', ipca: num(ids.ipca) || 5, projectionYears, surrenderValues:Array.from({length:projectionYears},(_,i)=>Number(surrenderValuesByStudy[role][i])||0)
     };
   }
 
@@ -330,7 +330,8 @@
     [[.006,'paybackMonths06'],[.008,'paybackMonths08'],[.01,'paybackMonths10']].forEach(([rate,id])=>setText(id,monthLabel(paybackAtRate(d,rate))));
     const currentAllocation=d.total?d.annualPremium/d.total*100:0,proposedAllocation=d.withoutInsurance?d.annualPremium/d.withoutInsurance*100:0;
     setWebGauge('gaugeCurrent',currentAllocation);setWebGauge('gaugeProposed',proposedAllocation);drawPayback(d);
-    document.querySelectorAll('.scenario-grid>div,.web-gauge').forEach(card=>setDashboardDetail(card,card.querySelector('span,h4')?.textContent||'Indicador',[card.querySelector('strong')?.textContent||'']));
+    const healthProfile=String(d.healthProfile||'').trim();setText('previewHealthProfile',healthProfile||'?');setText('previewHealthStatus',healthProfile?'INFORMADO NO DIAGNÓSTICO':'A PREENCHER');
+    document.querySelectorAll('.scenario-grid>div,.web-gauge,.health-profile-card').forEach(card=>setDashboardDetail(card,card.querySelector('span,h4')?.textContent||'Indicador',[card.querySelector('strong')?.textContent||'']));
   }
 
   document.querySelectorAll('[data-status]').forEach(btn=>btn.addEventListener('click',()=>{mode=btn.dataset.status;if(mode!=='couple')activeStudy='primary';document.querySelectorAll('[data-status]').forEach(b=>b.classList.toggle('active',b===btn));document.querySelectorAll('.couple').forEach(el=>el.classList.toggle('hidden',mode!=='couple'));document.querySelectorAll('[data-study]').forEach(b=>b.classList.toggle('active',b.dataset.study===activeStudy));render();}));

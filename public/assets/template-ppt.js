@@ -285,8 +285,9 @@
     const rateMonths=monthlyRates.map(rate=>monthsAtRate(d,rate));const starColors=['#e9a2a5','#8bd05f','#f0c400'];
     monthlyRates.forEach((rate,i)=>{const x=850+i*230;rect(ctx,x,408,210,100,i===1?'#173c32':'#03143d',5,i===1?GREEN:'#9d7624',2);text(ctx,'★',x+18,438,34,{size:30,color:starColors[i],bold:true});text(ctx,`${(rate*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}% a.m.`,x+55,438,140,{size:18,color:i===1?GREEN:GOLD,bold:true});fitText(ctx,monthsText(rateMonths[i]),x+20,480,170,{size:28,min:20,color:i===1?GREEN:WHITE,bold:true,align:'center'});});
     const currentAllocation=d.total?d.annualPremium/d.total*100:0,proposedAllocation=d.withoutInsurance?d.annualPremium/d.withoutInsurance*100:0;
-    gauge(ctx,40,600,750,275,'ALOCAÇÃO ATUAL VS PATRIMÔNIO TOTAL',currentAllocation);
-    gauge(ctx,810,600,750,275,'ALOCAÇÃO PROPOSTA VS PATRIMÔNIO LÍQUIDO',proposedAllocation);
+    gauge(ctx,40,600,490,275,'ALOCAÇÃO ATUAL VS PATRIMÔNIO TOTAL',currentAllocation);
+    gauge(ctx,555,600,490,275,'ALOCAÇÃO PROPOSTA VS PATRIMÔNIO LÍQUIDO',proposedAllocation);
+    const healthProfile=String(d.healthProfile||'').trim();rect(ctx,1070,600,490,275,'#03143d',12,'#9d7624',2);text(ctx,'PERFIL DE SAÚDE',1094,634,442,{size:21,color:GOLD,bold:true,align:'center'});text(ctx,healthProfile||'?',1110,738,410,{size:healthProfile?27:92,color:WHITE,bold:true,align:'center',maxLines:3});text(ctx,healthProfile?'INFORMADO NO DIAGNÓSTICO':'A PREENCHER',1094,842,442,{size:17,color:MUTED,bold:true,align:'center'});
     return pngBytes(canvas);
   }
   async function slide14(d){

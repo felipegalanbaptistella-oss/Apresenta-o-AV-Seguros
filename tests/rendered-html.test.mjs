@@ -45,7 +45,10 @@ test("keeps the form and export contract wired", async () => {
   assert.match(legacy, /id="coverageGap"[^>]*data-money-input/);
   assert.match(legacy, /id="generatePptBtn"/);
   assert.match(legacy, /id="generatePdfBtn"/);
-  assert.doesNotMatch(legacy, /healthProfile|previewHealth/);
+  assert.match(legacy, /id="healthProfile"[^>]*maxlength="60"/);
+  assert.match(legacy, /id="spouseHealthProfile"[^>]*maxlength="60"/);
+  assert.match(legacy, /id="healthProfileCard"/);
+  assert.match(legacy, /id="previewHealthProfile">\?</);
   assert.match(legacy, /id="paybackMonths06"/);
   assert.match(legacy, /id="paybackMonths08"/);
   assert.match(legacy, /id="paybackMonths10"/);
@@ -59,6 +62,8 @@ test("keeps the form and export contract wired", async () => {
   assert.match(app, /function personData\(role='primary'\)/);
   assert.match(app, /window\.RiskStudy\.calculatePerson/);
   assert.match(app, /function exportData\(\)/);
+  assert.match(app, /healthProfile:\$\(ids\.health\)\?\.value\.trim\(\)\|\|''/);
+  assert.match(app, /setText\('previewHealthProfile',healthProfile\|\|'\?'\)/);
   assert.match(app, /setText\('previewTotalCapital',money\(d\.total\)\)/);
   assert.match(app, /label\.className='donut-label'/);
   assert.match(app, /share\*100\)\.toLocaleString\('pt-BR'/);
@@ -107,6 +112,8 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /if\(stage>=3\)\{rect\(ctx,48,footerY/);
   assert.match(template, /RENDIMENTOS PAGAM A ALOCAÇÃO ANUAL EM/);
   assert.match(template, /ALOCAÇÃO PROPOSTA VS PATRIMÔNIO LÍQUIDO/);
+  assert.match(template, /text\(ctx,'PERFIL DE SAÚDE'/);
+  assert.match(template, /healthProfile\?'INFORMADO NO DIAGNÓSTICO':'A PREENCHER'/);
   assert.match(template, /monthsAtRate\(d,rate\)/);
   assert.match(template, /const surname=\(d\.lastName\|\|d\.firstName\|\|'Cliente'\)/);
   assert.match(template, /const texture=document\.createElement\('canvas'\)/);
