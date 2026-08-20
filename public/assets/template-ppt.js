@@ -287,7 +287,7 @@
     const currentAllocation=d.total?d.annualPremium/d.total*100:0,proposedAllocation=d.withoutInsurance?d.annualPremium/d.withoutInsurance*100:0;
     gauge(ctx,40,600,490,275,'ALOCAÇÃO ATUAL VS PATRIMÔNIO TOTAL',currentAllocation);
     gauge(ctx,555,600,490,275,'ALOCAÇÃO PROPOSTA VS PATRIMÔNIO LÍQUIDO',proposedAllocation);
-    const healthProfile=String(d.healthProfile||'').trim();rect(ctx,1070,600,490,275,'#03143d',12,'#9d7624',2);text(ctx,'PERFIL DE SAÚDE',1094,634,442,{size:21,color:GOLD,bold:true,align:'center'});text(ctx,healthProfile||'?',1110,738,410,{size:healthProfile?27:92,color:WHITE,bold:true,align:'center',maxLines:3});text(ctx,healthProfile?'INFORMADO NO DIAGNÓSTICO':'A PREENCHER',1094,842,442,{size:17,color:MUTED,bold:true,align:'center'});
+    rect(ctx,1070,600,490,275,'#03143d',12,'#9d7624',2);text(ctx,'PERFIL DE SAÚDE',1094,634,442,{size:21,color:GOLD,bold:true,align:'center'});text(ctx,'?',1110,738,410,{size:92,color:WHITE,bold:true,align:'center'});text(ctx,'A PREENCHER',1094,842,442,{size:17,color:MUTED,bold:true,align:'center'});
     return pngBytes(canvas);
   }
   async function slide14(d){
