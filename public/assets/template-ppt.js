@@ -101,11 +101,11 @@
     const {canvas,ctx}=await canvasFor(1);
     // A arte-base já contém o fundo, os logotipos e a tipografia do modelo aprovado.
     // Apenas o sobrenome é substituído para manter o nome da família dinâmico.
-    // Limpa a linha fixa do arquivo-modelo copiando a textura do mar logo abaixo,
-    // sem criar uma caixa visível atrás do sobrenome.
-    const texture=document.createElement('canvas');texture.width=380;texture.height=60;const textureCtx=texture.getContext('2d');textureCtx.drawImage(canvas,1100,780,380,60,0,0,380,60);textureCtx.globalCompositeOperation='destination-in';const edgeX=textureCtx.createLinearGradient(0,0,380,0);edgeX.addColorStop(0,'rgba(0,0,0,0)');edgeX.addColorStop(.12,'rgba(0,0,0,1)');edgeX.addColorStop(.88,'rgba(0,0,0,1)');edgeX.addColorStop(1,'rgba(0,0,0,0)');textureCtx.fillStyle=edgeX;textureCtx.fillRect(0,0,380,60);const edgeY=textureCtx.createLinearGradient(0,0,0,60);edgeY.addColorStop(0,'rgba(0,0,0,0)');edgeY.addColorStop(.18,'rgba(0,0,0,1)');edgeY.addColorStop(.82,'rgba(0,0,0,1)');edgeY.addColorStop(1,'rgba(0,0,0,0)');textureCtx.fillStyle=edgeY;textureCtx.fillRect(0,0,380,60);ctx.drawImage(texture,610,724);
+    // Limpa o sobrenome fixo do modelo com uma faixa azul-marinho lisa e
+    // suavemente integrada ao fundo, sem a mancha borrada da textura anterior.
+    const cleanBand=ctx.createLinearGradient(0,716,0,794);cleanBand.addColorStop(0,'rgba(2,14,56,0)');cleanBand.addColorStop(.2,'rgba(2,14,56,1)');cleanBand.addColorStop(.8,'rgba(2,14,56,1)');cleanBand.addColorStop(1,'rgba(2,14,56,0)');ctx.fillStyle=cleanBand;ctx.fillRect(0,716,W,78);
     const surname=(d.lastName||d.firstName||'Cliente').trim().toLocaleUpperCase('pt-BR');
-    fitText(ctx,`- ${surname} -`,555,752,490,{size:34,min:20,color:GOLD,bold:false,align:'center',font:'Georgia'});
+    const surnameWidth=520,surnameX=(W-surnameWidth)/2;fitText(ctx,`- ${surname} -`,surnameX,752,surnameWidth,{size:34,min:20,color:GOLD,bold:false,align:'center',font:'Georgia'});
     return pngBytes(canvas);
   }
 

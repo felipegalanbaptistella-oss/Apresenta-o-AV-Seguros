@@ -116,7 +116,10 @@ test("keeps the form and export contract wired", async () => {
   assert.doesNotMatch(template, /healthProfile|INFORMADO NO DIAGNÓSTICO/);
   assert.match(template, /monthsAtRate\(d,rate\)/);
   assert.match(template, /const surname=\(d\.lastName\|\|d\.firstName\|\|'Cliente'\)/);
-  assert.match(template, /const texture=document\.createElement\('canvas'\)/);
+  assert.match(template, /const cleanBand=ctx\.createLinearGradient\(0,716,0,794\)/);
+  assert.doesNotMatch(template, /getImageData|createImageData|putImageData/);
+  assert.match(template, /surnameX=\(W-surnameWidth\)\/2/);
+  assert.doesNotMatch(template, /const texture=document\.createElement\('canvas'\)/);
   assert.doesNotMatch(template, /applyTransitionsToAllSlides/);
   assert.doesNotMatch(template, /await preparePlanningStages/);
   assert.doesNotMatch(template, /\[2,\(\)=>planningStage0\(\)\]/);
