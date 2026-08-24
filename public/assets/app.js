@@ -25,6 +25,9 @@
   let activeStudy = 'primary';
   const surrenderValuesByStudy = {primary:[],spouse:[]};
   const surrenderPdfImportBusy = {primary:false,spouse:false};
+  let currentStudyId = null;
+  let currentStudyRevision = null;
+  let studySearchTimer = null;
 
   const moneyInputIds = ['xp','otherInvestments','privatePension','realEstate','holdings','currentInsurance','spouseXp','spouseOther','spousePension','spouseRealEstate','spouseHoldings','spouseInsurance','coverageGap','annualPremium','spouseCoverageGap','spouseAnnualPremium'];
   const decimalInputIds = ['ipca','annualReturn','spouseIpca','spouseAnnualReturn'];
@@ -65,6 +68,112 @@
   function exportData(){
     const primary=personData('primary'),hasSpouse=mode==='couple',studies=hasSpouse?[primary,personData('spouse')]:[primary];
     return {...primary,spouse:hasSpouse,spouseName:studies[1]?.name||'Cônjuge',maritalRegime:hasSpouse?$('maritalRegime').value:'',studies};
+  }
+
+  function databasePayload(){
+    return {
+      mode,
+      values:Object.fromEntries(inputIds.map(id=>[id,$(id)?.value??''])),
+      surrenderValues:{
+        primary:[...surrenderValuesByStudy.primary].slice(0,clamp(num('projectionYears')||20,12,40)),
+        spouse:mode==='couple'?[...surrenderValuesByStudy.spouse].slice(0,clamp(num('spouseProjectionYears')||20,12,40)):[]
+      }
+    };
+  }
+
+  async function databaseRequest(url,options={}){
+    const response=await fetch(url,{...options,headers:{'content-type':'application/json',...(options.headers||{})},cache:'no-store'});
+    let payload={};
+    try{payload=await response.json();}catch(_){/* resposta sem JSON */}
+    if(!response.ok)throw new Error(payload.error||`Falha no banco (${response.status}).`);
+    return payload;
+  }
+
+  function setDatabaseStatus(message,state=''){
+    const status=$('studyDatabaseStatus');if(!status)return;
+    status.className=`study-database-status ${state}`.trim();status.textContent=message;
+  }
+
+  function updateCurrentStudyMeta(name=''){
+    const meta=$('currentStudyMeta');if(!meta)return;
+    meta.textContent=currentStudyId
+      ? `${name||'Estudo aberto'} · versão ${currentStudyRevision}`
+      :'Novo estudo ainda não salvo.';
+  }
+
+  function studyMoneyFromCents(value){return money((Number(value)||0)/100);}
+
+  function renderStudyList(studies){
+    const list=$('studyList');if(!list)return;
+    list.innerHTML='';
+    if(!studies.length){const empty=document.createElement('p');empty.className='study-list-empty';empty.textContent='Nenhum estudo encontrado.';list.appendChild(empty);return;}
+    studies.forEach(study=>{
+      const button=document.createElement('button');button.type='button';button.className=`study-record${study.id===currentStudyId?' active':''}`;button.dataset.studyId=study.id;
+      const title=document.createElement('strong');title.textContent=[study.client_first_name,study.client_last_name].filter(Boolean).join(' ');
+      const family=document.createElement('span');family.textContent=study.spouse_name?`Com ${study.spouse_name}`:'Estudo individual';
+      const summary=document.createElement('small');const total=document.createElement('b');total.textContent=studyMoneyFromCents(study.total_assets_cents);const version=document.createElement('em');version.textContent=`v${study.revision}`;summary.append(total,version);
+      button.append(title,family,summary);button.addEventListener('click',()=>loadStudy(study.id));list.appendChild(button);
+    });
+  }
+
+  async function loadStudyList(){
+    setDatabaseStatus('Carregando estudos salvos…','loading');
+    try{
+      const query=$('studySearch')?.value.trim()||'';
+      const result=await databaseRequest(`/api/studies?q=${encodeURIComponent(query)}`);
+      renderStudyList(result.studies||[]);
+      setDatabaseStatus(`${(result.studies||[]).length} ${(result.studies||[]).length===1?'estudo encontrado':'estudos encontrados'}.`,'success');
+    }catch(error){setDatabaseStatus(error?.message||'Não foi possível consultar o banco.','error');}
+  }
+
+  function applyDatabasePayload(payload){
+    const targetMode=payload?.mode==='couple'?'couple':'single';
+    document.querySelector(`[data-status="${targetMode}"]`)?.click();
+    Object.entries(payload?.values||{}).forEach(([id,value])=>{const input=$(id);if(input)input.value=String(value??'');});
+    moneyInputIds.forEach(id=>{const input=$(id);if(input)finishMoneyFormat(input);});
+    decimalInputIds.forEach(id=>{const input=$(id);if(input)finishMoneyFormat(input);});
+    surrenderValuesByStudy.primary=Array.isArray(payload?.surrenderValues?.primary)?payload.surrenderValues.primary.map(Number):[];
+    surrenderValuesByStudy.spouse=Array.isArray(payload?.surrenderValues?.spouse)?payload.surrenderValues.spouse.map(Number):[];
+    ['primary','spouse'].forEach(role=>{const container=$(surrenderUi(role).inputs);if(container)delete container.dataset.signature;});
+    render();
+  }
+
+  async function loadStudy(id){
+    setDatabaseStatus('Abrindo o estudo…','loading');
+    try{
+      const result=await databaseRequest(`/api/studies/${encodeURIComponent(id)}`);
+      applyDatabasePayload(result.study.payload);
+      currentStudyId=result.study.id;currentStudyRevision=result.study.revision;
+      const name=[result.study.clientFirstName,result.study.clientLastName].filter(Boolean).join(' ');
+      updateCurrentStudyMeta(name);await loadStudyList();
+      setDatabaseStatus(`Estudo de ${name} carregado.`,'success');
+      $('clientForm')?.scrollIntoView({behavior:'smooth',block:'start'});
+    }catch(error){setDatabaseStatus(error?.message||'Não foi possível abrir o estudo.','error');}
+  }
+
+  async function saveStudy(){
+    const form=$('clientForm');if(!form.reportValidity())return;
+    const button=$('saveStudyBtn');button.disabled=true;button.textContent='Salvando…';setDatabaseStatus('Salvando o estudo no banco…','loading');
+    try{
+      const payload=databasePayload();
+      if(currentStudyId)payload.expectedRevision=currentStudyRevision;
+      const result=await databaseRequest(currentStudyId?`/api/studies/${currentStudyId}`:'/api/studies',{method:currentStudyId?'PUT':'POST',body:JSON.stringify(payload)});
+      currentStudyId=result.id;currentStudyRevision=result.revision;
+      const name=[$('clientFirstName').value.trim(),$('clientLastName').value.trim()].filter(Boolean).join(' ');
+      updateCurrentStudyMeta(name);await loadStudyList();setDatabaseStatus(`Estudo de ${name} salvo com sucesso.`,'success');
+    }catch(error){setDatabaseStatus(error?.message||'Não foi possível salvar o estudo.','error');}
+    finally{button.disabled=false;button.textContent='Salvar estudo';}
+  }
+
+  function newStudy(){
+    if(currentStudyId&&!window.confirm('Iniciar um novo estudo? Alterações não salvas no estudo aberto serão descartadas.'))return;
+    $('clientForm').reset();currentStudyId=null;currentStudyRevision=null;activeStudy='primary';
+    surrenderValuesByStudy.primary=[];surrenderValuesByStudy.spouse=[];
+    document.querySelector('[data-status="single"]')?.click();
+    moneyInputIds.forEach(id=>{const input=$(id);if(input)finishMoneyFormat(input);});
+    decimalInputIds.forEach(id=>{const input=$(id);if(input)finishMoneyFormat(input);});
+    ['primary','spouse'].forEach(role=>{const container=$(surrenderUi(role).inputs);if(container)delete container.dataset.signature;});
+    updateCurrentStudyMeta();render();loadStudyList();$('clientFirstName')?.focus();
   }
 
   function wlProjection(d) {
@@ -394,6 +503,11 @@
   }
   $('clientForm').addEventListener('submit',event=>{event.preventDefault();generateOutput('pptx');});
   $('generatePdfBtn').addEventListener('click',()=>generateOutput('pdf'));
+  $('saveStudyBtn')?.addEventListener('click',saveStudy);
+  $('newStudyBtn')?.addEventListener('click',newStudy);
+  $('refreshStudiesBtn')?.addEventListener('click',loadStudyList);
+  $('studySearch')?.addEventListener('input',()=>{clearTimeout(studySearchTimer);studySearchTimer=setTimeout(loadStudyList,280);});
   const spouseStudySection=$('spouseAssets'),primaryQuoteSection=$('surrenderInputs')?.closest('section');if(spouseStudySection&&primaryQuoteSection)primaryQuoteSection.after(spouseStudySection);
   render();
+  loadStudyList();
 })();

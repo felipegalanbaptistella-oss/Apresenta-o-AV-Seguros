@@ -55,7 +55,7 @@ test("keeps the form and export contract wired", async () => {
   const [page, layout, legacy, app, template, appCss] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../public/legacy.html", import.meta.url), "utf8"),
+    readFile(new URL("../public/legacy-v7.html", import.meta.url), "utf8"),
     readFile(new URL("../public/assets/app.js", import.meta.url), "utf8"),
     readFile(new URL("../public/assets/template-ppt.js", import.meta.url), "utf8"),
     readFile(new URL("../public/assets/app.css", import.meta.url), "utf8"),
@@ -77,6 +77,9 @@ test("keeps the form and export contract wired", async () => {
   assert.match(legacy, /id="coverageGap"[^>]*data-money-input/);
   assert.match(legacy, /id="generatePptBtn"/);
   assert.match(legacy, /id="generatePdfBtn"/);
+  assert.match(legacy, /id="studyVaultTitle"/);
+  assert.match(legacy, /id="saveStudyBtn"/);
+  assert.match(legacy, /id="studySearch"/);
   assert.doesNotMatch(legacy, /id="healthProfile"|id="spouseHealthProfile"/);
   assert.match(legacy, /id="healthProfileCard"/);
   assert.match(legacy, /id="previewHealthProfile">\?</);
@@ -93,6 +96,9 @@ test("keeps the form and export contract wired", async () => {
   assert.match(app, /function personData\(role='primary'\)/);
   assert.match(app, /window\.RiskStudy\.calculatePerson/);
   assert.match(app, /function exportData\(\)/);
+  assert.match(app, /function databasePayload\(\)/);
+  assert.match(app, /\/api\/studies/);
+  assert.match(app, /async function saveStudy\(\)/);
   assert.match(app, /maritalRegime:hasSpouse\?\$\('maritalRegime'\)\.value:''/);
   assert.match(app, /maritalRegime\.required=mode==='couple'/);
   assert.doesNotMatch(app, /healthProfile|spouseHealthProfile|ids\.health/);
@@ -181,6 +187,28 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /const sourceXml=\(await read\('ppt\/slides\/slide2\.xml'\)\).*?<p:timing/);
   assert.match(template, /const sourceRels=.*?\/notesSlide/);
   assert.match(template, /slide17\.xml\.rels',sourceRels/);
+});
+
+test("keeps the authenticated D1 study database contract wired", async () => {
+  const [hosting, schema, listRoute, detailRoute, worker] = await Promise.all([
+    readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/studies/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/studies/[id]/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.equal(JSON.parse(hosting).d1, "DB");
+  assert.match(schema, /sqliteTable\(\s*"risk_studies"/);
+  assert.match(schema, /sqliteTable\(\s*"risk_study_revisions"/);
+  assert.match(schema, /idx_risk_studies_client_name/);
+  assert.match(schema, /uidx_risk_study_revisions_study_revision/);
+  assert.match(listRoute, /INSERT INTO risk_studies/);
+  assert.match(listRoute, /INSERT INTO risk_study_revisions/);
+  assert.match(detailRoute, /revision = \?, updated_by = \?, updated_at = \?/);
+  assert.match(detailRoute, /status: 409/);
+  assert.match(worker, /hasValidBasicCredentials/);
+  assert.match(worker, /if \(!await hasValidBasicCredentials\(request, env\)\)/);
 });
 
 test("keeps the presentation model transition sequence", () => {

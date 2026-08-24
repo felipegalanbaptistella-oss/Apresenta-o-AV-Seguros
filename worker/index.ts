@@ -1,12 +1,14 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import type { AnyD1Database } from "drizzle-orm/d1";
+import { configureD1 } from "../db";
 
 interface Env {
-  ASSETS: Fetcher;
+  ASSETS: { fetch(request: Request): Promise<Response> };
   BASIC_AUTH_PASSWORD?: string;
   BASIC_AUTH_USERNAME?: string;
-  DB: D1Database;
+  DB: AnyD1Database;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
@@ -128,6 +130,8 @@ const worker = {
     if (!await hasValidBasicCredentials(request, env)) {
       return withSecurityHeaders(unauthorizedResponse(authIsConfigured), url.pathname);
     }
+
+    configureD1(env.DB);
 
     if (url.pathname === "/_vinext/image") {
       const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];

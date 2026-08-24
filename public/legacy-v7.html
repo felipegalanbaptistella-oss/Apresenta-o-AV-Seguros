@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <title>Gestão de Riscos — Gerador de apresentação</title>
-  <link rel="stylesheet" href="assets/app.css?v=14" />
+  <link rel="stylesheet" href="assets/app.css?v=15" />
   <script src="assets/jszip.min.js"></script>
   <script src="assets/pptxgen.min.js"></script>
   <script src="assets/pdflib/pdf-lib.min.js"></script>
@@ -18,6 +18,27 @@
       <h1>Gerador de apresentação comercial</h1>
       <p>Preencha os dados de cada pessoa. Quando houver cônjuge, o site calcula dois estudos independentes e os reúne na mesma apresentação familiar.</p>
     </header>
+
+    <section class="card study-vault" aria-labelledby="studyVaultTitle">
+      <div class="study-vault-heading">
+        <div>
+          <span class="study-vault-eyebrow">BANCO DE ESTUDOS</span>
+          <h2 id="studyVaultTitle">Clientes salvos</h2>
+          <p>Salve o preenchimento completo e retome o estudo depois. Os PDFs importados continuam somente neste navegador.</p>
+        </div>
+        <div class="study-vault-actions">
+          <button class="btn secondary" type="button" id="newStudyBtn">Novo estudo</button>
+          <button class="btn primary" type="button" id="saveStudyBtn">Salvar estudo</button>
+        </div>
+      </div>
+      <div class="study-vault-search">
+        <label for="studySearch">Buscar por cliente ou cônjuge</label>
+        <div><input id="studySearch" type="search" autocomplete="off" placeholder="Digite um nome" /><button type="button" id="refreshStudiesBtn">Atualizar</button></div>
+      </div>
+      <div id="studyDatabaseStatus" class="study-database-status" role="status" aria-live="polite">Carregando estudos salvos…</div>
+      <div id="currentStudyMeta" class="current-study-meta">Novo estudo ainda não salvo.</div>
+      <div id="studyList" class="study-list" aria-live="polite"></div>
+    </section>
 
     <div class="layout">
       <form class="card form-card" id="clientForm" autocomplete="off">
@@ -192,6 +213,6 @@
   <script src="assets/template-ppt-v28.js"></script>
   <script src="assets/surrender-pdf.js?v=8"></script>
   <script src="assets/study-model.js?v=1"></script>
-  <script src="assets/app.js?v=13"></script>
+  <script src="assets/app.js?v=14"></script>
 </body>
 </html>
