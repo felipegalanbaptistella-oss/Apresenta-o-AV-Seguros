@@ -41,7 +41,7 @@
 .btn.pdf{background:#173c32;color:#c8efaf;border:1px solid #70b544}.btn.pdf:hover{background:#21503b}
 .payback-layout{height:83%;grid-template-rows:60% 38%;gap:2%}.payback-main,.payback-chart-column,.payback-scenarios,.scenario-grid,.scenario-grid>div,.payback-gauges,.web-gauge{min-height:0}.payback-scenarios{grid-template-rows:35% 20% 35%;gap:5%}
 /* Agulha dos velocímetros: prêmio anual sobre o patrimônio. */
-.gauge-arc:after{background:#f28c28}
+.gauge-arc:after{width:6px;background:#ff6b00;border-radius:999px;box-shadow:0 0 0 2px #020e38,0 0 9px #ff6b00}
 /* A escala usa apenas vermelho, verdes e amarelo; o laranja fica exclusivo da agulha. */
 .gauge-arc{background:conic-gradient(from 270deg at 50% 100%,#ff4848 0 2%,#70b544 2% 16%,#c9e2ae 16% 30%,#f5df8d 30% 50%,transparent 50%)}
 .gauge-arc>span{color:#fff;text-shadow:0 1px 3px #0009}

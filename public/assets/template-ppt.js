@@ -1,5 +1,5 @@
 (() => {
-  const W=1600,H=900,NAVY='#020e38',PANEL='#061743',GOLD='#c5a05b',GOLD2='#d5a800',WHITE='#f4f5f8',MUTED='#c6cfdf',GREEN='#70b544',RED='#ff4848',BLUE='#294878';
+  const W=1600,H=900,EMU=7620,NAVY='#020e38',PANEL='#061743',GOLD='#c5a05b',GOLD2='#d5a800',WHITE='#f4f5f8',MUTED='#c6cfdf',GREEN='#70b544',RED='#ff4848',ORANGE='#ff6b00',BLUE='#294878';
   const imageCache=new Map();
   const brl=value=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value)||0);
   const pct=value=>`${(Number(value)||0).toLocaleString('pt-BR',{maximumFractionDigits:2})}%`;
@@ -11,7 +11,7 @@
     const promise=new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error(`Não foi possível carregar ${url}`));img.src=url;});
     imageCache.set(url,promise);return promise;
   }
-  async function canvasFor(slide){const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;const ctx=canvas.getContext('2d');ctx.drawImage(await loadImage(`assets/template-slides/slide${slide}.jpg`),0,0,W,H);return {canvas,ctx};}
+  async function canvasFor(slide){const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;const ctx=canvas.getContext('2d');const asset=slide===5?'assets/template-slides/slide5-only-top-v7.jpg':`assets/template-slides/slide${slide}.jpg?v=5`;ctx.drawImage(await loadImage(asset),0,0,W,H);return {canvas,ctx};}
   const rect=(ctx,x,y,w,h,fill,r=0,stroke=null,lw=1)=>{ctx.save();ctx.beginPath();if(r){ctx.roundRect(x,y,w,h,r);}else ctx.rect(x,y,w,h);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke();}ctx.restore();};
   function text(ctx,value,x,y,w,{size=26,color=WHITE,bold=false,align='left',font='Arial',baseline='middle',maxLines=1}={}){
     ctx.save();ctx.fillStyle=color;ctx.textAlign=align;ctx.textBaseline=baseline;ctx.font=`${bold?'700':'400'} ${size}px ${font}`;
@@ -187,12 +187,16 @@
     const rate=d.ipca/100;
     return Array.from({length:d.projectionYears},(_,year)=>{let accumulated=0;for(let i=0;i<Math.min(year+1,10);i++)accumulated+=d.annualPremium*Math.pow(1+rate,i);const surrender=Number(d.surrenderValues?.[year])||0;return{year,age:d.age+year,capital:d.coverageGap*Math.pow(1+rate,year),premium:year<10?d.annualPremium*Math.pow(1+rate,year):0,accumulated:year<10?accumulated:0,surrender};});
   }
-  function benefitPanel(ctx,x,y,w,h,title,lines,active){
+  function infoIcon(ctx,cx,cy){
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,15,0,Math.PI*2);ctx.fillStyle=GOLD;ctx.fill();ctx.strokeStyle=WHITE;ctx.lineWidth=2;ctx.stroke();ctx.restore();
+    text(ctx,'i',cx-13,cy+1,26,{size:20,color:NAVY,bold:true,align:'center',font:'Georgia'});
+  }
+  function benefitPanel(ctx,x,y,w,h,title,lines,active,{infoIcons=false}={}){
     rect(ctx,x,y,w,h,'#03143d',12,active?'#9d7624':'#26375f',2);
     text(ctx,title,x+18,y+28,w-36,{size:17,color:active?GOLD:'#63718f',bold:true,align:'center'});
     if(!active)return;
     const start=y+74,gap=(h-86)/Math.max(lines.length,1);
-    lines.forEach((label,index)=>fitText(ctx,label,x+24,start+index*gap,w-48,{size:20,min:14,color:GREEN,bold:false,align:'center'}));
+    lines.forEach((label,index)=>{const cy=start+index*gap;fitText(ctx,label,x+24,cy,w-(infoIcons?92:48),{size:20,min:14,color:GREEN,bold:false,align:'center'});if(infoIcons)infoIcon(ctx,x+w-38,cy);});
   }
   async function slide11(d,stage=3){
     const {canvas,ctx}=await canvasFor(11),rows=projection(d);
@@ -224,7 +228,7 @@
     rect(ctx,1128,88,432,758,NAVY);
     benefitPanel(ctx,1148,94,405,204,'BENEFÍCIOS SECURITÁRIOS',['CONGELAMENTO DE RISCO','CONGELAMENTO DE IDADE'],stage>=1);
     benefitPanel(ctx,1148,310,405,278,'BENEFÍCIOS FINANCEIROS E TRIBUTÁRIOS',['ALAVANCAGEM · Liquidez em D+0','ISENÇÃO DE IMPOSTOS*','QUITAÇÃO NO 10º ANO','sem necessidade de novos aportes'],stage>=2);
-    benefitPanel(ctx,1148,600,405,242,'BENEFÍCIOS LEGAIS',['INCOMUNICÁVEL','INALIENÁVEL','IMPENHORÁVEL'],stage>=3);
+    benefitPanel(ctx,1148,600,405,242,'BENEFÍCIOS LEGAIS',['INCOMUNICÁVEL','INALIENÁVEL','IMPENHORÁVEL'],stage>=3,{infoIcons:true});
     return pngBytes(canvas);
   }
 
@@ -258,7 +262,8 @@
     ctx.save();ctx.lineWidth=48;ctx.lineCap='butt';zones.forEach(([a,b,color])=>{ctx.beginPath();ctx.arc(cx,cy,r,start+Math.PI*a,start+Math.PI*b);ctx.strokeStyle=color;ctx.stroke();});ctx.restore();
     ctx.beginPath();ctx.moveTo(cx-r+20,cy);ctx.arc(cx,cy,r-49,Math.PI,Math.PI*2);ctx.lineTo(cx+r-20,cy);ctx.closePath();ctx.fillStyle='#c7a466';ctx.fill();
     const normalized=Math.max(0,Math.min(1,value/10)),angle=start+Math.PI*normalized;
-    line(ctx,cx+Math.cos(angle)*(r-27),cy+Math.sin(angle)*(r-27),cx+Math.cos(angle)*(r+29),cy+Math.sin(angle)*(r+29),'#f28c28',4);
+    const markerX1=cx+Math.cos(angle)*(r-31),markerY1=cy+Math.sin(angle)*(r-31),markerX2=cx+Math.cos(angle)*(r+33),markerY2=cy+Math.sin(angle)*(r+33);
+    ctx.save();ctx.lineCap='round';ctx.shadowColor='rgba(255,107,0,.65)';ctx.shadowBlur=8;ctx.strokeStyle='rgba(2,14,56,.92)';ctx.lineWidth=18;ctx.beginPath();ctx.moveTo(markerX1,markerY1);ctx.lineTo(markerX2,markerY2);ctx.stroke();ctx.strokeStyle=ORANGE;ctx.lineWidth=12;ctx.beginPath();ctx.moveTo(markerX1,markerY1);ctx.lineTo(markerX2,markerY2);ctx.stroke();ctx.restore();
     text(ctx,'Ótimo',x+160,cy-76,120,{size:16,color:WHITE,bold:true,align:'center'});
     text(ctx,'Recomendado',cx-140,y+82,280,{size:17,color:WHITE,bold:true,align:'center'});
     text(ctx,'Alta exposição',x+w-265,cy-92,160,{size:16,color:WHITE,bold:true,align:'center',maxLines:2});
@@ -302,6 +307,25 @@
     return pngBytes(canvas);
   }
 
+  const legalInfoSlides=[
+    {key:'incomunicavel',title:'INCOMUNICÁVEL',lead:'O capital por morte é pago ao beneficiário indicado e não integra a herança.',law:'Lei 15.040/2024 · arts. 113 a 116',detail:'A lei permite indicar livremente o beneficiário e estabelece que o capital segurado devido por morte não é herança para nenhum efeito.',limit:'O termo “incomunicável” é uma simplificação comercial, não uma regra absoluta para toda modalidade. Reserva, resgate em vida e regime de bens exigem análise do contrato e do caso concreto.'},
+    {key:'inalienavel',title:'INALIENÁVEL',lead:'A lei protege o crédito securitário contra renúncia ou redução antecipada.',law:'Lei 15.040/2024 · arts. 114 e 117',detail:'É nulo o negócio que implique renúncia ou redução do crédito ao capital segurado ou à reserva matemática.',limit:'Não é indisponibilidade absoluta: a lei admite substituição do beneficiário e ressalva empréstimo técnico e resgate previstos no contrato.'},
+    {key:'impenhoravel',title:'IMPENHORÁVEL',lead:'Os capitais devidos por morte ou perda da integridade física recebem proteção expressa contra penhora.',law:'Lei 15.040/2024 · art. 122  |  CPC · art. 833, VI',detail:'A Lei do Contrato de Seguro e o Código de Processo Civil qualificam o seguro de vida e os capitais securitários como impenhoráveis.',limit:'A proteção pode não alcançar valores resgatados em vida pelo próprio segurado quando passam a ter natureza de investimento (STJ, REsp 2.176.434, 2026).'}
+  ];
+  async function legalInfoSlide(info){
+    const {canvas,ctx}=await canvasFor(11);rect(ctx,0,0,W,H,NAVY);
+    text(ctx,'GESTÃO DE RISCOS',82,58,440,{size:18,color:GOLD,bold:true,font:'Georgia'});
+    text(ctx,'BENEFÍCIOS LEGAIS DO SEGURO DE VIDA',82,120,1180,{size:38,color:WHITE,bold:true});
+    rect(ctx,82,174,1436,112,'#0a2050',18,GOLD,2);fitText(ctx,info.title,112,229,430,{size:46,min:34,color:GOLD,bold:true});text(ctx,info.lead,550,229,930,{size:25,color:WHITE,maxLines:2});
+    rect(ctx,82,326,680,208,'#061743',18,'#284878',2);text(ctx,'BASE LEGAL VIGENTE',114,366,610,{size:18,color:GOLD,bold:true});fitText(ctx,info.law,114,414,610,{size:28,min:21,color:WHITE,bold:true});text(ctx,info.detail,114,474,610,{size:20,color:MUTED,maxLines:3});
+    rect(ctx,798,326,720,310,'#061743',18,'#284878',2);text(ctx,'ALCANCE E LIMITES',830,366,650,{size:18,color:GOLD,bold:true});text(ctx,info.limit,830,458,650,{size:22,color:WHITE,maxLines:7});
+    rect(ctx,82,574,680,62,'rgba(197,160,91,.14)',12,GOLD,1);text(ctx,'Base legal federal — não é previsão direta da Constituição Federal.',105,605,635,{size:16,color:GOLD,bold:true,align:'center'});
+    rect(ctx,82,690,1436,92,'#03143d',16,'#26375f',2);text(ctx,'Leitura orientativa. A aplicação depende da modalidade contratada, das condições da apólice e do caso concreto.',118,735,1364,{size:20,color:MUTED,align:'center',maxLines:2});
+    rect(ctx,1350,34,168,52,'#0a2050',12,GOLD,2);text(ctx,'← VOLTAR',1362,60,144,{size:17,color:WHITE,bold:true,align:'center'});
+    text(ctx,'Fontes: Lei 15.040/2024 (Planalto) · Lei 13.105/2015, CPC (Planalto) · STJ, quando indicado',82,842,1436,{size:15,color:'#8496bb',align:'center'});
+    return pngBytes(canvas);
+  }
+
   const fullSlidePic=()=>`<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr><p:pic><p:nvPicPr><p:cNvPr id="2" name="Slide personalizado"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rId999"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="12192000" cy="6858000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic></p:spTree>`;
   async function replaceSlide(zip,no,bytes,{hidden=false}={}){
     const xmlPath=`ppt/slides/slide${no}.xml`,relsPath=`ppt/slides/_rels/slide${no}.xml.rels`,mediaPath=`ppt/media/custom-slide${no}.png`;
@@ -320,6 +344,12 @@
     xml=xml.replace('</p:spTree>',`${hotspot}</p:spTree>`);
     rels=rels.replace('</Relationships>',`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slide${targetSlide}.xml"/></Relationships>`);
     zip.file(xmlPath,xml);zip.file(relsPath,rels);
+  }
+  async function addShowJumpHotspot(zip,sourceSlide,{x=0,y=0,w=12192000,h=6858000,name='Retornar ao slide anterior',jump='lastslideviewed'}={}){
+    const xmlPath=`ppt/slides/slide${sourceSlide}.xml`;let xml=await zip.file(xmlPath).async('string');
+    const shapeIds=[...xml.matchAll(/<p:cNvPr\b[^>]*\bid="(\d+)"/g)].map(match=>Number(match[1])),shapeId=Math.max(2,...shapeIds)+1;
+    const hotspot=`<p:sp><p:nvSpPr><p:cNvPr id="${shapeId}" name="${name}"><a:hlinkClick action="ppaction://hlinkshowjump?jump=${jump}"/></p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${w}" cy="${h}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="FFFFFF"><a:alpha val="0"/></a:srgbClr></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p/></p:txBody></p:sp>`;
+    xml=xml.replace('</p:spTree>',`${hotspot}</p:spTree>`);zip.file(xmlPath,xml);
   }
   async function ensureRiskNavigation(zip){
     const xmlPath='ppt/slides/slide2.xml',relsPath='ppt/slides/_rels/slide2.xml.rels';
@@ -355,6 +385,22 @@
     let contentTypes=await read('[Content_Types].xml');contentTypes=contentTypes.replace('</Types>','<Override PartName="/ppt/slides/slide15.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/><Override PartName="/ppt/slides/slide16.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>');zip.file('[Content_Types].xml',contentTypes);
     const appFile=zip.file('docProps/app.xml');if(appFile){let app=await appFile.async('string');app=app.replace(/<Slides>(\d+)<\/Slides>/,(_,count)=>`<Slides>${Number(count)+2}</Slides>`);if(slide12WasHidden)app=app.replace(/<HiddenSlides>(\d+)<\/HiddenSlides>/,(_,count)=>`<HiddenSlides>${Math.max(0,Number(count)-1)}</HiddenSlides>`);app=app.replace(/(<vt:lpstr>Títulos de slides<\/vt:lpstr><\/vt:variant><vt:variant><vt:i4>)(\d+)(<\/vt:i4>)/,(_,before,count,after)=>`${before}${Number(count)+2}${after}`).replace(/(<TitlesOfParts><vt:vector\b[^>]*\bsize=")(\d+)("[^>]*>)([\s\S]*?)(<\/vt:vector><\/TitlesOfParts>)/,(_,before,size,middle,body,after)=>`${before}${Number(size)+2}${middle}${body}<vt:lpstr>Apresentação do PowerPoint</vt:lpstr><vt:lpstr>Apresentação do PowerPoint</vt:lpstr>${after}`);zip.file('docProps/app.xml',app);}
   }
+  async function prepareLegalInfoSlides(zip){
+    const read=async path=>{const file=zip.file(path);if(!file)throw new Error(`Parte OOXML ausente: ${path}`);return file.async('string');};
+    const slideNumbers=[17,18,19];if(slideNumbers.some(no=>zip.file(`ppt/slides/slide${no}.xml`)))throw new Error('Os slides legais adicionais já existem no modelo.');
+    const cloneBase=(await read('ppt/slides/slide11.xml')).replace(/\s+show="0"(?=[\s>])/g,'').replace(/<p:timing\b[^>]*>[\s\S]*?<\/p:timing>/g,'');
+    const relXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/></Relationships>';
+    slideNumbers.forEach((no,index)=>{const xml=cloneBase.replace(/(<p14:creationId\b[^>]*\bval=")\d+("[^>]*\/>)/,(_,before,after)=>`${before}${3720000100+index}${after}`);zip.file(`ppt/slides/slide${no}.xml`,xml);zip.file(`ppt/slides/_rels/slide${no}.xml.rels`,relXml);});
+    const relPath='ppt/_rels/presentation.xml.rels';let rels=await read(relPath);const usedRids=[...rels.matchAll(/\bId="rId(\d+)"/g)].map(match=>Number(match[1])),firstRid=Math.max(0,...usedRids)+1;const newRids=slideNumbers.map((no,index)=>`rId${firstRid+index}`);
+    newRids.forEach((rid,index)=>{rels=rels.replace('</Relationships>',`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${slideNumbers[index]}.xml"/></Relationships>`);});zip.file(relPath,rels);
+    let presentation=await read('ppt/presentation.xml');const ids=[...presentation.matchAll(/<p:sldId\b[^>]*\bid="(\d+)"/g)].map(match=>Number(match[1]));let nextId=Math.max(255,...ids)+1;
+    const slide16Rel=[...rels.matchAll(/<Relationship\b[^>]*\/>/g)].map(match=>match[0]).find(tag=>/Target="slides\/slide16\.xml"/.test(tag)),slide16Rid=slide16Rel?.match(/\bId="([^"]+)"/)?.[1];if(!slide16Rid)throw new Error('Relacionamento do slide final da projeção não encontrado.');
+    const slide16Pattern=new RegExp(`<p:sldId\\b(?=[^>]*\\br:id="${slide16Rid}")[^>]*/>`),slide16Tag=presentation.match(slide16Pattern)?.[0];if(!slide16Tag)throw new Error('Posição do slide final da projeção não encontrada.');
+    const inserted=newRids.map(rid=>`<p:sldId id="${nextId++}" r:id="${rid}"/>`).join('');presentation=presentation.replace(slide16Pattern,`${slide16Tag}${inserted}`);zip.file('ppt/presentation.xml',presentation);
+    let types=await read('[Content_Types].xml');slideNumbers.forEach(no=>{types=types.replace('</Types>',`<Override PartName="/ppt/slides/slide${no}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>`);});zip.file('[Content_Types].xml',types);
+    const appFile=zip.file('docProps/app.xml');if(appFile){let app=await appFile.async('string');app=app.replace(/<Slides>(\d+)<\/Slides>/,(_,n)=>`<Slides>${Number(n)+slideNumbers.length}</Slides>`);if(/<HiddenSlides>\d+<\/HiddenSlides>/.test(app))app=app.replace(/<HiddenSlides>(\d+)<\/HiddenSlides>/,(_,n)=>`<HiddenSlides>${Number(n)+slideNumbers.length}</HiddenSlides>`);else app=app.replace(/(<Slides>\d+<\/Slides>)/,`$1<HiddenSlides>${slideNumbers.length}</HiddenSlides>`);app=app.replace(/(<TitlesOfParts><vt:vector\b[^>]*\bsize=")(\d+)("[^>]*>)([\s\S]*?)(<\/vt:vector><\/TitlesOfParts>)/,(_,before,size,middle,body,after)=>`${before}${Number(size)+slideNumbers.length}${middle}${body}${'<vt:lpstr>Base legal do seguro de vida</vt:lpstr>'.repeat(slideNumbers.length)}${after}`);zip.file('docProps/app.xml',app);}
+    return Object.fromEntries(legalInfoSlides.map((info,index)=>[info.key,slideNumbers[index]]));
+  }
   async function preparePlanningStages(zip){
     if(zip.file('ppt/slides/slide17.xml'))throw new Error('O slide adicional de planejamento já existe no modelo.');
     const read=async path=>{const file=zip.file(path);if(!file)throw new Error(`Parte OOXML ausente: ${path}`);return file.async('string');};
@@ -368,7 +414,7 @@
   }
   const projectionSlideNumbers=[11,12,15,16];
   const studySlideNumbers=[6,7,8,9,10,11,12,15,16,13];
-  async function renderCommonSlides(d){const tasks=[[1,()=>slide1(d)],[3,()=>staticSlide(3)],[4,()=>staticSlide(4)],[14,()=>slide14(d)]];const rendered=[];for(const [no,render] of tasks)rendered.push([no,await render()]);return rendered;}
+  async function renderCommonSlides(d){const tasks=[[1,()=>slide1(d)],[3,()=>staticSlide(3)],[4,()=>staticSlide(4)],[5,()=>staticSlide(5)],[14,()=>slide14(d)]];const rendered=[];for(const [no,render] of tasks)rendered.push([no,await render()]);return rendered;}
   async function renderOverviewSlides(d){const tasks=[[6,()=>slide6(d)],[7,()=>slide7(d)],[8,()=>assetSlide(8,d,'current')],[9,()=>assetSlide(9,d,'reallocation')],[10,()=>assetSlide(10,d,'with')],[13,()=>slide13(d)]];const rendered=[];for(const [no,render] of tasks)rendered.push([no,await render()]);return rendered;}
   async function renderProjectionSlides(d){const tasks=[[11,()=>slide11(d,0)],[12,()=>slide11(d,1)],[15,()=>slide11(d,2)],[16,()=>slide11(d,3)]];const rendered=[];for(const [no,render] of tasks)rendered.push([no,await render()]);return rendered;}
   async function renderStudySlides(d){const overview=new Map(await renderOverviewSlides(d)),projectionSlides=new Map(await renderProjectionSlides(d));return studySlideNumbers.map(no=>[no,overview.get(no)||projectionSlides.get(no)]);}
@@ -396,19 +442,23 @@
   }
   window.buildTemplatePpt=async d=>{
     if(!window.JSZip)throw new Error('A biblioteca JSZip não foi carregada.');
-    const response=await fetch('assets/modelo-base.pptx?v=2');if(!response.ok)throw new Error('O arquivo-modelo do PowerPoint não foi encontrado.');
+    const response=await fetch('assets/modelo-base.pptx?v=3');if(!response.ok)throw new Error('O arquivo-modelo do PowerPoint não foi encontrado.');
     const zip=await JSZip.loadAsync(await response.arrayBuffer());
     await prepareProjectionStages(zip);
+    const legalTargets=await prepareLegalInfoSlides(zip);
     const studies=Array.isArray(d.studies)&&d.studies.length?d.studies:[d];
     for(const [no,bytes] of await renderCommonSlides(d))await replaceSlide(zip,no,bytes,{hidden:no===3});
     await ensureRiskNavigation(zip);
     const combined=combineStudiesForPpt(d,studies);
     for(const [no,bytes] of await renderOverviewSlides(combined))await replaceSlide(zip,no,bytes);
     for(const [no,bytes] of await renderProjectionSlides(studies[0]))await replaceSlide(zip,no,bytes);
+    for(const info of legalInfoSlides){const target=legalTargets[info.key];await replaceSlide(zip,target,await legalInfoSlide(info),{hidden:true});await addShowJumpHotspot(zip,target,{x:1350*EMU,y:34*EMU,w:168*EMU,h:52*EMU,name:`Voltar de ${info.title}`});}
+    const legalIconCenters=[674,726,778];for(let index=0;index<legalInfoSlides.length;index++)await addSlideJumpHotspot(zip,16,legalTargets[legalInfoSlides[index].key],{x:1492*EMU,y:(legalIconCenters[index]-22)*EMU,w:46*EMU,h:44*EMU,name:`Abrir explicação: ${legalInfoSlides[index].title}`});
     if(studies.length>1){
       const mapping=await cloneHiddenProjectionSlides(zip),spouseSlides=new Map(await renderProjectionSlides(studies[1])),hiddenTargets=mapping.map(([,target])=>target);
       for(const [source,target] of mapping)await replaceSlide(zip,target,spouseSlides.get(source),{hidden:true});
       for(const source of projectionSlideNumbers)await addSlideJumpHotspot(zip,source,hiddenTargets[0],{x:11320000,y:0,w:780000,h:650000,name:'Abrir projeção do cônjuge'});
+      const spouseFinal=mapping.find(([source])=>source===16)?.[1];if(spouseFinal)for(let index=0;index<legalInfoSlides.length;index++)await addSlideJumpHotspot(zip,spouseFinal,legalTargets[legalInfoSlides[index].key],{x:1492*EMU,y:(legalIconCenters[index]-22)*EMU,w:46*EMU,h:44*EMU,name:`Abrir explicação: ${legalInfoSlides[index].title}`});
       for(let index=0;index<hiddenTargets.length;index++)await addSlideJumpHotspot(zip,hiddenTargets[index],hiddenTargets[index+1]||13,{name:index===hiddenTargets.length-1?'Retornar ao estudo familiar':'Avançar projeção do cônjuge'});
     }
     return zip.generateAsync({type:'blob',compression:'DEFLATE'});

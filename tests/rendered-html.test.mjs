@@ -19,7 +19,7 @@ test("server-renders the consolidated generator", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /<title>Gestão de Riscos — Gerador Completo<\/title>/i);
-  assert.match(html, /src=["']\/legacy\.html["']/i);
+  assert.match(html, /src=["']\/legacy-v7\.html["']/i);
   assert.match(html, /Gerador de apresentação de gestão de riscos/i);
 });
 
@@ -32,10 +32,14 @@ test("keeps the form and export contract wired", async () => {
     readFile(new URL("../public/assets/template-ppt.js", import.meta.url), "utf8"),
     readFile(new URL("../public/assets/app.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /src="\/legacy\.html"/);
+  assert.match(page, /src="\/legacy-v7\.html"/);
   assert.match(layout, /generateMetadata\(\): Promise<Metadata>/);
   assert.match(legacy, /id="clientFirstName"/);
   assert.match(legacy, /id="clientLastName"/);
+  assert.match(legacy, /id="maritalRegime"[^>]*disabled/);
+  assert.match(legacy, /Comunhão universal de bens/);
+  assert.match(legacy, /Comunhão parcial de bens/);
+  assert.match(legacy, /Separação de bens/);
   assert.match(legacy, /id="spouseCoverageGap"[^>]*data-money-input/);
   assert.match(legacy, /id="spouseAnnualPremium"[^>]*data-money-input/);
   assert.match(legacy, /id="spouseSurrenderInputs"/);
@@ -61,6 +65,8 @@ test("keeps the form and export contract wired", async () => {
   assert.match(app, /function personData\(role='primary'\)/);
   assert.match(app, /window\.RiskStudy\.calculatePerson/);
   assert.match(app, /function exportData\(\)/);
+  assert.match(app, /maritalRegime:hasSpouse\?\$\('maritalRegime'\)\.value:''/);
+  assert.match(app, /maritalRegime\.required=mode==='couple'/);
   assert.doesNotMatch(app, /healthProfile|spouseHealthProfile|ids\.health/);
   assert.match(app, /setText\('previewTotalCapital',money\(d\.total\)\)/);
   assert.match(app, /label\.className='donut-label'/);
@@ -73,11 +79,14 @@ test("keeps the form and export contract wired", async () => {
   assert.match(app, /const paybackAtRate=/);
   assert.match(app, /currentAllocation=d\.total\?d\.annualPremium\/d\.total\*100:0/);
   assert.match(app, /proposedAllocation=d\.withoutInsurance\?d\.annualPremium\/d\.withoutInsurance\*100:0/);
-  assert.match(appCss, /gauge-arc:after\{background:#f28c28\}/);
+  assert.match(appCss, /gauge-arc:after\{[^}]*width:6px;[^}]*background:#ff6b00;[^}]*box-shadow:/);
   assert.match(appCss, /gauge-arc\{background:conic-gradient\(from 270deg at 50% 100%,#ff4848 0 2%,#70b544 2% 16%/);
   assert.match(appCss, /gauge-arc>span\{color:#fff/);
   assert.match(template, /window\.buildTemplatePpt/);
-  assert.match(template, /fetch\('assets\/modelo-base\.pptx\?v=2'\)/);
+  assert.match(legacy, /src="assets\/template-ppt-v28\.js"/);
+  assert.match(template, /slide===5\?'assets\/template-slides\/slide5-only-top-v7\.jpg'/);
+  assert.match(template, /\[5,\(\)=>staticSlide\(5\)\]/);
+  assert.match(template, /fetch\('assets\/modelo-base\.pptx\?v=3'\)/);
   assert.match(template, /window\.buildTemplatePdf/);
   assert.match(template, /fitText\(ctx,'15% - 20%'/);
   assert.match(template, /text\(ctx,'CAPITAL TOTAL DO CLIENTE'/);
@@ -85,7 +94,9 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /const label=pct\(actualShares\[i\]\*100\)/);
   assert.match(template, /donutPercentText\(ctx,label,lx-42,ly,84/);
   assert.match(template, /d\.annualPremium\/d\.total\*100:0,proposedAllocation=d\.withoutInsurance\?d\.annualPremium\/d\.withoutInsurance\*100:0/);
-  assert.match(template, /'#f28c28',4/);
+  assert.match(template, /ORANGE='#ff6b00'/);
+  assert.match(template, /ctx\.lineWidth=12/);
+  assert.match(template, /ctx\.shadowColor='rgba\(255,107,0,\.65\)'/);
   assert.doesNotMatch(template, /#e98b35/);
   assert.match(template, /text\(ctx,'Ótimo',[\s\S]*?color:WHITE/);
   assert.match(template, /text\(ctx,'Recomendado',[\s\S]*?color:WHITE/);
@@ -95,6 +106,16 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /function combineStudiesForPpt\(d,studies\)/);
   assert.match(template, /studyLabel:'Estudo familiar consolidado'/);
   assert.match(template, /async function cloneHiddenProjectionSlides\(zip\)/);
+  assert.match(template, /const legalInfoSlides=\[/);
+  assert.match(template, /Lei 15\.040\/2024 · arts\. 113 a 116/);
+  assert.match(template, /Lei 15\.040\/2024 · arts\. 114 e 117/);
+  assert.match(template, /Lei 15\.040\/2024 · art\. 122  \|  CPC · art\. 833, VI/);
+  assert.match(template, /async function prepareLegalInfoSlides\(zip\)/);
+  assert.match(template, /const legalTargets=await prepareLegalInfoSlides\(zip\)/);
+  assert.match(template, /benefitPanel\(ctx,1148,600,405,242,[\s\S]*?\{infoIcons:true\}\)/);
+  assert.match(template, /addSlideJumpHotspot\(zip,16,legalTargets/);
+  assert.match(template, /async function addShowJumpHotspot\(zip,sourceSlide/);
+  assert.match(template, /jump='lastslideviewed'/);
   assert.match(template, /async function ensureRiskNavigation\(zip\)/);
   assert.match(template, /addSlideJumpHotspot\(zip,2,3,/);
   assert.match(template, /replaceSlide\(zip,no,bytes,\{hidden:no===3\}\)/);

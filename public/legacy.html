@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <title>Gestão de Riscos — Gerador de apresentação</title>
-  <link rel="stylesheet" href="assets/app.css?v=13" />
+  <link rel="stylesheet" href="assets/app.css?v=14" />
   <script src="assets/jszip.min.js"></script>
   <script src="assets/pptxgen.min.js"></script>
   <script src="assets/pdflib/pdf-lib.min.js"></script>
@@ -30,7 +31,10 @@
 
         <div id="spouseBlock" class="couple hidden">
           <p class="person-title">Dados do cônjuge</p>
-          <div class="grid"><div class="field"><label for="spouseName">Nome do cônjuge</label><input id="spouseName" autocomplete="given-name" /></div></div>
+          <div class="grid">
+            <div class="field"><label for="spouseName">Nome do cônjuge</label><input id="spouseName" autocomplete="given-name" /></div>
+            <div class="field"><label for="maritalRegime">Regime de casamento</label><select id="maritalRegime" disabled><option value="">Selecione o regime</option><option value="Comunhão universal de bens">Comunhão universal de bens</option><option value="Comunhão parcial de bens">Comunhão parcial de bens</option><option value="Separação de bens">Separação de bens</option></select></div>
+          </div>
         </div>
 
         <section class="section primary-study-section">
@@ -185,9 +189,9 @@
 
     <footer>Material informativo — os valores projetados dependem das premissas preenchidas e da cotação da seguradora.</footer>
   </main>
-  <script src="assets/template-ppt.js?v=24"></script>
+  <script src="assets/template-ppt-v28.js"></script>
   <script src="assets/surrender-pdf.js?v=8"></script>
   <script src="assets/study-model.js?v=1"></script>
-  <script src="assets/app.js?v=12"></script>
+  <script src="assets/app.js?v=13"></script>
 </body>
 </html>
