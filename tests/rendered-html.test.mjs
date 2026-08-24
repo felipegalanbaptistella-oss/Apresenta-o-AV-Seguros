@@ -4,26 +4,39 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-async function render(email = "felipe.galanbaptistella@gmail.com", pathname = "/") {
+const TEST_USERNAME = "altavista";
+const TEST_PASSWORD = "test-password";
+
+function basicAuthorization(username, password) {
+  return `Basic ${Buffer.from(`${username}:${password}`, "utf8").toString("base64")}`;
+}
+
+async function render(credentials = { username: TEST_USERNAME, password: TEST_PASSWORD }, pathname = "/", configured = true) {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
   const headers = { accept: "text/html" };
-  if (email) headers["oai-authenticated-user-email"] = email;
+  if (credentials) headers.authorization = basicAuthorization(credentials.username, credentials.password);
   return worker.fetch(new Request(`http://localhost${pathname}`, { headers }), {
     ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) },
+    BASIC_AUTH_USERNAME: configured ? TEST_USERNAME : undefined,
+    BASIC_AUTH_PASSWORD: configured ? TEST_PASSWORD : undefined,
   }, { waitUntil() {}, passThroughOnException() {} });
 }
 
-test("fails closed for anonymous and external identities", async () => {
+test("fails closed without valid login credentials", async () => {
   for (const pathname of ["/", "/legacy-v7.html", "/assets/modelo-base.pptx"]) {
     const anonymous = await render(null, pathname);
-    assert.equal(anonymous.status, 302);
-    assert.match(anonymous.headers.get("location") ?? "", /\/signin-with-chatgpt\?return_to=/);
+    assert.equal(anonymous.status, 401);
+    assert.match(anonymous.headers.get("www-authenticate") ?? "", /^Basic realm=/);
   }
 
-  const external = await render("outsider@example.com");
-  assert.equal(external.status, 403);
+  const invalid = await render({ username: TEST_USERNAME, password: "wrong-password" });
+  assert.equal(invalid.status, 401);
+
+  const missingConfiguration = await render(null, "/", false);
+  assert.equal(missingConfiguration.status, 503);
+  assert.equal(missingConfiguration.headers.get("www-authenticate"), null);
 });
 
 test("server-renders the consolidated generator", async () => {

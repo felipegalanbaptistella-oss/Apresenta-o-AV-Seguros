@@ -4,6 +4,8 @@ import handler from "vinext/server/app-router-entry";
 
 interface Env {
   ASSETS: Fetcher;
+  BASIC_AUTH_PASSWORD?: string;
+  BASIC_AUTH_USERNAME?: string;
   DB: D1Database;
   IMAGES: {
     input(stream: ReadableStream): {
@@ -14,39 +16,54 @@ interface Env {
   };
 }
 
-const AUTHENTICATED_EMAIL_HEADER = "oai-authenticated-user-email";
-const ALLOWED_EMAILS = new Set(["felipe.galanbaptistella@gmail.com"]);
-const ALLOWED_EMAIL_DOMAINS = ["altavistainvest.com.br"];
-const AUTH_PATHS = new Set([
-  "/signin-with-chatgpt",
-  "/signout-with-chatgpt",
-  "/callback",
-]);
-
-function normalizedAuthenticatedEmail(request: Request): string | null {
-  const email = request.headers.get(AUTHENTICATED_EMAIL_HEADER)?.trim().toLowerCase();
-  return email || null;
+function parseBasicCredentials(request: Request): { password: string; username: string } | null {
+  const authorization = request.headers.get("authorization");
+  if (!authorization?.startsWith("Basic ")) return null;
+  try {
+    const encoded = authorization.slice(6).trim();
+    const bytes = Uint8Array.from(atob(encoded), character => character.charCodeAt(0));
+    const decoded = new TextDecoder().decode(bytes);
+    const separator = decoded.indexOf(":");
+    if (separator < 1) return null;
+    return { username: decoded.slice(0, separator), password: decoded.slice(separator + 1) };
+  } catch {
+    return null;
+  }
 }
 
-function isAuthorizedEmail(email: string): boolean {
-  if (ALLOWED_EMAILS.has(email)) return true;
-  const separator = email.lastIndexOf("@");
-  if (separator <= 0) return false;
-  return ALLOWED_EMAIL_DOMAINS.includes(email.slice(separator + 1));
+async function sha256(value: string): Promise<Uint8Array> {
+  return new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)));
 }
 
-function signInResponse(url: URL): Response {
-  const returnTo = `${url.pathname}${url.search}`;
-  const signInUrl = new URL("/signin-with-chatgpt", url.origin);
-  signInUrl.searchParams.set("return_to", returnTo);
-  return Response.redirect(signInUrl, 302);
+async function secureEqual(left: string, right: string): Promise<boolean> {
+  const [leftHash, rightHash] = await Promise.all([sha256(left), sha256(right)]);
+  let difference = 0;
+  for (let index = 0; index < leftHash.length; index += 1) {
+    difference |= leftHash[index] ^ rightHash[index];
+  }
+  return difference === 0;
 }
 
-function forbiddenResponse(): Response {
-  return new Response("Acesso restrito aos usuários autorizados da Alta Vista.", {
-    status: 403,
-    headers: { "content-type": "text/plain; charset=utf-8" },
-  });
+async function hasValidBasicCredentials(request: Request, env: Env): Promise<boolean> {
+  if (!env.BASIC_AUTH_USERNAME || !env.BASIC_AUTH_PASSWORD) return false;
+  const credentials = parseBasicCredentials(request) ?? { username: "", password: "" };
+  const [usernameMatches, passwordMatches] = await Promise.all([
+    secureEqual(credentials.username, env.BASIC_AUTH_USERNAME),
+    secureEqual(credentials.password, env.BASIC_AUTH_PASSWORD),
+  ]);
+  return usernameMatches && passwordMatches;
+}
+
+function unauthorizedResponse(isConfigured: boolean): Response {
+  const headers: Record<string, string> = {
+    "cache-control": "no-store, max-age=0",
+    "content-type": "text/plain; charset=utf-8",
+  };
+  if (isConfigured) headers["www-authenticate"] = 'Basic realm="Gestão de Riscos", charset="UTF-8"';
+  return new Response(
+    isConfigured ? "Login ou senha inválidos." : "Autenticação indisponível.",
+    { status: isConfigured ? 401 : 503, headers },
+  );
 }
 
 function withSecurityHeaders(response: Response, pathname: string): Response {
@@ -107,11 +124,9 @@ interface ExecutionContext {
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
-
-    if (!AUTH_PATHS.has(url.pathname)) {
-      const email = normalizedAuthenticatedEmail(request);
-      if (!email) return withSecurityHeaders(signInResponse(url), url.pathname);
-      if (!isAuthorizedEmail(email)) return withSecurityHeaders(forbiddenResponse(), url.pathname);
+    const authIsConfigured = Boolean(env.BASIC_AUTH_USERNAME && env.BASIC_AUTH_PASSWORD);
+    if (!await hasValidBasicCredentials(request, env)) {
+      return withSecurityHeaders(unauthorizedResponse(authIsConfigured), url.pathname);
     }
 
     if (url.pathname === "/_vinext/image") {
