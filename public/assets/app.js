@@ -110,7 +110,7 @@
 
   function pdfRecognitionMessage(reason){
     const messages={
-      ocr_unavailable:'Este PDF Ã© uma digitalizaÃ§Ã£o. O OCR local nÃ£o estÃ¡ disponÃ­vel; use a colagem manual ou conecte-se Ã  internet e tente novamente.',
+      ocr_unavailable:'Este PDF é uma digitalização. O OCR local não está disponível; use a colagem manual ou tente novamente em um navegador compatível.',
       no_text:'Este PDF parece ser uma imagem ou digitalização. Use a colagem manual ou envie uma versão com texto pesquisável.',
       no_header:'Não encontrei um cabeçalho de resgate no PDF. Os valores atuais foram preservados.',
       ambiguous_surrender_columns:'O PDF possui mais de uma coluna de resgate e não há uma regra definida para escolher entre elas. Os valores atuais foram preservados.',
@@ -389,7 +389,7 @@
       const safe=d.familyLabel.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'');
       downloadBlob(blob,`Gestao-de-Riscos-${safe||'Familia'}.${kind==='pdf'?'pdf':'pptx'}`);
       status.textContent=kind==='pdf'?'PDF gerado sem as duplicações usadas no efeito da apresentação.':'PowerPoint gerado com os efeitos de apresentação.';
-    }catch(error){console.error(error);status.textContent=`Erro ao gerar o ${kind==='pdf'?'PDF':'PowerPoint'}: ${error?.message||String(error)}`;}
+    }catch(error){status.textContent=`Erro ao gerar o ${kind==='pdf'?'PDF':'PowerPoint'}: ${error?.message||String(error)}`;}
     finally{pptBtn.disabled=false;pdfBtn.disabled=false;}
   }
   $('clientForm').addEventListener('submit',event=>{event.preventDefault();generateOutput('pptx');});

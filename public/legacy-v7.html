@@ -20,11 +20,11 @@
     </header>
 
     <div class="layout">
-      <form class="card form-card" id="clientForm">
+      <form class="card form-card" id="clientForm" autocomplete="off">
         <h2>Dados do cliente</h2>
         <div class="grid">
-          <div class="field"><label for="clientFirstName">Nome</label><input id="clientFirstName" required autocomplete="given-name" /></div>
-          <div class="field"><label for="clientLastName">Sobrenome</label><input id="clientLastName" required autocomplete="family-name" /></div>
+          <div class="field"><label for="clientFirstName">Nome</label><input id="clientFirstName" required autocomplete="off" /></div>
+          <div class="field"><label for="clientLastName">Sobrenome</label><input id="clientLastName" required autocomplete="off" /></div>
           <div class="field"><label for="consultant">Corretor responsável</label><select id="consultant" required><option value="fabio">Fabio Kenji Hassui</option><option value="alexandre">Alexandre Faustino</option><option value="moises">Moisés Santos</option></select></div>
           <div class="field full"><label>Composição familiar</label><div class="switch"><button type="button" class="active" data-status="single">Cliente solteiro</button><button type="button" data-status="couple">Cliente com cônjuge</button></div></div>
         </div>
@@ -32,7 +32,7 @@
         <div id="spouseBlock" class="couple hidden">
           <p class="person-title">Dados do cônjuge</p>
           <div class="grid">
-            <div class="field"><label for="spouseName">Nome do cônjuge</label><input id="spouseName" autocomplete="given-name" /></div>
+            <div class="field"><label for="spouseName">Nome do cônjuge</label><input id="spouseName" autocomplete="off" /></div>
             <div class="field"><label for="maritalRegime">Regime de casamento</label><select id="maritalRegime" disabled><option value="">Selecione o regime</option><option value="Comunhão universal de bens">Comunhão universal de bens</option><option value="Comunhão parcial de bens">Comunhão parcial de bens</option><option value="Separação de bens">Separação de bens</option></select></div>
           </div>
         </div>

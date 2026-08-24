@@ -4,19 +4,34 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-async function render() {
+async function render(email = "felipe.galanbaptistella@gmail.com", pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
-  return worker.fetch(new Request("http://localhost/", { headers: { accept: "text/html" } }), {
+  const headers = { accept: "text/html" };
+  if (email) headers["oai-authenticated-user-email"] = email;
+  return worker.fetch(new Request(`http://localhost${pathname}`, { headers }), {
     ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) },
   }, { waitUntil() {}, passThroughOnException() {} });
 }
+
+test("fails closed for anonymous and external identities", async () => {
+  for (const pathname of ["/", "/legacy-v7.html", "/assets/modelo-base.pptx"]) {
+    const anonymous = await render(null, pathname);
+    assert.equal(anonymous.status, 302);
+    assert.match(anonymous.headers.get("location") ?? "", /\/signin-with-chatgpt\?return_to=/);
+  }
+
+  const external = await render("outsider@example.com");
+  assert.equal(external.status, 403);
+});
 
 test("server-renders the consolidated generator", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
+  assert.equal(response.headers.get("cache-control"), "no-store, max-age=0");
+  assert.match(response.headers.get("content-security-policy") ?? "", /frame-ancestors 'self'/);
   const html = await response.text();
   assert.match(html, /<title>Gestão de Riscos — Gerador Completo<\/title>/i);
   assert.match(html, /src=["']\/legacy-v7\.html["']/i);

@@ -2,7 +2,13 @@
   "use strict";
 
   const MAX_FILE_BYTES = 25 * 1024 * 1024;
-  const MAX_PAGES = 80;
+  const MAX_PAGES = 40;
+  const MAX_TEXT_ITEMS_PER_PAGE = 10000;
+  const MAX_TEXT_ITEMS_TOTAL = 100000;
+  const MAX_TEXT_CHARACTERS_TOTAL = 2000000;
+  const MAX_OCR_SIDE = 4096;
+  const MAX_OCR_PIXELS_PER_PAGE = 12000000;
+  const MAX_OCR_PIXELS_TOTAL = 80000000;
   const MIN_CONFIDENT_ROWS = 5;
   const HEADER_RE = /\b(?:RESGATE|RESERVA\s+RESGAT(?:ÁVEL|AVEL|\?VEL)|RESERVA\s+FINANCEIRA|VALOR\s+DA\s+RESERVA|CASH\s+VALUE|SURRENDER(?:\s+VALUE)?)\b/i;
   const MONEY_RE = /(?:R\$|BRL|US\$)?\s*-?\(?(?:(?:\d{1,3}(?:[.\s]\d{3})+|\d+),\d{2}|(?:\d{1,3}(?:,\d{3})+|\d+)\.\d{2})\)?|(?:R\$|BRL|US\$)\s*-?\(?\d+\)?/gi;
@@ -15,6 +21,33 @@
       this.name = "SurrenderPdfError";
       this.code = code;
     }
+  }
+
+  function validateTextBudget(items, budget) {
+    const itemCount = Array.isArray(items) ? items.length : 0;
+    const characterCount = (items || []).reduce((sum, item) => sum + String(item?.str ?? "").length, 0);
+    if (itemCount > MAX_TEXT_ITEMS_PER_PAGE) {
+      throw new SurrenderPdfError("too_complex", "O PDF possui texto demais em uma única página.");
+    }
+    budget.items += itemCount;
+    budget.characters += characterCount;
+    if (budget.items > MAX_TEXT_ITEMS_TOTAL || budget.characters > MAX_TEXT_CHARACTERS_TOTAL) {
+      throw new SurrenderPdfError("too_complex", "O PDF excede o limite seguro de conteúdo processado.");
+    }
+  }
+
+  function validateOcrViewport(width, height, budget) {
+    const safeWidth = Math.ceil(Number(width));
+    const safeHeight = Math.ceil(Number(height));
+    const pixels = safeWidth * safeHeight;
+    if (!Number.isFinite(pixels) || safeWidth <= 0 || safeHeight <= 0 || safeWidth > MAX_OCR_SIDE || safeHeight > MAX_OCR_SIDE || pixels > MAX_OCR_PIXELS_PER_PAGE) {
+      throw new SurrenderPdfError("too_complex", "Uma página do PDF excede o limite seguro de dimensões para OCR.");
+    }
+    budget.pixels += pixels;
+    if (budget.pixels > MAX_OCR_PIXELS_TOTAL) {
+      throw new SurrenderPdfError("too_complex", "O PDF excede o limite seguro de processamento de imagens.");
+    }
+    return { width: safeWidth, height: safeHeight };
   }
 
   function normalizeText(value) {
@@ -385,9 +418,10 @@
     if (typeof document === "undefined") throw new SurrenderPdfError("ocr_unavailable", "O OCR local nao esta disponivel neste navegador.");
     const scale = Number(options.scale) || 1.7;
     const viewport = pdfPage.getViewport({ scale });
+    const dimensions = validateOcrViewport(viewport.width, viewport.height, options.ocrBudget || { pixels: 0 });
     const canvas = document.createElement("canvas");
-    canvas.width = Math.ceil(viewport.width);
-    canvas.height = Math.ceil(viewport.height);
+    canvas.width = dimensions.width;
+    canvas.height = dimensions.height;
     const context = canvas.getContext("2d", { willReadFrequently: true });
     await pdfPage.render({ canvasContext: context, viewport }).promise;
     const worker = await loadOcrWorker(options);
@@ -454,14 +488,22 @@
     try {
       const pdfjs = await loadPdfJs();
       const bytes = new Uint8Array(await file.arrayBuffer());
-      loadingTask = pdfjs.getDocument({ data: bytes, isEvalSupported: false });
+      loadingTask = pdfjs.getDocument({
+        data: bytes,
+        isEvalSupported: false,
+        maxImageSize: MAX_OCR_PIXELS_PER_PAGE,
+        canvasMaxAreaInBytes: MAX_OCR_PIXELS_PER_PAGE * 4,
+      });
       pdf = await loadingTask.promise;
-      if (pdf.numPages > MAX_PAGES) throw new SurrenderPdfError("too_many_pages", "A cotação possui mais de 80 páginas.");
+      if (pdf.numPages > MAX_PAGES) throw new SurrenderPdfError("too_many_pages", "A cotação possui mais de 40 páginas.");
       const pages = [];
+      const textBudget = { items: 0, characters: 0 };
       for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
         const page = await pdf.getPage(pageNumber);
         const content = await page.getTextContent({ disableNormalization: false });
-        pages.push(content.items || []);
+        const items = content.items || [];
+        validateTextBudget(items, textBudget);
+        pages.push(items);
         page.cleanup();
       }
       const textResult = extractSurrenderValuesFromPages(pages, options);
@@ -471,10 +513,11 @@
 
       options.onProgress?.({ status: "ocr", progress: 0 });
       const ocrPages = [];
+      const ocrBudget = { pixels: 0 };
       for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
         const page = await pdf.getPage(pageNumber);
         options.onProgress?.({ status: "recognizing", page: pageNumber, total: pdf.numPages, progress: pageNumber / pdf.numPages });
-        ocrPages.push(await recognizePageWithOcr(page, options));
+        ocrPages.push(await recognizePageWithOcr(page, { ...options, ocrBudget }));
         page.cleanup();
       }
       const ocrResult = extractSurrenderValuesFromPages(ocrPages, options);
@@ -498,5 +541,7 @@
     groupItemsByLine,
     normalizeText,
     parseMoneyToken,
+    validateOcrViewport,
+    validateTextBudget,
   };
 })(typeof window !== "undefined" ? window : globalThis);

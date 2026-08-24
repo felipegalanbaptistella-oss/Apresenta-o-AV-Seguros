@@ -6,7 +6,20 @@ await import("../public/assets/surrender-pdf.js");
 const {
   extractSurrenderValuesFromPages,
   parseMoneyToken,
+  validateOcrViewport,
+  validateTextBudget,
 } = globalThis.SurrenderPdf;
+
+test("rejeita dimensões de OCR e conteúdo textual fora do orçamento", () => {
+  assert.throws(
+    () => validateOcrViewport(100000, 100000, { pixels: 0 }),
+    error => error?.code === "too_complex",
+  );
+  assert.throws(
+    () => validateTextBudget(Array.from({ length: 10001 }, () => ({ str: "x" })), { items: 0, characters: 0 }),
+    error => error?.code === "too_complex",
+  );
+});
 
 function item(str, x, y, width = Math.max(18, str.length * 5)) {
   return { str, width, transform: [1, 0, 0, 1, x, y] };
