@@ -104,8 +104,9 @@ test("keeps the form and export contract wired", async () => {
   assert.match(app, /method:'DELETE'/);
   assert.match(app, /Excluir definitivamente o estudo de/);
   assert.match(app, /className='study-delete-icon'/);
-  assert.match(appCss, /\.study-delete\{[^}]*color:#ff646f/);
-  assert.match(appCss, /\.study-record \.study-delete-icon\{[^}]*border:2px solid currentColor/);
+  assert.match(appCss, /\.study-delete\{[^}]*border:0[^}]*background:transparent[^}]*color:#d96b74/);
+  assert.match(appCss, /\.study-delete:hover,\.study-delete:focus-visible\{[^}]*color:#ff707a/);
+  assert.match(appCss, /\.study-record \.study-delete-icon\{[^}]*border:1\.5px solid currentColor/);
   assert.match(studyRoute, /export async function DELETE/);
   assert.match(studyRoute, /DELETE FROM risk_studies WHERE id = \?/);
   assert.match(app, /maritalRegime:hasSpouse\?\$\('maritalRegime'\)\.value:''/);
