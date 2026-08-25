@@ -108,11 +108,15 @@
     list.innerHTML='';
     if(!studies.length){const empty=document.createElement('p');empty.className='study-list-empty';empty.textContent='Nenhum estudo encontrado.';list.appendChild(empty);return;}
     studies.forEach(study=>{
-      const button=document.createElement('button');button.type='button';button.className=`study-record${study.id===currentStudyId?' active':''}`;button.dataset.studyId=study.id;
+      const name=[study.client_first_name,study.client_last_name].filter(Boolean).join(' ');
+      const card=document.createElement('article');card.className=`study-record${study.id===currentStudyId?' active':''}`;card.dataset.studyId=study.id;
+      const button=document.createElement('button');button.type='button';button.className='study-record-open';button.setAttribute('aria-label',`Abrir estudo de ${name}`);
       const title=document.createElement('strong');title.textContent=[study.client_first_name,study.client_last_name].filter(Boolean).join(' ');
       const family=document.createElement('span');family.textContent=study.spouse_name?`Com ${study.spouse_name}`:'Estudo individual';
       const summary=document.createElement('small');const total=document.createElement('b');total.textContent=studyMoneyFromCents(study.total_assets_cents);const version=document.createElement('em');version.textContent=`v${study.revision}`;summary.append(total,version);
-      button.append(title,family,summary);button.addEventListener('click',()=>loadStudy(study.id));list.appendChild(button);
+      const deleteButton=document.createElement('button');deleteButton.type='button';deleteButton.className='study-delete';deleteButton.setAttribute('aria-label',`Excluir estudo de ${name}`);deleteButton.title=`Excluir estudo de ${name}`;
+      const deleteIcon=document.createElement('span');deleteIcon.className='study-delete-icon';deleteIcon.setAttribute('aria-hidden','true');deleteButton.appendChild(deleteIcon);
+      button.append(title,family,summary);button.addEventListener('click',()=>loadStudy(study.id));deleteButton.addEventListener('click',()=>deleteStudy(study,deleteButton));card.append(button,deleteButton);list.appendChild(card);
     });
   }
 
@@ -149,6 +153,22 @@
       setDatabaseStatus(`Estudo de ${name} carregado.`,'success');
       $('clientForm')?.scrollIntoView({behavior:'smooth',block:'start'});
     }catch(error){setDatabaseStatus(error?.message||'Não foi possível abrir o estudo.','error');}
+  }
+
+  async function deleteStudy(study,button){
+    const name=[study.client_first_name,study.client_last_name].filter(Boolean).join(' ')||'este cliente';
+    if(!window.confirm(`Excluir definitivamente o estudo de ${name}? Esta ação não pode ser desfeita.`))return;
+    button.disabled=true;button.setAttribute('aria-busy','true');setDatabaseStatus(`Excluindo o estudo de ${name}…`,'loading');
+    try{
+      await databaseRequest(`/api/studies/${encodeURIComponent(study.id)}`,{method:'DELETE'});
+      const wasCurrent=study.id===currentStudyId;
+      if(wasCurrent){currentStudyId=null;currentStudyRevision=null;updateCurrentStudyMeta();}
+      await loadStudyList();
+      setDatabaseStatus(wasCurrent
+        ? `Estudo de ${name} excluído. Os dados permanecem no formulário como um novo estudo.`
+        : `Estudo de ${name} excluído com sucesso.`,'success');
+    }catch(error){setDatabaseStatus(error?.message||'Não foi possível excluir o estudo.','error');}
+    finally{if(button.isConnected){button.disabled=false;button.removeAttribute('aria-busy');}}
   }
 
   async function saveStudy(){

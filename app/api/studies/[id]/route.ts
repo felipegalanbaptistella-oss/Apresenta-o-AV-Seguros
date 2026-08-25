@@ -130,3 +130,23 @@ export async function PUT(request: Request, context: RouteContext) {
     return routeError(error);
   }
 }
+
+export async function DELETE(_request: Request, context: RouteContext) {
+  try {
+    const { id } = await context.params;
+    if (!isValidStudyId(id)) throw new StudyInputError("Identificador de estudo inválido.");
+
+    const result = await getD1()
+      .prepare("DELETE FROM risk_studies WHERE id = ?")
+      .bind(id)
+      .run();
+
+    if (!result.meta.changes) {
+      return Response.json({ error: "Estudo não encontrado." }, { status: 404 });
+    }
+
+    return Response.json({ deleted: true, id });
+  } catch (error) {
+    return routeError(error);
+  }
+}

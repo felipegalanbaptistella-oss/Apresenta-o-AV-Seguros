@@ -52,13 +52,14 @@ test("server-renders the consolidated generator", async () => {
 });
 
 test("keeps the form and export contract wired", async () => {
-  const [page, layout, legacy, app, template, appCss] = await Promise.all([
+  const [page, layout, legacy, app, template, appCss, studyRoute] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../public/legacy-v7.html", import.meta.url), "utf8"),
     readFile(new URL("../public/assets/app.js", import.meta.url), "utf8"),
     readFile(new URL("../public/assets/template-ppt.js", import.meta.url), "utf8"),
     readFile(new URL("../public/assets/app.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/studies/[id]/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page, /src="\/legacy-v7\.html"/);
   assert.match(layout, /generateMetadata\(\): Promise<Metadata>/);
@@ -99,6 +100,14 @@ test("keeps the form and export contract wired", async () => {
   assert.match(app, /function databasePayload\(\)/);
   assert.match(app, /\/api\/studies/);
   assert.match(app, /async function saveStudy\(\)/);
+  assert.match(app, /async function deleteStudy\(study,button\)/);
+  assert.match(app, /method:'DELETE'/);
+  assert.match(app, /Excluir definitivamente o estudo de/);
+  assert.match(app, /className='study-delete-icon'/);
+  assert.match(appCss, /\.study-delete\{[^}]*color:#ff646f/);
+  assert.match(appCss, /\.study-record \.study-delete-icon\{[^}]*border:2px solid currentColor/);
+  assert.match(studyRoute, /export async function DELETE/);
+  assert.match(studyRoute, /DELETE FROM risk_studies WHERE id = \?/);
   assert.match(app, /maritalRegime:hasSpouse\?\$\('maritalRegime'\)\.value:''/);
   assert.match(app, /maritalRegime\.required=mode==='couple'/);
   assert.doesNotMatch(app, /healthProfile|spouseHealthProfile|ids\.health/);
