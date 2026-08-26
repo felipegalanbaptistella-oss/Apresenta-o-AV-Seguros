@@ -262,14 +262,16 @@
     ctx.save();ctx.lineWidth=48;ctx.lineCap='butt';zones.forEach(([a,b,color])=>{ctx.beginPath();ctx.arc(cx,cy,r,start+Math.PI*a,start+Math.PI*b);ctx.strokeStyle=color;ctx.stroke();});ctx.restore();
     ctx.beginPath();ctx.moveTo(cx-r+20,cy);ctx.arc(cx,cy,r-49,Math.PI,Math.PI*2);ctx.lineTo(cx+r-20,cy);ctx.closePath();ctx.fillStyle='#c7a466';ctx.fill();
     const normalized=Math.max(0,Math.min(1,value/10)),angle=start+Math.PI*normalized;
-    const markerX1=cx+Math.cos(angle)*(r-31),markerY1=cy+Math.sin(angle)*(r-31),markerX2=cx+Math.cos(angle)*(r+33),markerY2=cy+Math.sin(angle)*(r+33);
-    ctx.save();ctx.lineCap='round';ctx.shadowColor='rgba(255,107,0,.65)';ctx.shadowBlur=8;ctx.strokeStyle='rgba(2,14,56,.92)';ctx.lineWidth=18;ctx.beginPath();ctx.moveTo(markerX1,markerY1);ctx.lineTo(markerX2,markerY2);ctx.stroke();ctx.strokeStyle=ORANGE;ctx.lineWidth=12;ctx.beginPath();ctx.moveTo(markerX1,markerY1);ctx.lineTo(markerX2,markerY2);ctx.stroke();ctx.restore();
-    text(ctx,'Ótimo',x+160,cy-76,120,{size:16,color:WHITE,bold:true,align:'center'});
-    text(ctx,'Recomendado',cx-140,y+82,280,{size:17,color:WHITE,bold:true,align:'center'});
-    text(ctx,'Alta exposição',x+w-265,cy-92,160,{size:16,color:WHITE,bold:true,align:'center',maxLines:2});
+    const directionX=Math.cos(angle),directionY=Math.sin(angle),normalX=-directionY,normalY=directionX;
+    const tipX=cx+directionX*(r+5),tipY=cy+directionY*(r+5),baseX=cx+directionX*18,baseY=cy+directionY*18,needleHalfWidth=10;
+    ctx.save();ctx.shadowColor='rgba(255,107,0,.7)';ctx.shadowBlur=10;ctx.fillStyle=ORANGE;ctx.strokeStyle='rgba(2,14,56,.95)';ctx.lineWidth=6;ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(tipX,tipY);ctx.lineTo(baseX+normalX*needleHalfWidth,baseY+normalY*needleHalfWidth);ctx.lineTo(baseX-normalX*needleHalfWidth,baseY-normalY*needleHalfWidth);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,15,0,Math.PI*2);ctx.fillStyle=ORANGE;ctx.fill();ctx.strokeStyle='#020e38';ctx.lineWidth=6;ctx.stroke();ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fillStyle='#f5df8d';ctx.fill();ctx.restore();
+    text(ctx,'Ótimo',x+108,cy-66,112,{size:14,color:WHITE,bold:true,align:'center'});
+    text(ctx,'Recomendado',cx-105,y+86,210,{size:15,color:WHITE,bold:true,align:'center'});
+    text(ctx,'Alta exposição',x+w-198,cy-72,158,{size:14,color:WHITE,bold:true,align:'center',maxLines:2});
     text(ctx,'Não se aplica',x+24,cy+10,150,{size:16,color:WHITE,bold:true,align:'center'});
     text(ctx,'Acima de 10%',x+w-180,cy+10,155,{size:16,color:WHITE,bold:true,align:'center'});
-    fitText(ctx,pct(value),cx-105,cy-48,210,{size:38,min:27,color:WHITE,bold:true,align:'center'});
+    fitText(ctx,pct(value),cx-92,cy-34,184,{size:36,min:27,color:WHITE,bold:true,align:'center'});
   }
   const monthsAtRate=(d,rate)=>d.financial>0&&d.annualPremium>0?Math.ceil(d.annualPremium/(d.financial*rate)):0;
   const monthsText=months=>months?`${months} ${months===1?'MÊS':'MESES'}`:'—';

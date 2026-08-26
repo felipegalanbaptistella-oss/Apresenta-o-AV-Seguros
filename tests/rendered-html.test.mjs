@@ -127,7 +127,7 @@ test("keeps the form and export contract wired", async () => {
   assert.match(appCss, /gauge-arc\{background:conic-gradient\(from 270deg at 50% 100%,#ff4848 0 2%,#70b544 2% 16%/);
   assert.match(appCss, /gauge-arc>span\{color:#fff/);
   assert.match(template, /window\.buildTemplatePpt/);
-  assert.match(legacy, /src="assets\/template-ppt-v28\.js"/);
+  assert.match(legacy, /src="assets\/template-ppt-v28\.js\?v=29"/);
   assert.match(template, /slide===5\?'assets\/template-slides\/slide5-only-top-v7\.jpg'/);
   assert.match(template, /\[5,\(\)=>staticSlide\(5\)\]/);
   assert.match(template, /fetch\('assets\/modelo-base\.pptx\?v=3'\)/);
@@ -139,8 +139,8 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /donutPercentText\(ctx,label,lx-42,ly,84/);
   assert.match(template, /d\.annualPremium\/d\.total\*100:0,proposedAllocation=d\.withoutInsurance\?d\.annualPremium\/d\.withoutInsurance\*100:0/);
   assert.match(template, /ORANGE='#ff6b00'/);
-  assert.match(template, /ctx\.lineWidth=12/);
-  assert.match(template, /ctx\.shadowColor='rgba\(255,107,0,\.65\)'/);
+  assert.match(template, /ctx\.lineWidth=6;ctx\.lineJoin='round'/);
+  assert.match(template, /ctx\.shadowColor='rgba\(255,107,0,\.7\)'/);
   assert.doesNotMatch(template, /#e98b35/);
   assert.match(template, /text\(ctx,'Ótimo',[\s\S]*?color:WHITE/);
   assert.match(template, /text\(ctx,'Recomendado',[\s\S]*?color:WHITE/);
@@ -175,6 +175,10 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /if\(stage>=3\)\{rect\(ctx,48,footerY/);
   assert.match(template, /RENDIMENTOS PAGAM A ALOCAÇÃO ANUAL EM/);
   assert.match(template, /ALOCAÇÃO PROPOSTA VS PATRIMÔNIO LÍQUIDO/);
+  assert.match(template, /const directionX=Math\.cos\(angle\),directionY=Math\.sin\(angle\),normalX=-directionY,normalY=directionX/);
+  assert.match(template, /ctx\.moveTo\(tipX,tipY\).*ctx\.lineTo\(baseX\+normalX\*needleHalfWidth,baseY\+normalY\*needleHalfWidth\)/);
+  assert.match(template, /ctx\.arc\(cx,cy,15,0,Math\.PI\*2\)/);
+  assert.doesNotMatch(template, /markerX1/);
   assert.match(template, /text\(ctx,'PERFIL DE SAÚDE'/);
   assert.match(template, /text\(ctx,'\?',1110,738,410,\{size:92/);
   assert.match(template, /text\(ctx,'A PREENCHER'/);
