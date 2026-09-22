@@ -305,20 +305,37 @@
     }
   }
 
+  function normalizeSurrenderPasteCell(value){return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toUpperCase();}
+  function isContractStartYearLabel(value){return /^(?:ANO\s+(?:(?:DE|DA)\s+)?(?:EMISSAO|CONTRATACAO|CONTRATO)|(?:EMISSAO|CONTRATACAO|CONTRATO))\b/.test(normalizeSurrenderPasteCell(value));}
   function pasteSurrenderColumn(event,input){
     const clipboard=event.clipboardData?.getData('text/plain')||'';
     if(!clipboard.trim())return;
+    const role=input.dataset.study==='spouse'?'spouse':'primary';
+    const rows=clipboard.split(/\r\n|\n|\r/).map(row=>row.split('\t').map(cell=>cell.trim()));
+    const headerRowIndex=rows.findIndex(cells=>{const normalizedCells=cells.map(normalizeSurrenderPasteCell),hasResgate=normalizedCells.some(cell=>/\b(?:RESGATE|RESERVA\s+RESGATAVEL|VALOR\s+DA\s+RESERVA|CASH\s+VALUE|SURRENDER(?:\s+VALUE)?)\b/.test(cell)),hasColumnContext=normalizedCells.some(cell=>/\b(?:ANO|YEAR|IDADE|AGE|VIGENCIA|VALOR)\b/.test(cell));return hasResgate&&hasColumnContext;});
+    let resgateColumnIndex=null;
+    if(headerRowIndex>=0){
+      const candidates=rows[headerRowIndex].flatMap((cell,index)=>/\b(?:RESGATE|RESERVA\s+RESGATAVEL|VALOR\s+DA\s+RESERVA|CASH\s+VALUE|SURRENDER(?:\s+VALUE)?)\b/.test(normalizeSurrenderPasteCell(cell))?[{index,label:normalizeSurrenderPasteCell(cell)}]:[]);
+      const unqualified=candidates.filter(candidate=>! /\b(?:BRUTO|LIQUIDO|GROSS|NET)\b/.test(candidate.label));
+      const preferred=unqualified.length?unqualified:candidates;
+      if(preferred.length>1){
+        event.preventDefault();
+        const status=$(surrenderUi(role).pasteStatus);
+        if(status){status.className='surrender-paste-status warning';status.textContent='A tabela tem mais de uma coluna de resgate. Copie apenas a coluna desejada; nenhum valor foi alterado.';}
+        return;
+      }
+      if(preferred.length===1)resgateColumnIndex=preferred[0].index;
+    }
     let ignoredContractStartRow=false;
-    const values=clipboard.split(/\r\n|\n|\r/).flatMap(row=>{
-      const cells=row.split('\t').map(cell=>cell.trim()).filter(Boolean);
-      const firstCell=(cells[0]||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toUpperCase();
-      if(/^(?:ANO\s+(?:(?:DE|DA)\s+)?(?:EMISSAO|CONTRATACAO|CONTRATO)|(?:EMISSAO|CONTRATACAO|CONTRATO))\b/.test(firstCell)){ignoredContractStartRow=true;return [];}
-      const cell=[...cells].reverse().find(value=>/\d/.test(value));
-      return cell===undefined?[]:[parseNumericValue(cell)];
+    const values=rows.flatMap((cells,rowIndex)=>{
+      if(rowIndex===headerRowIndex||resgateColumnIndex!==null&&rowIndex<headerRowIndex)return [];
+      if(isContractStartYearLabel(cells[0])){ignoredContractStartRow=true;return [];}
+      const cell=resgateColumnIndex!==null?cells[resgateColumnIndex]:[...cells].filter(Boolean).reverse().find(value=>/\d/.test(value));
+      return cell===undefined||! /\d/.test(cell)?[]:[parseNumericValue(cell)];
     });
     if(!values.length)return;
     event.preventDefault();
-    const role=input.dataset.study==='spouse'?'spouse':'primary',start=Number(input.dataset.surrenderIndex)||0,limit=data(role).projectionYears;
+    const start=Number(input.dataset.surrenderIndex)||0,limit=data(role).projectionYears;
     const applied=values.slice(0,Math.max(0,limit-start));
     applied.forEach((value,offset)=>{surrenderValuesByStudy[role][start+offset]=value;const field=document.querySelector(`[data-study="${role}"][data-surrender-index="${start+offset}"]`);if(field)field.value=value.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});});
     render();

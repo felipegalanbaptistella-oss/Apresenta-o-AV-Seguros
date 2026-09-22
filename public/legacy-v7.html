@@ -102,7 +102,7 @@
               <div class="surrender-pdf-actions"><button id="spouseSurrenderPdfButton" class="surrender-pdf-button" type="button">Selecionar PDF</button><input id="spouseSurrenderPdfInput" type="file" accept="application/pdf,.pdf" hidden tabindex="-1" aria-hidden="true" /><span id="spouseSurrenderPdfFilename" class="surrender-pdf-filename">Nenhum arquivo selecionado</span></div>
             </div>
             <div id="spouseSurrenderPdfStatus" class="surrender-pdf-status" role="status" aria-live="polite">A leitura e a colagem manual afetam apenas o estudo do cônjuge.</div>
-            <div class="surrender-paste-guide"><strong>Colagem em massa</strong><span>Cole a coluna do Excel na primeira célula; os valores serão distribuídos pelas linhas.</span></div>
+            <div class="surrender-paste-guide"><strong>Colagem em massa</strong><span>Cole a tabela com cabeçalhos ou a coluna de valores começando no Ano 1. A linha Ano Emissão é descartada quando aparece identificada.</span></div>
             <div class="surrender-editor"><div class="surrender-editor-head"><span>Ano</span><span>Idade</span><span>Corrigido pelo IPCA (R$)</span><span>Atual da seguradora (R$)</span></div><div id="spouseSurrenderInputs" class="surrender-editor-body"></div></div>
             <div id="spouseSurrenderPasteStatus" class="surrender-paste-status" role="status" aria-live="polite">Você ainda pode editar qualquer célula individualmente.</div>
           </div>
@@ -128,7 +128,7 @@
             <div class="field"><label for="annualReturn">Rentabilidade atuarial (% a.a.)</label><input id="annualReturn" type="text" inputmode="decimal" data-decimal-input value="3,00" /></div>
           </div>
           <div class="surrender-block">
-            <div class="surrender-heading"><div><strong>Valores de resgate da cotação</strong><span>Uma coluna, como no Excel: um valor para cada ano da projeção.</span></div><span class="surrender-bulk-badge">Colagem em massa ativada</span></div>
+            <div class="surrender-heading"><div><strong>Valores de resgate da cotação</strong><span>Cole uma coluna de resgate ou a tabela completa com cabeçalhos.</span></div><span class="surrender-bulk-badge">Colagem em massa ativada</span></div>
             <div id="surrenderPdfDrop" class="surrender-pdf-import">
               <div class="surrender-pdf-icon" aria-hidden="true">PDF</div>
               <div class="surrender-pdf-copy">
@@ -143,7 +143,7 @@
               </div>
             </div>
             <div id="surrenderPdfStatus" class="surrender-pdf-status" role="status" aria-live="polite">Funciona com PDFs digitais que tenham uma tabela e um cabeçalho de resgate. A colagem manual continua disponível abaixo.</div>
-            <div class="surrender-paste-guide"><strong>Como preencher de uma vez</strong><span>Copie a coluna de valores no Excel, clique na primeira célula abaixo e pressione <kbd>Ctrl</kbd> + <kbd>V</kbd>. Os números serão distribuídos automaticamente pelas linhas.</span></div>
+            <div class="surrender-paste-guide"><strong>Como preencher de uma vez</strong><span>Copie a tabela completa com cabeçalhos ou a coluna de resgate começando em “Ano 1”; cole na primeira célula abaixo e pressione <kbd>Ctrl</kbd> + <kbd>V</kbd>. A linha “Ano Emissão” é descartada quando aparece identificada.</span></div>
             <div class="surrender-editor"><div class="surrender-editor-head"><span>Ano</span><span>Idade</span><span>Corrigido pelo IPCA (R$)</span><span>Atual da seguradora (R$)</span></div><div id="surrenderInputs" class="surrender-editor-body"></div></div>
             <div id="surrenderPasteStatus" class="surrender-paste-status" role="status" aria-live="polite">Você ainda pode editar qualquer célula individualmente.</div>
           </div>
@@ -211,8 +211,8 @@
     <footer>Material informativo — os valores projetados dependem das premissas preenchidas e da cotação da seguradora.</footer>
   </main>
   <script src="assets/template-ppt-v28.js?v=30"></script>
-  <script src="assets/surrender-pdf.js?v=9"></script>
+  <script src="assets/surrender-pdf.js?v=10"></script>
   <script src="assets/study-model.js?v=1"></script>
-  <script src="assets/app.js?v=16"></script>
+  <script src="assets/app.js?v=17"></script>
 </body>
 </html>
