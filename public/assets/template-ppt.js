@@ -185,7 +185,7 @@
 
   function projection(d){
     const rate=d.ipca/100;
-    return Array.from({length:d.projectionYears},(_,year)=>{let accumulated=0;for(let i=0;i<Math.min(year+1,10);i++)accumulated+=d.annualPremium*Math.pow(1+rate,i);const surrender=Number(d.surrenderValues?.[year])||0;return{year,age:d.age+year,capital:d.coverageGap*Math.pow(1+rate,year),premium:year<10?d.annualPremium*Math.pow(1+rate,year):0,accumulated:year<10?accumulated:0,surrender};});
+    return Array.from({length:d.projectionYears},(_,year)=>{let accumulated=0;for(let i=0;i<Math.min(year+1,10);i++)accumulated+=d.annualPremium*Math.pow(1+rate,i);const surrender=Number(d.surrenderValues?.[year])||0,surrenderCorrected=surrender*Math.pow(1+rate,year+1);return{year,age:d.age+year,capital:d.coverageGap*Math.pow(1+rate,year),premium:year<10?d.annualPremium*Math.pow(1+rate,year):0,accumulated:year<10?accumulated:0,surrender,surrenderCorrected};});
   }
   function infoIcon(ctx,cx,cy){
     ctx.save();ctx.beginPath();ctx.arc(cx,cy,15,0,Math.PI*2);ctx.fillStyle=GOLD;ctx.fill();ctx.strokeStyle=WHITE;ctx.lineWidth=2;ctx.stroke();ctx.restore();
@@ -202,9 +202,9 @@
     const {canvas,ctx}=await canvasFor(11),rows=projection(d);
     rect(ctx,30,70,1090,770,NAVY);rect(ctx,47,95,1060,46,'#ad8a3c',18);
     rect(ctx,1085,18,410,68,NAVY);fitText(ctx,clientLabel(d).toLocaleUpperCase('pt-BR'),1100,52,365,{size:18,min:10,color:WHITE,bold:true,align:'right'});
-    rect(ctx,640,22,340,50,NAVY);text(ctx,`IPCA: ${pct(d.ipca)} a.a.`,640,48,340,{size:27,color:WHITE,bold:true,align:'center'});
-    const cols=[48,160,405,650,875,1105],heads=['IDADE','CAPITAL SEGURADO','APORTE ANUAL','APORTE ACUMULADO','RESGATE'];
-    heads.forEach((head,i)=>text(ctx,head,cols[i],119,cols[i+1]-cols[i],{size:17,color:WHITE,bold:true,align:'center'}));
+    rect(ctx,640,22,340,50,NAVY);fitText(ctx,`IPCA ${pct(d.ipca)} + 3% a.a.`,640,48,340,{size:24,min:16,color:WHITE,bold:true,align:'center'});
+    const cols=[48,148,338,520,720,912,1105],heads=['IDADE','CAPITAL SEGURADO','APORTE ANUAL','APORTE ACUMULADO','RESGATE CORRIGIDO','RESGATE ATUAL'];
+    heads.forEach((head,i)=>text(ctx,head,cols[i],119,cols[i+1]-cols[i],{size:15,color:WHITE,bold:true,align:'center'}));
     const top=142,rowH=Math.min(31.4,627/Math.max(rows.length,1));
     const milestone10=Math.min(9,Math.max(0,rows.length-1));
     const activeRows=new Set();if(stage>=1)activeRows.add(0);if(stage>=2)activeRows.add(milestone10);if(stage>=3)activeRows.add(Math.max(0,rows.length-1));
@@ -212,8 +212,8 @@
       const y=top+i*rowH,active=activeRows.has(i);
       rect(ctx,48,y,1057,rowH,i%2?'#082350':'#061743');
       if(active)rect(ctx,48,y+1,1057,rowH-2,'rgba(39,91,73,.62)',7,GREEN,2);
-      const cell=[r.age,brl(r.capital),brl(r.premium),brl(r.accumulated),brl(r.surrender)];
-      cell.forEach((v,j)=>fitText(ctx,v,cols[j]+4,y+rowH/2,cols[j+1]-cols[j]-8,{size:active&&j>0?19:16,min:10,color:active&&(i===milestone10||i===rows.length-1)&&(j===1||j===4)?GREEN:WHITE,bold:active,align:'center'}));
+      const cell=[r.age,brl(r.capital),brl(r.premium),brl(r.accumulated),brl(r.surrenderCorrected),brl(r.surrender)];
+      cell.forEach((v,j)=>fitText(ctx,v,cols[j]+4,y+rowH/2,cols[j+1]-cols[j]-8,{size:active&&j>0?19:16,min:10,color:active&&(i===milestone10||i===rows.length-1)&&(j===1||j===4||j===5)?GREEN:WHITE,bold:active,align:'center'}));
     });
     if(stage>=3){
       const arrowCenters=[405,645,876];

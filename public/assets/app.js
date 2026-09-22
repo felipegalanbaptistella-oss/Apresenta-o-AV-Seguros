@@ -202,6 +202,7 @@
     return years.map(year => {
       const accumulated = Array.from({length:Math.min(year + 1, 10)}, (_, i) => d.annualPremium * Math.pow(1 + rate, i)).reduce((a,b)=>a+b,0);
       const surrender = Number(d.surrenderValues?.[year]) || 0;
+      const surrenderCorrected = surrender * Math.pow(1 + rate, year + 1);
       return {
       year,
       age: d.age===null ? null : d.age + year,
@@ -209,7 +210,8 @@
       premium: year < 10 ? d.annualPremium * Math.pow(1 + rate, year) : 0,
       accumulated,
       accumulatedDisplay: year < 10 ? accumulated : 0,
-      surrender
+      surrender,
+      surrenderCorrected
     };});
   }
 
@@ -217,9 +219,11 @@
   function syncSurrenderInputs(d,role='primary') {
     const container=$(surrenderUi(role).inputs); if(!container) return;
     const signature=`${d.age??'empty'}:${d.projectionYears}`;
-    if(container.dataset.signature===signature) return;
-    container.dataset.signature=signature;
-    container.innerHTML=Array.from({length:d.projectionYears},(_,i)=>{const age=d.age===null?'—':`${d.age+i} anos`,value=(Number(surrenderValuesByStudy[role][i])||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});return `<label class="surrender-row"><strong>${i+1}º</strong><span>${age}</span><input type="text" inputmode="decimal" data-money-input data-study="${role}" data-surrender-index="${i}" value="${value}" aria-label="Valor de resgate no ${i+1}º ano, ${d.age===null?'idade a preencher':`idade ${d.age+i}`}" /></label>`;}).join('');
+    if(container.dataset.signature!==signature){
+      container.dataset.signature=signature;
+      container.innerHTML=Array.from({length:d.projectionYears},(_,i)=>{const age=d.age===null?'—':`${d.age+i} anos`,value=(Number(surrenderValuesByStudy[role][i])||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});return `<label class="surrender-row"><strong>${i+1}º</strong><span>${age}</span><span class="surrender-corrected" data-surrender-corrected="${i}">${money(0)}</span><input type="text" inputmode="decimal" data-money-input data-study="${role}" data-surrender-index="${i}" value="${value}" aria-label="Valor atual de resgate no ${i+1}º ano, ${d.age===null?'idade a preencher':`idade ${d.age+i}`}" /></label>`;}).join('');
+    }
+    container.querySelectorAll('[data-surrender-corrected]').forEach(output=>{const year=Number(output.dataset.surrenderCorrected),actual=Number(surrenderValuesByStudy[role][year])||0;output.textContent=money(actual*Math.pow(1+d.ipca/100,year+1));});
   }
 
   function refreshSurrenderInputs(role='primary'){
@@ -444,12 +448,12 @@
     setDashboardDetail($('withBarInsurance'),'Seguro de vida',[money(d.coverageAfter)]);setDashboardDetail($('withBarFinancial'),'Ativos financeiros',[money(d.financial)]);setDashboardDetail($('withBarIlliquid'),'Patrimônio imobilizado',[money(d.illiquid)]);setDashboardDetail($('withBarCost'),'Custo sucessório coberto',[money(d.liability)]);
 
     const projection=wlProjection(d);
-    setText('projectionIpca',`IPCA: ${d.ipca.toLocaleString('pt-BR')}% a.a.`);
+    setText('projectionIpca',`IPCA ${d.ipca.toLocaleString('pt-BR')}% + 3% a.a.`);
     setText('projectionClientName',d.name.toLocaleUpperCase('pt-BR'));
     setText('capitalStart',money(d.coverageGap));setText('premiumTenth',money(projection[9]?.premium||0));
     const wlTableBody=$('wlTableBody');
-    if(wlTableBody) wlTableBody.innerHTML=projection.map((row,index)=>`<tr class="${index===0||index===9||index===projection.length-1?'highlight ':''}${index===9?'payoff ':''}${index>=10?'paid':''}"><td>${row.age??'—'}</td><td>${money(row.capital)}</td><td>${money(row.premium)}</td><td>${money(row.accumulatedDisplay)}</td><td>${money(row.surrender)}</td></tr>`).join('');
-    wlTableBody?.querySelectorAll('tr').forEach((row,index)=>{const item=projection[index];setDashboardDetail(row,`${index+1}º ano · ${item.age===null?'idade a preencher':`${item.age} anos`}`,[`Capital segurado: ${money(item.capital)}`,`Prêmio anual: ${money(item.premium)}`,`Resgate informado: ${money(item.surrender)}`]);});
+    if(wlTableBody) wlTableBody.innerHTML=projection.map((row,index)=>`<tr class="${index===0||index===9||index===projection.length-1?'highlight ':''}${index===9?'payoff ':''}${index>=10?'paid':''}"><td>${row.age??'—'}</td><td>${money(row.capital)}</td><td>${money(row.premium)}</td><td>${money(row.accumulatedDisplay)}</td><td>${money(row.surrenderCorrected)}</td><td>${money(row.surrender)}</td></tr>`).join('');
+    wlTableBody?.querySelectorAll('tr').forEach((row,index)=>{const item=projection[index];setDashboardDetail(row,`${index+1}º ano · ${item.age===null?'idade a preencher':`${item.age} anos`}`,[`Capital segurado: ${money(item.capital)}`,`Prêmio anual: ${money(item.premium)}`,`Resgate corrigido por IPCA + 3% a.a.: ${money(item.surrenderCorrected)}`,`Resgate atual da seguradora: ${money(item.surrender)}`]);});
     setText('consultantSummaryName',d.consultantData.name);
     const consultantPhone=$('consultantSummaryPhone'),consultantEmail=$('consultantSummaryEmail');
     if(consultantPhone){consultantPhone.textContent=d.consultantData.phone;consultantPhone.href=`tel:${d.consultantData.phoneHref}`;}
