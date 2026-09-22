@@ -289,6 +289,7 @@
       const details=[`${imported} ${imported===1?'valor importado':'valores importados'} de ${result.pageCount} ${result.pageCount===1?'página':'páginas'}`];
       if(ignored)details.push(`${ignored} ${ignored===1?'linha excedeu':'linhas excederam'} o horizonte e ${ignored===1?'foi ignorada':'foram ignoradas'}`);
       if(missing)details.push(`${missing} ${missing===1?'linha não identificada permaneceu':'linhas não identificadas permaneceram'} como estava${missing===1?'':'m'}`);
+      if(result.ignoredContractStartRow)details.push('a linha do ano de emissão/contratação foi desconsiderada');
       details.push('Revise os valores antes de gerar a apresentação');
       setSurrenderPdfStatus(`${details.join('. ')}.`,'success',role);
       if(button)button.textContent='Selecionar outro PDF';
@@ -307,8 +308,11 @@
   function pasteSurrenderColumn(event,input){
     const clipboard=event.clipboardData?.getData('text/plain')||'';
     if(!clipboard.trim())return;
+    let ignoredContractStartRow=false;
     const values=clipboard.split(/\r\n|\n|\r/).flatMap(row=>{
       const cells=row.split('\t').map(cell=>cell.trim()).filter(Boolean);
+      const firstCell=(cells[0]||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toUpperCase();
+      if(/^(?:ANO\s+(?:(?:DE|DA)\s+)?(?:EMISSAO|CONTRATACAO|CONTRATO)|(?:EMISSAO|CONTRATACAO|CONTRATO))\b/.test(firstCell)){ignoredContractStartRow=true;return [];}
       const cell=[...cells].reverse().find(value=>/\d/.test(value));
       return cell===undefined?[]:[parseNumericValue(cell)];
     });
@@ -319,7 +323,7 @@
     applied.forEach((value,offset)=>{surrenderValuesByStudy[role][start+offset]=value;const field=document.querySelector(`[data-study="${role}"][data-surrender-index="${start+offset}"]`);if(field)field.value=value.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});});
     render();
     const status=$(surrenderUi(role).pasteStatus);
-    if(status){const ignored=values.length-applied.length;status.className=`surrender-paste-status ${ignored?'warning':'success'}`;status.textContent=`${applied.length} ${applied.length===1?'valor colado':'valores colados'} a partir do ${start+1}º ano${ignored?`. ${ignored} excederam o horizonte e foram ignorados.`:'.'}`;}
+    if(status){const ignored=values.length-applied.length;status.className=`surrender-paste-status ${ignored?'warning':'success'}`;status.textContent=`${applied.length} ${applied.length===1?'valor colado':'valores colados'} a partir do ${start+1}º ano${ignored?`. ${ignored} excederam o horizonte e foram ignorados.`:'.'}${ignoredContractStartRow?' A linha do ano de emissão/contratação foi desconsiderada.':''}`;}
   }
 
   function setText(id, text) { const el = $(id); if (el) el.textContent = text; }

@@ -59,6 +59,11 @@
       .toUpperCase();
   }
 
+  function isContractStartYearRow(line) {
+    const label = normalizeText(line?.text ?? line?.items?.map(item => item.str).join(" "));
+    return /^(?:ANO\s+(?:(?:DE|DA)\s+)?(?:EMISSAO|CONTRATACAO|CONTRATO)|(?:EMISSAO|CONTRATACAO|CONTRATO))\b/.test(label);
+  }
+
   function parseMoneyToken(value) {
     const raw = String(value ?? "").replace(/\u00a0/g, " ").trim();
     if (!/\d/.test(raw)) return null;
@@ -282,11 +287,17 @@
 
   function parseTableAfterHeader(lines, header, options = {}) {
     const rows = [];
+    let ignoredContractStartRow = false;
     let missesAfterRows = 0;
     const ageOffset = inferAgeOffset(lines, header, options);
     for (let index = header.lineIndex + 1; index < lines.length; index += 1) {
       const line = lines[index];
       if (HEADER_RE.test(normalizeText(line.text))) break;
+      if (isContractStartYearRow(line)) {
+        ignoredContractStartRow = true;
+        missesAfterRows = 0;
+        continue;
+      }
       const amounts = moneyCandidates(line)
         .filter(candidate => candidate.center >= header.left && candidate.center <= header.right)
         .sort((a, b) => Math.abs(a.center - header.surrenderX) - Math.abs(b.center - header.surrenderX));
@@ -319,7 +330,7 @@
       rows.push({ index: rowIndex, value: Math.max(0, amounts[0].value), x: amounts[0].center, raw: amounts[0].raw });
       missesAfterRows = 0;
     }
-    return rows;
+    return { rows, ignoredContractStartRow };
   }
 
   function extractSurrenderValuesFromPages(pages, options = {}) {
@@ -328,6 +339,7 @@
     const sequential = [];
     let headerCount = 0;
     let ambiguousHeaderCount = 0;
+    let ignoredContractStartRow = false;
     let textCharacters = 0;
     const alignments = [];
 
@@ -338,8 +350,9 @@
       headerCount += headers.length;
       ambiguousHeaderCount += headers.filter(header => header.ambiguous).length;
       headers.forEach(header => {
-        const rows = parseTableAfterHeader(lines, header, options);
-        rows.forEach(row => {
+        const parsed = parseTableAfterHeader(lines, header, options);
+        ignoredContractStartRow ||= parsed.ignoredContractStartRow;
+        parsed.rows.forEach(row => {
           alignments.push(Math.abs(row.x - header.surrenderX));
           if (Number.isInteger(row.index) && row.index >= 0 && row.index < maxValues) {
             if (!indexed.has(row.index)) indexed.set(row.index, { ...row, pageIndex });
@@ -379,7 +392,7 @@
               ? "misaligned_column"
               : null;
 
-    return { values, presentIndices, confidence, reason, headerCount, ambiguousHeaderCount, rowCount, textCharacters };
+    return { values, presentIndices, confidence, reason, headerCount, ambiguousHeaderCount, rowCount, textCharacters, ignoredContractStartRow };
   }
 
   function scriptBaseUrl() {
