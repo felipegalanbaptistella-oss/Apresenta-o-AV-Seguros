@@ -163,6 +163,9 @@
         for (let itemIndex = 0; itemIndex < candidateLine.items.length - 1; itemIndex += 1) {
           const first = candidateLine.items[itemIndex];
           const second = candidateLine.items[itemIndex + 1];
+          const gap = second.x - (first.x + first.width);
+          const maxHeaderWordGap = Math.max(6, Math.min(16, Math.min(first.width, second.width) * 0.5));
+          if (gap > maxHeaderWordGap) continue;
           const combined = `${first.str} ${second.str}`;
           if (HEADER_RE.test(normalizeText(combined))) {
             candidateItems.push({
