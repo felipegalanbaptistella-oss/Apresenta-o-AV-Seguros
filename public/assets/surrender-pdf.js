@@ -10,7 +10,7 @@
   const MAX_OCR_PIXELS_PER_PAGE = 12000000;
   const MAX_OCR_PIXELS_TOTAL = 80000000;
   const MIN_CONFIDENT_ROWS = 5;
-  const HEADER_RE = /\b(?:RESGATE|RESERVA\s+RESGAT(?:ÁVEL|AVEL|\?VEL)|RESERVA\s+FINANCEIRA|VALOR\s+DA\s+RESERVA|CASH\s+VALUE|SURRENDER(?:\s+VALUE)?)\b/i;
+  const HEADER_RE = /\b(?:RESGATE|RESERVA\s*RESGAT(?:ÁVEL|AVEL|\?VEL)|RESERVA\s*FINANCEIRA|VALOR\s+DA\s+RESERVA|CASH\s+VALUE|SURRENDER(?:\s+VALUE)?)\b/i;
   const MONEY_RE = /(?:R\$|BRL|US\$)?\s*-?\(?(?:(?:\d{1,3}(?:[.\s]\d{3})+|\d+),\d{2}|(?:\d{1,3}(?:,\d{3})+|\d+)\.\d{2})\)?|(?:R\$|BRL|US\$)\s*-?\(?\d+\)?/gi;
   let pdfJsPromise;
   let ocrWorkerPromise;
@@ -63,7 +63,7 @@
     const label = normalizeText(line?.text ?? line?.items?.map(item => item.str).join(" "));
     // PDF.js may split accented labels across text items, such as "Emiss ã o".
     const compactLabel = label.replace(/[^A-Z0-9]/g, "");
-    return /(?:ANO)?(?:EMISSAO|CONTRATACAO|CONTRATO)/.test(compactLabel);
+    return /^ANO/.test(compactLabel) && /(?:EMISSAO|CONTRATACAO|CONTRATO)/.test(compactLabel);
   }
 
   function parseMoneyToken(value) {
@@ -263,6 +263,17 @@
     });
   }
 
+  function labeledYearCandidate(line) {
+    for (const item of line.items) {
+      const match = normalizeText(item.str).match(/^\s*ANO\s+(\d{1,3})(?:\s*\(\s*\d{1,3}\s*ANOS?\s*\))?\s*$/i);
+      const value = Number(match?.[1]);
+      if (Number.isInteger(value) && value >= 1 && value <= 80) {
+        return { value, center: item.center };
+      }
+    }
+    return null;
+  }
+
   function nearestInteger(integers, x, maxDistance = 70) {
     if (!Number.isFinite(x)) return null;
     const ordered = integers.map(item => ({ ...item, distance: Math.abs(item.center - x) })).sort((a, b) => a.distance - b.distance);
@@ -314,20 +325,23 @@
         if (zeroPlaceholder) amounts.push({ value: 0, center: zeroPlaceholder.center, raw: zeroPlaceholder.str });
       }
       const integers = integerCandidates(line);
-      const hasRowMarker = integers.some(item => item.center < header.left);
+      const labeledYear = labeledYearCandidate(line);
+      const hasRowMarker = integers.some(item => item.center < header.left)
+        || Boolean(labeledYear && labeledYear.center < header.left);
       if (!amounts.length || !hasRowMarker) {
         if (rows.length) missesAfterRows += 1;
         if (missesAfterRows >= 8) break;
         continue;
       }
 
-      const year = nearestInteger(integers, header.yearX);
+      const year = nearestInteger(integers, header.yearX) ?? labeledYear?.value ?? null;
       const age = nearestInteger(integers, header.ageX);
       let rowIndex = Number.isInteger(year) && year >= 1 && year <= 80 ? year - 1 : null;
       if (Number.isInteger(age) && Number.isFinite(options.currentAge)) {
         const ageIndex = age - Number(options.currentAge) - (Number.isFinite(ageOffset) ? ageOffset : 0);
         if (ageIndex >= 0 && ageIndex <= 80 && (rowIndex === null || Math.abs(rowIndex - ageIndex) > 2)) rowIndex = ageIndex;
       }
+      if (labeledYear && labeledYear.center < header.left) rowIndex = labeledYear.value - 1;
       if (rowIndex === null && !Number.isFinite(header.yearX) && !Number.isFinite(header.ageX)) {
         const possibleYear = integers.filter(item => item.center < header.left).map(item => item.value).find(value => value >= 1 && value <= 80);
         if (possibleYear !== undefined) rowIndex = possibleYear - 1;
