@@ -127,7 +127,7 @@ test("keeps the form and export contract wired", async () => {
   assert.match(appCss, /gauge-arc\{background:conic-gradient\(from 270deg at 50% 100%,#ff4848 0 2%,#70b544 2% 16%/);
   assert.match(appCss, /gauge-arc>span\{color:#fff/);
   assert.match(template, /window\.buildTemplatePpt/);
-  assert.match(legacy, /src="assets\/template-ppt-v28\.js\?v=31"/);
+  assert.match(legacy, /src="assets\/template-ppt-v28\.js\?v=32"/);
   assert.match(template, /slide===5\?'assets\/template-slides\/slide5-only-top-v7\.jpg'/);
   assert.match(template, /\[5,\(\)=>staticSlide\(5\)\]/);
   assert.match(template, /fetch\('assets\/modelo-base\.pptx\?v=3'\)/);

@@ -185,7 +185,7 @@
 
   function projection(d){
     const rate=d.ipca/100;
-    return Array.from({length:d.projectionYears},(_,year)=>{let accumulated=0;for(let i=0;i<Math.min(year+1,10);i++)accumulated+=d.annualPremium*Math.pow(1+rate,i);const surrender=Number(d.surrenderValues?.[year])||0,surrenderCorrected=surrender*Math.pow(1+rate,year+1);return{year,age:d.age+year,capital:d.coverageGap*Math.pow(1+rate,year),premium:year<10?d.annualPremium*Math.pow(1+rate,year):0,accumulated:year<10?accumulated:0,surrender,surrenderCorrected};});
+    return Array.from({length:d.projectionYears},(_,year)=>{const yearNumber=year+1;let accumulated=0;for(let i=0;i<Math.min(yearNumber,10);i++)accumulated+=d.annualPremium*Math.pow(1+rate,i);const surrender=Number(d.surrenderValues?.[year])||0,ipcaFactor=Math.pow(1+rate,yearNumber),surrenderCorrected=surrender*ipcaFactor;return{year:yearNumber,age:d.age===null?null:d.age+yearNumber,capital:d.coverageGap*ipcaFactor,premium:yearNumber<=10?d.annualPremium*Math.pow(1+rate,yearNumber-1):0,accumulated:yearNumber<=10?accumulated:0,surrender,surrenderCorrected};});
   }
   function infoIcon(ctx,cx,cy){
     ctx.save();ctx.beginPath();ctx.arc(cx,cy,15,0,Math.PI*2);ctx.fillStyle=GOLD;ctx.fill();ctx.strokeStyle=WHITE;ctx.lineWidth=2;ctx.stroke();ctx.restore();
