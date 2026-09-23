@@ -61,7 +61,8 @@
 
   function isContractStartYearRow(line) {
     const label = normalizeText(line?.text ?? line?.items?.map(item => item.str).join(" "));
-    return /^(?:ANO\s+(?:(?:DE|DA)\s+)?(?:EMISSAO|CONTRATACAO|CONTRATO)|(?:EMISSAO|CONTRATACAO|CONTRATO))\b/.test(label);
+    // PDF text extraction can place a row label after numeric fragments from neighboring columns.
+    return /\b(?:ANO\s+(?:(?:DE|DA)\s+)?(?:EMISSAO|CONTRATACAO|CONTRATO)|(?:EMISSAO|CONTRATACAO|CONTRATO))\b/.test(label);
   }
 
   function parseMoneyToken(value) {
