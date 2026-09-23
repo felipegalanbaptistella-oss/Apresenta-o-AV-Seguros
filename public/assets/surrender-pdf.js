@@ -61,8 +61,9 @@
 
   function isContractStartYearRow(line) {
     const label = normalizeText(line?.text ?? line?.items?.map(item => item.str).join(" "));
-    // PDF text extraction can place a row label after numeric fragments from neighboring columns.
-    return /\b(?:ANO\s+(?:(?:DE|DA)\s+)?(?:EMISSAO|CONTRATACAO|CONTRATO)|(?:EMISSAO|CONTRATACAO|CONTRATO))\b/.test(label);
+    // PDF.js may split accented labels across text items, such as "Emiss ã o".
+    const compactLabel = label.replace(/[^A-Z0-9]/g, "");
+    return /(?:ANO)?(?:EMISSAO|CONTRATACAO|CONTRATO)/.test(compactLabel);
   }
 
   function parseMoneyToken(value) {
@@ -255,7 +256,8 @@
   function integerCandidates(line) {
     return line.items.flatMap(item => {
       if (/R\$|BRL|US\$/i.test(item.str)) return [];
-      const match = item.str.match(/^\s*(\d{1,4})\s*(?:º|°|ANOS?|YEARS?)?\s*$/i);
+      // Some PDFs combine the year label and number into one text item ("Ano 3").
+      const match = normalizeText(item.str).match(/^\s*(?:(?:ANO|YEAR)\s+)?(\d{1,4})\s*(?:º|°|ANOS?|YEARS?)?\s*$/i);
       if (!match) return [];
       return [{ value: Number(match[1]), center: item.center }];
     });
