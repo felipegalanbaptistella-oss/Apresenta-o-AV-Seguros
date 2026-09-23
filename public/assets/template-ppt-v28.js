@@ -203,7 +203,7 @@
     rect(ctx,30,70,1090,770,NAVY);rect(ctx,47,95,1060,46,'#ad8a3c',18);
     rect(ctx,1085,18,410,68,NAVY);fitText(ctx,clientLabel(d).toLocaleUpperCase('pt-BR'),1100,52,365,{size:18,min:10,color:WHITE,bold:true,align:'right'});
     rect(ctx,640,22,340,50,NAVY);fitText(ctx,`IPCA ${pct(d.ipca)} + 3% a.a.`,640,48,340,{size:24,min:16,color:WHITE,bold:true,align:'center'});
-    const cols=[48,148,338,520,720,912,1105],heads=['IDADE','CAPITAL SEGURADO','APORTE ANUAL','APORTE ACUMULADO','RESGATE CORRIGIDO','RESGATE ATUAL'];
+    const cols=[48,148,368,578,808,1105],heads=['IDADE','CAPITAL SEGURADO','APORTE ANUAL','APORTE ACUMULADO','RESGATE CORRIGIDO'];
     heads.forEach((head,i)=>text(ctx,head,cols[i],119,cols[i+1]-cols[i],{size:15,color:WHITE,bold:true,align:'center'}));
     const top=142,rowH=Math.min(31.4,627/Math.max(rows.length,1));
     const milestone10=Math.min(9,Math.max(0,rows.length-1));
@@ -212,11 +212,11 @@
       const y=top+i*rowH,active=activeRows.has(i);
       rect(ctx,48,y,1057,rowH,i%2?'#082350':'#061743');
       if(active)rect(ctx,48,y+1,1057,rowH-2,'rgba(39,91,73,.62)',7,GREEN,2);
-      const cell=[r.age,brl(r.capital),brl(r.premium),brl(r.accumulated),brl(r.surrenderCorrected),brl(r.surrender)];
-      cell.forEach((v,j)=>fitText(ctx,v,cols[j]+4,y+rowH/2,cols[j+1]-cols[j]-8,{size:active&&j>0?19:16,min:10,color:active&&(i===milestone10||i===rows.length-1)&&(j===1||j===4||j===5)?GREEN:WHITE,bold:active,align:'center'}));
+      const cell=[r.age,brl(r.capital),brl(r.premium),brl(r.accumulated),brl(r.surrenderCorrected)];
+      cell.forEach((v,j)=>fitText(ctx,v,cols[j]+4,y+rowH/2,cols[j+1]-cols[j]-8,{size:active&&j>0?19:16,min:10,color:active&&(i===milestone10||i===rows.length-1)&&(j===1||j===4)?GREEN:WHITE,bold:active,align:'center'}));
     });
     if(stage>=3){
-      const arrowCenters=[405,645,876];
+      const arrowCenters=[473,693,956];
       for(let i=11;i<Math.min(18,rows.length);i++){
         const ay=top+i*rowH+rowH*.48;
         arrowCenters.forEach(ax=>{line(ctx,ax-14,ay-8,ax,ay+6,'#bc9440',3);line(ctx,ax,ay+6,ax+14,ay-8,'#bc9440',3);});
@@ -264,8 +264,8 @@
     const normalized=Math.max(0,Math.min(1,value/10)),angle=start+Math.PI*normalized;
     const directionX=Math.cos(angle),directionY=Math.sin(angle),normalX=-directionY,normalY=directionX;
     const tipX=cx+directionX*(r+5),tipY=cy+directionY*(r+5),baseX=cx+directionX*18,baseY=cy+directionY*18,needleHalfWidth=10;
-    ctx.save();ctx.shadowColor='rgba(255,107,0,.7)';ctx.shadowBlur=10;ctx.fillStyle=ORANGE;ctx.strokeStyle='rgba(2,14,56,.95)';ctx.lineWidth=6;ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(tipX,tipY);ctx.lineTo(baseX+normalX*needleHalfWidth,baseY+normalY*needleHalfWidth);ctx.lineTo(baseX-normalX*needleHalfWidth,baseY-normalY*needleHalfWidth);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
-    ctx.save();ctx.beginPath();ctx.arc(cx,cy,15,0,Math.PI*2);ctx.fillStyle=ORANGE;ctx.fill();ctx.strokeStyle='#020e38';ctx.lineWidth=6;ctx.stroke();ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fillStyle='#f5df8d';ctx.fill();ctx.restore();
+    ctx.save();ctx.shadowColor='rgba(255,107,0,.7)';ctx.shadowBlur=10;ctx.fillStyle=ORANGE;ctx.beginPath();ctx.moveTo(tipX,tipY);ctx.lineTo(baseX+normalX*needleHalfWidth,baseY+normalY*needleHalfWidth);ctx.lineTo(baseX-normalX*needleHalfWidth,baseY-normalY*needleHalfWidth);ctx.closePath();ctx.fill();ctx.restore();
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,15,0,Math.PI*2);ctx.fillStyle=ORANGE;ctx.fill();ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fillStyle='#f5df8d';ctx.fill();ctx.restore();
     text(ctx,'Ótimo',x+108,cy-66,112,{size:14,color:WHITE,bold:true,align:'center'});
     text(ctx,'Recomendado',cx-105,y+86,210,{size:15,color:WHITE,bold:true,align:'center'});
     text(ctx,'Alta exposição',x+w-198,cy-72,158,{size:14,color:WHITE,bold:true,align:'center',maxLines:2});

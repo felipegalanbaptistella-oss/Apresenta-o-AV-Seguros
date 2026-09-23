@@ -473,8 +473,8 @@
     setText('projectionClientName',d.name.toLocaleUpperCase('pt-BR'));
     setText('capitalStart',money(d.coverageGap));setText('premiumTenth',money(projection[9]?.premium||0));
     const wlTableBody=$('wlTableBody');
-    if(wlTableBody) wlTableBody.innerHTML=projection.map((row,index)=>`<tr class="${index===0||index===9||index===projection.length-1?'highlight ':''}${index===9?'payoff ':''}${index>=10?'paid':''}"><td>${row.age??'—'}</td><td>${money(row.capital)}</td><td>${money(row.premium)}</td><td>${money(row.accumulatedDisplay)}</td><td>${money(row.surrenderCorrected)}</td><td>${money(row.surrender)}</td></tr>`).join('');
-    wlTableBody?.querySelectorAll('tr').forEach((row,index)=>{const item=projection[index];setDashboardDetail(row,`${index+1}º ano · ${item.age===null?'idade a preencher':`${item.age} anos`}`,[`Capital segurado: ${money(item.capital)}`,`Prêmio anual: ${money(item.premium)}`,`Resgate corrigido por IPCA + 3% a.a.: ${money(item.surrenderCorrected)}`,`Resgate atual da seguradora: ${money(item.surrender)}`]);});
+    if(wlTableBody) wlTableBody.innerHTML=projection.map((row,index)=>`<tr class="${index===0||index===9||index===projection.length-1?'highlight ':''}${index===9?'payoff ':''}${index>=10?'paid':''}"><td>${row.age??'—'}</td><td>${money(row.capital)}</td><td>${money(row.premium)}</td><td>${money(row.accumulatedDisplay)}</td><td>${money(row.surrenderCorrected)}</td></tr>`).join('');
+    wlTableBody?.querySelectorAll('tr').forEach((row,index)=>{const item=projection[index];setDashboardDetail(row,`${index+1}º ano · ${item.age===null?'idade a preencher':`${item.age} anos`}`,[`Capital segurado: ${money(item.capital)}`,`Prêmio anual: ${money(item.premium)}`,`Resgate corrigido por IPCA + 3% a.a.: ${money(item.surrenderCorrected)}`]);});
     setText('consultantSummaryName',d.consultantData.name);
     const consultantPhone=$('consultantSummaryPhone'),consultantEmail=$('consultantSummaryEmail');
     if(consultantPhone){consultantPhone.textContent=d.consultantData.phone;consultantPhone.href=`tel:${d.consultantData.phoneHref}`;}
