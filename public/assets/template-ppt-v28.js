@@ -301,11 +301,11 @@
     const {canvas,ctx}=await canvasFor(14);
     const card=ctx.createLinearGradient(295,0,1340,0);card.addColorStop(0,'#03143d');card.addColorStop(.72,'#04183f');card.addColorStop(1,'#061b43');
     rect(ctx,295,315,1045,315,card,24,'rgba(197,160,91,.72)',2);
-    text(ctx,'SEU CONSULTOR',430,354,820,{size:15,color:GOLD,bold:true,font:'Georgia'});
-    fitText(ctx,d.consultantData.name,430,405,825,{size:37,min:26,color:WHITE,bold:false,font:'Georgia'});
-    line(ctx,430,447,1255,447,'rgba(197,160,91,.55)',1);
-    text(ctx,'E-MAIL',430,478,160,{size:14,color:GOLD,bold:true});fitText(ctx,d.consultantData.email,430,515,820,{size:30,min:22,color:WHITE,bold:true});
-    text(ctx,'TELEFONE',430,563,160,{size:14,color:GOLD,bold:true});fitText(ctx,d.consultantData.phone,430,600,520,{size:30,min:23,color:WHITE,bold:true});
+    text(ctx,'SEU CONSULTOR',295,354,1045,{size:15,color:GOLD,bold:true,font:'Georgia',align:'center'});
+    fitText(ctx,d.consultantData.name,295,405,1045,{size:37,min:26,color:WHITE,bold:false,font:'Georgia',align:'center'});
+    line(ctx,405,447,1230,447,'rgba(197,160,91,.55)',1);
+    text(ctx,'E-MAIL',295,478,1045,{size:14,color:GOLD,bold:true,align:'center'});fitText(ctx,d.consultantData.email,295,515,1045,{size:30,min:22,color:WHITE,bold:true,align:'center'});
+    text(ctx,'TELEFONE',295,563,1045,{size:14,color:GOLD,bold:true,align:'center'});fitText(ctx,d.consultantData.phone,295,600,1045,{size:30,min:23,color:WHITE,bold:true,align:'center'});
     return pngBytes(canvas);
   }
 
