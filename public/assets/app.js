@@ -16,6 +16,21 @@
   };
   const num = id => parseNumericValue($(id)?.value);
   const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+  const SURRENDER_RATE_BANDS = [
+    { fromMonth: 1, toMonth: 24, percentage: 0 },
+    { fromMonth: 25, toMonth: 36, percentage: 15 },
+    { fromMonth: 37, toMonth: 48, percentage: 20 },
+    { fromMonth: 49, toMonth: 60, percentage: 40 },
+    { fromMonth: 61, toMonth: 72, percentage: 50 },
+    { fromMonth: 73, toMonth: 84, percentage: 70 },
+    { fromMonth: 85, toMonth: 96, percentage: 90 },
+    { fromMonth: 97, toMonth: Number.POSITIVE_INFINITY, percentage: 100 }
+  ];
+  const surrenderPercentageForMonth = months => SURRENDER_RATE_BANDS.find(band => months >= band.fromMonth && months <= band.toMonth)?.percentage ?? 100;
+  const surrenderValuesForYears = (annualPremium, years) => Array.from({length:years},(_,index) => {
+    const month = (index + 1) * 12;
+    return Math.max(0, Number(annualPremium) || 0) * surrenderPercentageForMonth(month) / 100;
+  });
   const CONSULTANTS = {
     fabio:{name:'Fabio Kenji Hassui',phone:'(11) 99270-0538',phoneHref:'+5511992700538',email:'fabio.hassui@altavistainvest.com.br'},
     alexandre:{name:'Alexandre Faustino',phone:'(11) 98097-7782',phoneHref:'+5511980977782',email:'alexandre.faustino@altavistainvest.com.br'},
@@ -23,8 +38,6 @@
   };
   let mode = 'single';
   let activeStudy = 'primary';
-  const surrenderValuesByStudy = {primary:[],spouse:[]};
-  const surrenderPdfImportBusy = {primary:false,spouse:false};
   let currentStudyId = null;
   let currentStudyRevision = null;
   let studySearchTimer = null;
@@ -60,7 +73,9 @@
     return {
       firstName, lastName, name, familyLabel, spouseName: spouseGivenName || 'Cônjuge', consultant: consultantData.name, consultantData, spouse:false, role, studyLabel:isSpouse?'Estudo individual do cônjuge':'Estudo individual do titular',
       ...calculated,
-      age, ipca: num(ids.ipca), projectionYears, surrenderValues:Array.from({length:projectionYears},(_,i)=>Number(surrenderValuesByStudy[role][i])||0)
+      age, ipca: num(ids.ipca), projectionYears,
+      surrenderRates:Array.from({length:projectionYears},(_,i)=>surrenderPercentageForMonth((i+1)*12)),
+      surrenderValues:surrenderValuesForYears(calculated.annualPremium,projectionYears)
     };
   }
 
@@ -71,12 +86,14 @@
   }
 
   function databasePayload(){
+    const primary=personData('primary');
+    const spouse=mode==='couple'?personData('spouse'):null;
     return {
       mode,
       values:Object.fromEntries(inputIds.map(id=>[id,$(id)?.value??''])),
       surrenderValues:{
-        primary:[...surrenderValuesByStudy.primary].slice(0,clamp(num('projectionYears')||20,12,40)),
-        spouse:mode==='couple'?[...surrenderValuesByStudy.spouse].slice(0,clamp(num('spouseProjectionYears')||20,12,40)):[]
+        primary:primary.surrenderValues,
+        spouse:spouse?.surrenderValues||[]
       }
     };
   }
@@ -136,9 +153,6 @@
     Object.entries(payload?.values||{}).forEach(([id,value])=>{const input=$(id);if(input)input.value=String(value??'');});
     moneyInputIds.forEach(id=>{const input=$(id);if(input)finishMoneyFormat(input);});
     decimalInputIds.forEach(id=>{const input=$(id);if(input)finishMoneyFormat(input);});
-    surrenderValuesByStudy.primary=Array.isArray(payload?.surrenderValues?.primary)?payload.surrenderValues.primary.map(Number):[];
-    surrenderValuesByStudy.spouse=Array.isArray(payload?.surrenderValues?.spouse)?payload.surrenderValues.spouse.map(Number):[];
-    ['primary','spouse'].forEach(role=>{const container=$(surrenderUi(role).inputs);if(container)delete container.dataset.signature;});
     render();
   }
 
@@ -188,11 +202,9 @@
   function newStudy(){
     if(currentStudyId&&!window.confirm('Iniciar um novo estudo? Alterações não salvas no estudo aberto serão descartadas.'))return;
     $('clientForm').reset();currentStudyId=null;currentStudyRevision=null;activeStudy='primary';
-    surrenderValuesByStudy.primary=[];surrenderValuesByStudy.spouse=[];
     document.querySelector('[data-status="single"]')?.click();
     moneyInputIds.forEach(id=>{const input=$(id);if(input)finishMoneyFormat(input);});
     decimalInputIds.forEach(id=>{const input=$(id);if(input)finishMoneyFormat(input);});
-    ['primary','spouse'].forEach(role=>{const container=$(surrenderUi(role).inputs);if(container)delete container.dataset.signature;});
     updateCurrentStudyMeta();render();loadStudyList();$('clientFirstName')?.focus();
   }
 
@@ -217,132 +229,17 @@
     };});
   }
 
-  const surrenderUi=role=>role==='spouse'?{inputs:'spouseSurrenderInputs',pdfStatus:'spouseSurrenderPdfStatus',pdfButton:'spouseSurrenderPdfButton',pdfDrop:'spouseSurrenderPdfDrop',pdfFilename:'spouseSurrenderPdfFilename',pdfInput:'spouseSurrenderPdfInput',pasteStatus:'spouseSurrenderPasteStatus'}:{inputs:'surrenderInputs',pdfStatus:'surrenderPdfStatus',pdfButton:'surrenderPdfButton',pdfDrop:'surrenderPdfDrop',pdfFilename:'surrenderPdfFilename',pdfInput:'surrenderPdfInput',pasteStatus:'surrenderPasteStatus'};
+  const surrenderUi=role=>role==='spouse'?'spouseSurrenderInputs':'surrenderInputs';
   function syncSurrenderInputs(d,role='primary') {
-    const container=$(surrenderUi(role).inputs); if(!container) return;
-    const signature=`${d.age??'empty'}:${d.projectionYears}`;
-    if(container.dataset.signature!==signature){
-      container.dataset.signature=signature;
-      container.innerHTML=Array.from({length:d.projectionYears},(_,i)=>{const age=d.age===null?'—':`${d.age+i+1} anos`,value=(Number(surrenderValuesByStudy[role][i])||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});return `<label class="surrender-row"><strong>${i+1}º</strong><span>${age}</span><span class="surrender-corrected" data-surrender-corrected="${i}">${money(0)}</span><input type="text" inputmode="decimal" data-money-input data-study="${role}" data-surrender-index="${i}" value="${value}" aria-label="Valor atual de resgate no ${i+1}º ano, ${d.age===null?'idade a preencher':`idade ${d.age+i+1}`}" /></label>`;}).join('');
-    }
-    container.querySelectorAll('[data-surrender-corrected]').forEach(output=>{const year=Number(output.dataset.surrenderCorrected),actual=Number(surrenderValuesByStudy[role][year])||0;output.textContent=money(actual*Math.pow(1+d.ipca/100,year+1));});
-  }
-
-  function refreshSurrenderInputs(role='primary'){
-    const container=$(surrenderUi(role).inputs);
-    const scrollTop=container?.scrollTop||0;
-    if(container)delete container.dataset.signature;
-    render();
-    if(container)container.scrollTop=scrollTop;
-  }
-
-  function setSurrenderPdfStatus(message,state='',role='primary'){
-    const status=$(surrenderUi(role).pdfStatus);
-    if(!status)return;
-    status.className=`surrender-pdf-status ${state}`.trim();
-    status.textContent=message;
-  }
-
-  function pdfRecognitionMessage(reason){
-    const messages={
-      ocr_unavailable:'Este PDF é uma digitalização. O OCR local não está disponível; use a colagem manual ou tente novamente em um navegador compatível.',
-      no_text:'Este PDF parece ser uma imagem ou digitalização. Use a colagem manual ou envie uma versão com texto pesquisável.',
-      no_header:'Não encontrei um cabeçalho de resgate no PDF. Os valores atuais foram preservados.',
-      ambiguous_surrender_columns:'O PDF possui mais de uma coluna de resgate e não há uma regra definida para escolher entre elas. Os valores atuais foram preservados.',
-      too_few_rows:'Encontrei a tabela, mas não há linhas suficientes para importar com segurança. Os valores atuais foram preservados.',
-      non_sequential_rows:'Os anos da tabela não formam uma sequência confiável. Os valores atuais foram preservados.',
-      misaligned_column:'A coluna de resgate ficou ambígua neste PDF. Os valores atuais foram preservados.'
-    };
-    return messages[reason]||'Não consegui reconhecer a coluna de resgate com segurança. Os valores atuais foram preservados.';
-  }
-
-  async function importSurrenderPdf(file,role='primary'){
-    const ui=surrenderUi(role),button=$(ui.pdfButton),drop=$(ui.pdfDrop),filename=$(ui.pdfFilename),input=$(ui.pdfInput);
-    if(surrenderPdfImportBusy[role]){setSurrenderPdfStatus('Já existe uma cotação sendo processada. Aguarde a conclusão.','warning',role);return;}
-    surrenderPdfImportBusy[role]=true;
-    const initial=data(role),horizon=initial.projectionYears,previousValues=[...surrenderValuesByStudy[role]],previousSignature=JSON.stringify(previousValues);
-    let mutationApplied=false;
-    if(filename)filename.textContent=file?.name||'Nenhum arquivo selecionado';
-    if(button){button.disabled=true;button.textContent='Lendo PDF…';}
-    drop?.classList.add('loading');
-    setSurrenderPdfStatus('Lendo a cotação e procurando a coluna de resgate…','loading',role);
-    try{
-      if(!window.SurrenderPdf?.extractSurrenderValues)throw new Error('O leitor de PDF não foi carregado. Atualize a página e tente novamente.');
-      const result=await window.SurrenderPdf.extractSurrenderValues(file,{currentAge:initial.age,maxValues:80,onProgress:progress=>{
-        if(progress?.status==='ocr')setSurrenderPdfStatus('PDF sem texto: ativando OCR local. O arquivo continua somente neste navegador...','loading');
-        if(progress?.status==='recognizing')setSurrenderPdfStatus(`OCR local lendo a pagina ${progress.page} de ${progress.total}...`,'loading');
-      }});
-      if(result.confidence!=='high'){
-        setSurrenderPdfStatus(pdfRecognitionMessage(result.reason),'warning',role);
-        return;
-      }
-      const current=data(role);
-      if(current.age!==initial.age||current.projectionYears!==horizon||JSON.stringify(surrenderValuesByStudy[role])!==previousSignature){
-        setSurrenderPdfStatus('A idade, o horizonte ou a tabela foram alterados durante a leitura. O PDF não foi aplicado; selecione-o novamente.','warning',role);
-        return;
-      }
-      const presentIndices=(result.presentIndices||result.values.map((_,index)=>index)).filter(Number.isInteger);
-      const nextValues=Array.from({length:horizon},(_,index)=>Number(previousValues[index])||0);
-      presentIndices.forEach(index=>{if(index>=0&&index<horizon)nextValues[index]=Number(result.values[index])||0;});
-      surrenderValuesByStudy[role]=nextValues;
-      mutationApplied=true;
-      refreshSurrenderInputs(role);
-      const imported=presentIndices.filter(index=>index>=0&&index<horizon).length,ignored=presentIndices.filter(index=>index>=horizon).length,missing=Math.max(0,horizon-imported);
-      const details=[`${imported} ${imported===1?'valor importado':'valores importados'} de ${result.pageCount} ${result.pageCount===1?'página':'páginas'}`];
-      if(ignored)details.push(`${ignored} ${ignored===1?'linha excedeu':'linhas excederam'} o horizonte e ${ignored===1?'foi ignorada':'foram ignoradas'}`);
-      if(missing)details.push(`${missing} ${missing===1?'linha não identificada permaneceu':'linhas não identificadas permaneceram'} como estava${missing===1?'':'m'}`);
-      if(result.ignoredContractStartRow)details.push('a linha do ano de emissão/contratação foi desconsiderada');
-      details.push('Revise os valores antes de gerar a apresentação');
-      setSurrenderPdfStatus(`${details.join('. ')}.`,'success',role);
-      if(button)button.textContent='Selecionar outro PDF';
-    }catch(error){
-      if(mutationApplied){surrenderValuesByStudy[role]=previousValues;try{refreshSurrenderInputs(role);}catch(_){/* sem ação */}}
-      setSurrenderPdfStatus(error?.message||'Não foi possível ler esta cotação. Os valores atuais foram preservados.','error',role);
-      if(filename)filename.textContent='Nenhum arquivo importado';
-    }finally{
-      surrenderPdfImportBusy[role]=false;
-      drop?.classList.remove('loading');
-      if(button){button.disabled=false;if(button.textContent==='Lendo PDF…')button.textContent='Selecionar PDF';}
-      if(input)input.value='';
-    }
-  }
-
-  function normalizeSurrenderPasteCell(value){return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toUpperCase();}
-  function isContractStartYearLabel(value){return /^(?:ANO\s+(?:(?:DE|DA)\s+)?(?:EMISSAO|CONTRATACAO|CONTRATO)|(?:EMISSAO|CONTRATACAO|CONTRATO))\b/.test(normalizeSurrenderPasteCell(value));}
-  function pasteSurrenderColumn(event,input){
-    const clipboard=event.clipboardData?.getData('text/plain')||'';
-    if(!clipboard.trim())return;
-    const role=input.dataset.study==='spouse'?'spouse':'primary';
-    const rows=clipboard.split(/\r\n|\n|\r/).map(row=>row.split('\t').map(cell=>cell.trim()));
-    const headerRowIndex=rows.findIndex(cells=>{const normalizedCells=cells.map(normalizeSurrenderPasteCell),hasResgate=normalizedCells.some(cell=>/\b(?:RESGATE|RESERVA\s+RESGATAVEL|VALOR\s+DA\s+RESERVA|CASH\s+VALUE|SURRENDER(?:\s+VALUE)?)\b/.test(cell)),hasColumnContext=normalizedCells.some(cell=>/\b(?:ANO|YEAR|IDADE|AGE|VIGENCIA|VALOR)\b/.test(cell));return hasResgate&&hasColumnContext;});
-    let resgateColumnIndex=null;
-    if(headerRowIndex>=0){
-      const candidates=rows[headerRowIndex].flatMap((cell,index)=>/\b(?:RESGATE|RESERVA\s+RESGATAVEL|VALOR\s+DA\s+RESERVA|CASH\s+VALUE|SURRENDER(?:\s+VALUE)?)\b/.test(normalizeSurrenderPasteCell(cell))?[{index,label:normalizeSurrenderPasteCell(cell)}]:[]);
-      const unqualified=candidates.filter(candidate=>! /\b(?:BRUTO|LIQUIDO|GROSS|NET)\b/.test(candidate.label));
-      const preferred=unqualified.length?unqualified:candidates;
-      if(preferred.length>1){
-        event.preventDefault();
-        const status=$(surrenderUi(role).pasteStatus);
-        if(status){status.className='surrender-paste-status warning';status.textContent='A tabela tem mais de uma coluna de resgate. Copie apenas a coluna desejada; nenhum valor foi alterado.';}
-        return;
-      }
-      if(preferred.length===1)resgateColumnIndex=preferred[0].index;
-    }
-    let ignoredContractStartRow=false;
-    const values=rows.flatMap((cells,rowIndex)=>{
-      if(rowIndex===headerRowIndex||resgateColumnIndex!==null&&rowIndex<headerRowIndex)return [];
-      if(isContractStartYearLabel(cells[0])){ignoredContractStartRow=true;return [];}
-      const cell=resgateColumnIndex!==null?cells[resgateColumnIndex]:[...cells].filter(Boolean).reverse().find(value=>/\d/.test(value));
-      return cell===undefined||! /\d/.test(cell)?[]:[parseNumericValue(cell)];
-    });
-    if(!values.length)return;
-    event.preventDefault();
-    const start=Number(input.dataset.surrenderIndex)||0,limit=data(role).projectionYears;
-    const applied=values.slice(0,Math.max(0,limit-start));
-    applied.forEach((value,offset)=>{surrenderValuesByStudy[role][start+offset]=value;const field=document.querySelector(`[data-study="${role}"][data-surrender-index="${start+offset}"]`);if(field)field.value=value.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});});
-    render();
-    const status=$(surrenderUi(role).pasteStatus);
-    if(status){const ignored=values.length-applied.length;status.className=`surrender-paste-status ${ignored?'warning':'success'}`;status.textContent=`${applied.length} ${applied.length===1?'valor colado':'valores colados'} a partir do ${start+1}º ano${ignored?`. ${ignored} excederam o horizonte e foram ignorados.`:'.'}${ignoredContractStartRow?' A linha do ano de emissão/contratação foi desconsiderada.':''}`;}
+    const container=$(surrenderUi(role)); if(!container) return;
+    const scrollTop=container.scrollTop;
+    container.innerHTML=Array.from({length:d.projectionYears},(_,i)=>{
+      const year=i+1,months=year*12,age=d.age===null?'—':`${d.age+year} anos`;
+      const percentage=surrenderPercentageForMonth(months),surrender=Number(d.surrenderValues?.[i])||0;
+      const corrected=surrender*Math.pow(1+d.ipca/100,year);
+      return `<div class="surrender-row"><strong>${year}º</strong><span>${age}</span><span class="surrender-rate">${percentage.toLocaleString('pt-BR',{maximumFractionDigits:2})}%</span><span>${money(surrender)}</span><span class="surrender-corrected">${money(corrected)}</span></div>`;
+    }).join('');
+    container.scrollTop=scrollTop;
   }
 
   function setText(id, text) { const el = $(id); if (el) el.textContent = text; }
@@ -492,7 +389,6 @@
   document.querySelectorAll('[data-status]').forEach(btn=>btn.addEventListener('click',()=>{mode=btn.dataset.status;if(mode!=='couple')activeStudy='primary';const maritalRegime=$('maritalRegime');if(maritalRegime){maritalRegime.disabled=mode!=='couple';maritalRegime.required=mode==='couple';}document.querySelectorAll('[data-status]').forEach(b=>b.classList.toggle('active',b===btn));document.querySelectorAll('.couple').forEach(el=>el.classList.toggle('hidden',mode!=='couple'));document.querySelectorAll('[data-study]').forEach(b=>b.classList.toggle('active',b.dataset.study===activeStudy));render();}));
   document.querySelectorAll('[data-study]').forEach(btn=>btn.addEventListener('click',()=>{activeStudy=btn.dataset.study==='spouse'&&mode==='couple'?'spouse':'primary';document.querySelectorAll('[data-study]').forEach(b=>b.classList.toggle('active',b.dataset.study===activeStudy));render();document.querySelector('.summary')?.scrollIntoView({behavior:'smooth',block:'start'});}));
   inputIds.forEach(id=>{const input=$(id);if(!input)return;if(moneyInputIds.includes(id)||decimalInputIds.includes(id)){finishMoneyFormat(input);input.addEventListener('focus',()=>{if(parseNumericValue(input.value)===0)input.select();});input.addEventListener('input',()=>{formatMoneyWhileTyping(input);render();});input.addEventListener('blur',()=>{finishMoneyFormat(input);render();});return;}input.addEventListener(id==='consultant'||id==='maritalRegime'?'change':'input',render);});
-  ['primary','spouse'].forEach(role=>{const ui=surrenderUi(role),pdfInput=$(ui.pdfInput),pdfButton=$(ui.pdfButton),pdfDrop=$(ui.pdfDrop),container=$(ui.inputs);pdfButton?.addEventListener('click',()=>pdfInput?.click());pdfInput?.addEventListener('change',()=>{const file=pdfInput.files?.[0];if(file)importSurrenderPdf(file,role);});['dragenter','dragover'].forEach(type=>pdfDrop?.addEventListener(type,event=>{event.preventDefault();event.stopPropagation();pdfDrop.classList.add('dragover');}));['dragleave','drop'].forEach(type=>pdfDrop?.addEventListener(type,event=>{event.preventDefault();event.stopPropagation();pdfDrop.classList.remove('dragover');}));pdfDrop?.addEventListener('drop',event=>{const file=event.dataTransfer?.files?.[0];if(file)importSurrenderPdf(file,role);});container?.addEventListener('focusin',event=>{const input=event.target.closest('[data-surrender-index]');if(input&&parseNumericValue(input.value)===0)input.select();});container?.addEventListener('paste',event=>{const input=event.target.closest('[data-surrender-index]');if(input)pasteSurrenderColumn(event,input);});container?.addEventListener('input',event=>{const input=event.target.closest('[data-surrender-index]');if(!input)return;formatMoneyWhileTyping(input);surrenderValuesByStudy[role][Number(input.dataset.surrenderIndex)]=parseNumericValue(input.value);render();});container?.addEventListener('focusout',event=>{const input=event.target.closest('[data-surrender-index]');if(!input)return;finishMoneyFormat(input);surrenderValuesByStudy[role][Number(input.dataset.surrenderIndex)]=parseNumericValue(input.value);render();});});
   document.addEventListener('pointermove',event=>{
     const target=event.target.closest?.('[data-dashboard-title]');if(!target)return;
     if(target.id==='paybackChart'&&target.__dashboardMeta){

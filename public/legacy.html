@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <title>Gestão de Riscos — Gerador de apresentação</title>
-  <link rel="stylesheet" href="assets/app.css?v=18" />
+  <link rel="stylesheet" href="assets/app.css?v=19" />
   <script src="assets/jszip.min.js"></script>
   <script src="assets/pptxgen.min.js"></script>
   <script src="assets/pdflib/pdf-lib.min.js"></script>
@@ -74,16 +74,8 @@
             <div class="field"><label for="spouseAnnualReturn">Rentabilidade atuarial (% a.a.)</label><input id="spouseAnnualReturn" type="text" inputmode="decimal" data-decimal-input value="3,00" /></div>
           </div>
           <div class="surrender-block spouse-surrender-block">
-            <div class="surrender-heading"><div><strong>Valores de resgate da cotação do cônjuge</strong><span>Esta tabela alimenta somente o estudo do cônjuge.</span></div><span class="surrender-bulk-badge">ESTUDO SEPARADO</span></div>
-            <div id="spouseSurrenderPdfDrop" class="surrender-pdf-import">
-              <div class="surrender-pdf-icon" aria-hidden="true">PDF</div>
-              <div class="surrender-pdf-copy"><strong>Importar cotação do cônjuge</strong><span>Selecione ou arraste o PDF para preencher a coluna individual de resgate.</span><small>O documento é processado somente neste navegador.</small></div>
-              <div class="surrender-pdf-actions"><button id="spouseSurrenderPdfButton" class="surrender-pdf-button" type="button">Selecionar PDF</button><input id="spouseSurrenderPdfInput" type="file" accept="application/pdf,.pdf" hidden tabindex="-1" aria-hidden="true" /><span id="spouseSurrenderPdfFilename" class="surrender-pdf-filename">Nenhum arquivo selecionado</span></div>
-            </div>
-            <div id="spouseSurrenderPdfStatus" class="surrender-pdf-status" role="status" aria-live="polite">A leitura e a colagem manual afetam apenas o estudo do cônjuge.</div>
-            <div class="surrender-paste-guide"><strong>Colagem em massa</strong><span>Cole a tabela com cabeçalhos ou a coluna de valores começando no Ano 1. A linha Ano Emissão é descartada quando aparece identificada.</span></div>
-            <div class="surrender-editor"><div class="surrender-editor-head"><span>Ano</span><span>Idade</span><span>Corrigido pelo IPCA (R$)</span><span>Atual da seguradora (R$)</span></div><div id="spouseSurrenderInputs" class="surrender-editor-body"></div></div>
-            <div id="spouseSurrenderPasteStatus" class="surrender-paste-status" role="status" aria-live="polite">Você ainda pode editar qualquer célula individualmente.</div>
+            <div class="surrender-heading"><div><strong>Projeção de resgate do cônjuge</strong><span>Percentual da tabela aplicado ao prêmio anual informado.</span></div><span class="surrender-bulk-badge">ESTUDO SEPARADO</span></div>
+            <div class="surrender-editor"><div class="surrender-editor-head"><span>Ano</span><span>Idade</span><span>Tabela (%)</span><span>Resgate base (R$)</span><span>Corrigido pelo IPCA (R$)</span></div><div id="spouseSurrenderInputs" class="surrender-editor-body"></div></div>
           </div>
         </section>
 
@@ -98,7 +90,7 @@
 
         <section class="section">
           <h3>Dados da cotação WL10</h3>
-          <p class="small-note">O custo e os valores de resgate dependem da cotação da seguradora. Preencha abaixo exatamente os números apresentados na proposta.</p>
+          <p class="small-note">A simulação aplica ao prêmio anual os percentuais da tabela de resgate e corrige cada valor pelo IPCA informado.</p>
           <div class="grid three">
             <div class="field"><label for="clientAge">Idade atual</label><input id="clientAge" type="number" min="18" max="100" step="1" required placeholder="Informe a idade" /></div>
             <div class="field"><label for="annualPremium">Prêmio anual da apólice (R$)</label><input id="annualPremium" type="text" inputmode="decimal" data-money-input value="0,00" /></div>
@@ -107,24 +99,8 @@
             <div class="field"><label for="annualReturn">Rentabilidade atuarial (% a.a.)</label><input id="annualReturn" type="text" inputmode="decimal" data-decimal-input value="3,00" /></div>
           </div>
           <div class="surrender-block">
-            <div class="surrender-heading"><div><strong>Valores de resgate da cotação</strong><span>Cole uma coluna de resgate ou a tabela completa com cabeçalhos.</span></div><span class="surrender-bulk-badge">Colagem em massa ativada</span></div>
-            <div id="surrenderPdfDrop" class="surrender-pdf-import">
-              <div class="surrender-pdf-icon" aria-hidden="true">PDF</div>
-              <div class="surrender-pdf-copy">
-                <strong>Importar cotação da seguradora</strong>
-                <span>Selecione ou arraste o PDF para preencher automaticamente a coluna de resgate.</span>
-                <small>O documento é processado somente neste navegador e não é enviado nem armazenado.</small>
-              </div>
-              <div class="surrender-pdf-actions">
-                <button id="surrenderPdfButton" class="surrender-pdf-button" type="button" aria-describedby="surrenderPdfFilename surrenderPdfStatus">Selecionar PDF</button>
-                <input id="surrenderPdfInput" type="file" accept="application/pdf,.pdf" hidden tabindex="-1" aria-hidden="true" />
-                <span id="surrenderPdfFilename" class="surrender-pdf-filename">Nenhum arquivo selecionado</span>
-              </div>
-            </div>
-            <div id="surrenderPdfStatus" class="surrender-pdf-status" role="status" aria-live="polite">Lê tabelas de resgate ou reserva em PDFs digitais e usa OCR local quando o escaneado não tem texto selecionável. A colagem manual continua disponível abaixo.</div>
-            <div class="surrender-paste-guide"><strong>Como preencher de uma vez</strong><span>Copie a tabela completa com cabeçalhos ou a coluna de resgate começando em “Ano 1”; cole na primeira célula abaixo e pressione <kbd>Ctrl</kbd> + <kbd>V</kbd>. A linha “Ano Emissão” é descartada quando aparece identificada.</span></div>
-            <div class="surrender-editor"><div class="surrender-editor-head"><span>Ano</span><span>Idade</span><span>Corrigido pelo IPCA (R$)</span><span>Atual da seguradora (R$)</span></div><div id="surrenderInputs" class="surrender-editor-body"></div></div>
-            <div id="surrenderPasteStatus" class="surrender-paste-status" role="status" aria-live="polite">Você ainda pode editar qualquer célula individualmente.</div>
+            <div class="surrender-heading"><div><strong>Projeção de resgate pela tabela</strong><span>Percentual da tabela aplicado ao prêmio anual informado.</span></div><span class="surrender-bulk-badge">RESGATE ESTIMADO</span></div>
+            <div class="surrender-editor"><div class="surrender-editor-head"><span>Ano</span><span>Idade</span><span>Tabela (%)</span><span>Resgate base (R$)</span><span>Corrigido pelo IPCA (R$)</span></div><div id="surrenderInputs" class="surrender-editor-body"></div></div>
           </div>
         </section>
 
@@ -190,8 +166,7 @@
     <footer>Material informativo — os valores projetados dependem das premissas preenchidas e da cotação da seguradora.</footer>
   </main>
   <script src="assets/template-ppt-v28.js?v=33"></script>
-  <script src="assets/surrender-pdf.js?v=14"></script>
   <script src="assets/study-model.js?v=1"></script>
-  <script src="assets/app.js?v=19"></script>
+  <script src="assets/app.js?v=20"></script>
 </body>
 </html>
