@@ -299,7 +299,9 @@
   function sequenceQuality(indices) {
     if (!indices.length) return 0;
     const unique = [...new Set(indices)].sort((a, b) => a - b);
-    return unique[0] === 0 && unique.every((value, index) => value === index) ? 1 : 0;
+    // Some quotations omit the two zero-value years and start at year 3.
+    const first = unique[0];
+    return (first === 0 || first === 2) && unique.every((value, index) => value === first + index) ? 1 : 0;
   }
 
   function parseTableAfterHeader(lines, header, options = {}) {
@@ -396,7 +398,7 @@
     const rowCount = indexed.size || sequential.length;
     const continuity = indexed.size ? sequenceQuality(indices) : rowCount >= 3 ? 0.8 : 0;
     const meanAlignment = alignments.length ? alignments.reduce((sum, value) => sum + value, 0) / alignments.length : Infinity;
-    const presentIndices = indexed.size ? indices : values.map((_, index) => index);
+    let presentIndices = indexed.size ? indices : values.map((_, index) => index);
     const confidence = headerCount > 0 && ambiguousHeaderCount === 0 && rowCount >= MIN_CONFIDENT_ROWS && continuity >= 0.65 && meanAlignment <= 130 ? "high" : rowCount >= 2 ? "medium" : "low";
     const reason = textCharacters < 30
       ? "no_text"
@@ -411,6 +413,14 @@
             : meanAlignment > 130
               ? "misaligned_column"
               : null;
+
+    if (confidence === "high") {
+      // The presentation starts at the first policy year even when the PDF starts at year 3.
+      // The first two surrender years are always zero; later years retain the quoted values.
+      const zeroYears = Math.min(2, maxValues);
+      values = Array.from({ length: Math.max(values.length, zeroYears) }, (_, index) => index < zeroYears ? 0 : values[index]);
+      presentIndices = [...new Set([...Array.from({ length: zeroYears }, (_, index) => index), ...presentIndices])].sort((a, b) => a - b);
+    }
 
     return { values, presentIndices, confidence, reason, headerCount, ambiguousHeaderCount, rowCount, textCharacters, ignoredContractStartRow };
   }

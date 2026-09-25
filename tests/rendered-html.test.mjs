@@ -93,7 +93,7 @@ test("keeps the form and export contract wired", async () => {
   assert.match(legacy, /id="previewTotalCapital"/);
   assert.match(legacy, /class="donut-center" id="donutWithoutCenter"/);
   assert.match(legacy, /class="donut-center" id="donutWithCenter"/);
-  assert.match(app, /const surrenderValuesForYears = \(annualPremium, years\) =>/);
+  assert.match(app, /const surrenderValuesByStudy = \{primary:\[\],spouse:\[\]\}/);
   assert.match(app, /function personData\(role='primary'\)/);
   assert.match(app, /window\.RiskStudy\.calculatePerson/);
   assert.match(app, /function exportData\(\)/);

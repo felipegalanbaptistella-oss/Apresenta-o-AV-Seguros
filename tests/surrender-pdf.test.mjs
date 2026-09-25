@@ -43,8 +43,8 @@ test("localiza a coluna de resgate sem confundir capital ou aporte", () => {
     item("APORTE ACUMULADO", 345, 720, 115),
     item("VALOR DE RESGATE", 515, 720, 105),
   ];
-  const expected = [0, 4500.25, 12750.5, 22100.75, 32000];
-  expected.forEach((surrender, index) => {
+  const quotedValues = [0, 4500.25, 12750.5, 22100.75, 32000];
+  quotedValues.forEach((surrender, index) => {
     const y = 690 - index * 28;
     page.push(
       item(String(index + 1), 47, y, 12),
@@ -58,7 +58,7 @@ test("localiza a coluna de resgate sem confundir capital ou aporte", () => {
   const result = extractSurrenderValuesFromPages([page], { currentAge: 23, maxValues: 20 });
   assert.equal(result.confidence, "high");
   assert.equal(result.rowCount, 5);
-  assert.deepEqual(result.values, expected);
+  assert.deepEqual(result.values, [0, 0, 12750.5, 22100.75, 32000]);
 });
 
 test("reconhece cabeçalho quebrado de reserva resgatável", () => {
@@ -145,7 +145,7 @@ test("usa a idade para ordenar quando a tabela não possui coluna de ano", () =>
 
   const result = extractSurrenderValuesFromPages([page], { currentAge: 40, maxValues: 20 });
   assert.equal(result.confidence, "high");
-  assert.deepEqual(result.values, [1000, 2500, 4000, 5750, 7300]);
+  assert.deepEqual(result.values, [0, 0, 4000, 5750, 7300]);
 });
 
 test("não autoriza importação sem cabeçalho reconhecido", () => {
@@ -190,4 +190,78 @@ test("não escolhe silenciosamente entre resgate bruto e líquido", () => {
   const result = extractSurrenderValuesFromPages([page], { maxValues: 20 });
   assert.notEqual(result.confidence, "high");
   assert.equal(result.reason, "ambiguous_surrender_columns");
+});
+
+test("preenche os dois primeiros anos com zero quando a tabela começa no Ano 3", () => {
+  const page = [item("ANO", 45, 720, 28), item("VALOR DE RESGATE", 470, 720, 110)];
+  const values = [15000, 22000, 30000, 41000, 50000];
+  values.forEach((value, index) => {
+    const y = 690 - index * 25;
+    page.push(
+      item(`Ano ${index + 3}`, 50, y, 55),
+      item(`R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, 485, y, 90),
+    );
+  });
+
+  const result = extractSurrenderValuesFromPages([page], { maxValues: 20 });
+  assert.equal(result.confidence, "high");
+  assert.deepEqual(result.presentIndices, [0, 1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(result.values, [0, 0, ...values]);
+});
+
+test("preenche os dois primeiros anos com zero quando as células de resgate estão vazias", () => {
+  const page = [item("ANO", 45, 720, 28), item("VALOR DE RESGATE", 470, 720, 110)];
+  const values = [15000, 22000, 30000, 41000, 50000];
+  for (let year = 1; year <= 7; year += 1) {
+    const y = 690 - (year - 1) * 25;
+    page.push(item(String(year), 50, y, 15));
+    if (year >= 3) {
+      page.push(item(`R$ ${values[year - 3].toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, 485, y, 90));
+    }
+  }
+
+  const result = extractSurrenderValuesFromPages([page], { maxValues: 20 });
+  assert.equal(result.confidence, "high");
+  assert.deepEqual(result.presentIndices, [0, 1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(result.values, [0, 0, ...values]);
+});
+
+test("ignora Ano Emissão sem criar um terceiro ano zerado", () => {
+  const page = [
+    item("ANO", 45, 720, 28),
+    item("VALOR DE RESGATE", 470, 720, 110),
+    item("Ano Emissão", 50, 690, 90),
+    item("R$ 999.999,00", 485, 690, 90),
+  ];
+  const values = [0, 0, 15000, 22000, 30000];
+  values.forEach((value, index) => {
+    const y = 660 - index * 25;
+    page.push(
+      item(String(index + 1), 50, y, 15),
+      item(`R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, 485, y, 90),
+    );
+  });
+
+  const result = extractSurrenderValuesFromPages([page], { maxValues: 20 });
+  assert.equal(result.confidence, "high");
+  assert.equal(result.ignoredContractStartRow, true);
+  assert.deepEqual(result.presentIndices, [0, 1, 2, 3, 4]);
+  assert.deepEqual(result.values, values);
+});
+
+test("zera o Ano 2 mesmo quando a cotação mostra resgate e preserva os anos seguintes", () => {
+  const page = [item("ANO", 45, 720, 28), item("VALOR DE RESGATE", 470, 720, 110)];
+  const quotedValues = [0, 917.5, 15000, 22000, 30000];
+  quotedValues.forEach((value, index) => {
+    const y = 690 - index * 25;
+    page.push(
+      item(String(index + 1), 50, y, 15),
+      item(`R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, 485, y, 90),
+    );
+  });
+
+  const result = extractSurrenderValuesFromPages([page], { maxValues: 20 });
+  assert.equal(result.confidence, "high");
+  assert.deepEqual(result.presentIndices, [0, 1, 2, 3, 4]);
+  assert.deepEqual(result.values, [0, 0, 15000, 22000, 30000]);
 });
