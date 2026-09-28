@@ -61,7 +61,10 @@ test("keeps the form and export contract wired", async () => {
     readFile(new URL("../public/assets/app.css", import.meta.url), "utf8"),
     readFile(new URL("../app/api/studies/[id]/route.ts", import.meta.url), "utf8"),
   ]);
-  const templateV28 = await readFile(new URL("../public/assets/template-ppt-v28.js", import.meta.url), "utf8");
+  const [templateV28, legacyHtml] = await Promise.all([
+    readFile(new URL("../public/assets/template-ppt-v28.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/legacy.html", import.meta.url), "utf8"),
+  ]);
   assert.match(page, /src="\/legacy-v7\.html"/);
   assert.match(layout, /generateMetadata\(\): Promise<Metadata>/);
   assert.match(legacy, /id="clientFirstName"/);
@@ -128,7 +131,8 @@ test("keeps the form and export contract wired", async () => {
   assert.match(appCss, /gauge-arc\{background:conic-gradient\(from 270deg at 50% 100%,#ff4848 0 2%,#70b544 2% 16%/);
   assert.match(appCss, /gauge-arc>span\{color:#fff/);
   assert.match(template, /window\.buildTemplatePpt/);
-  assert.match(legacy, /src="assets\/template-ppt-v28\.js\?v=36"/);
+  assert.match(legacy, /src="assets\/template-ppt-v28\.js\?v=37"/);
+  assert.match(legacyHtml, /src="assets\/template-ppt-v28\.js\?v=37"/);
   assert.match(template, /slide===5\?'assets\/template-slides\/slide5-only-top-v7\.jpg'/);
   assert.match(template, /\[5,\(\)=>staticSlide\(5\)\]/);
   assert.match(template, /fetch\('assets\/modelo-base\.pptx\?v=3'\)/);
@@ -155,10 +159,18 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /Lei 15\.040\/2024 · arts\. 113 a 116/);
   assert.match(template, /Lei 15\.040\/2024 · arts\. 114 e 117/);
   assert.match(template, /Lei 15\.040\/2024 · art\. 122  \|  CPC · art\. 833, VI/);
+  assert.match(template, /async function legalInfoSlide\(\)/);
+  assert.match(template, /const rowTops=\[160,326,492\]/);
   assert.match(template, /async function prepareLegalInfoSlides\(zip\)/);
-  assert.match(template, /const legalTargets=await prepareLegalInfoSlides\(zip\)/);
+  assert.match(template, /const slideNumber=17;if\(\[17,18,19\]/);
+  assert.match(template, /const legalTarget=await prepareLegalInfoSlides\(zip\)/);
+  assert.doesNotMatch(template, /const legalTargets=await prepareLegalInfoSlides\(zip\)/);
   assert.match(template, /benefitPanel\(ctx,1148,600,405,242,[\s\S]*?\{infoIcons:true\}\)/);
-  assert.match(template, /addSlideJumpHotspot\(zip,16,legalTargets/);
+  assert.match(template, /addSlideJumpHotspot\(zip,16,legalTarget/);
+  assert.match(template, /addSlideJumpHotspot\(zip,spouseFinal,legalTarget/);
+  assert.match(templateV28, /const rowTops=\[160,326,492\]/);
+  assert.match(templateV28, /const slideNumber=17;if\(\[17,18,19\]/);
+  assert.match(templateV28, /addSlideJumpHotspot\(zip,16,legalTarget/);
   assert.match(template, /async function addShowJumpHotspot\(zip,sourceSlide/);
   assert.match(template, /jump='lastslideviewed'/);
   assert.match(template, /async function ensureRiskNavigation\(zip\)/);
@@ -202,8 +214,9 @@ test("keeps the form and export contract wired", async () => {
   assert.match(templateV28, /function justifiedRowCenters\(top,bottom,count,rowHeight=32\)/);
   assert.match(template, /function downArrow\(ctx,cx,cy\)/);
   assert.match(template, /lineTo\(x\+6,y\+14\)/);
-  assert.match(template, /rect\(ctx,82,326,1436,276/);
-  assert.match(template, /rect\(ctx,82,618,1436,58/);
+  assert.match(template, /rect\(ctx,82,y,1436,152/);
+  assert.match(template, /rect\(ctx,82,666,1436,48/);
+  assert.match(template, /rect\(ctx,82,728,1436,80/);
   assert.doesNotMatch(template, /ALCANCE E LIMITES|info\.limit/);
   assert.match(template, /for\(let i=10;i<Math\.min\(18,rows\.length\);i\+\+\)/);
   assert.match(template, /const cloneBase=\(await read\('ppt\/slides\/slide11\.xml'\)\).*?<p:timing/);
