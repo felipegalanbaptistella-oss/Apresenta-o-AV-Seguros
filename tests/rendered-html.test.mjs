@@ -61,6 +61,7 @@ test("keeps the form and export contract wired", async () => {
     readFile(new URL("../public/assets/app.css", import.meta.url), "utf8"),
     readFile(new URL("../app/api/studies/[id]/route.ts", import.meta.url), "utf8"),
   ]);
+  const templateV28 = await readFile(new URL("../public/assets/template-ppt-v28.js", import.meta.url), "utf8");
   assert.match(page, /src="\/legacy-v7\.html"/);
   assert.match(layout, /generateMetadata\(\): Promise<Metadata>/);
   assert.match(legacy, /id="clientFirstName"/);
@@ -127,7 +128,7 @@ test("keeps the form and export contract wired", async () => {
   assert.match(appCss, /gauge-arc\{background:conic-gradient\(from 270deg at 50% 100%,#ff4848 0 2%,#70b544 2% 16%/);
   assert.match(appCss, /gauge-arc>span\{color:#fff/);
   assert.match(template, /window\.buildTemplatePpt/);
-  assert.match(legacy, /src="assets\/template-ppt-v28\.js\?v=33"/);
+  assert.match(legacy, /src="assets\/template-ppt-v28\.js\?v=34"/);
   assert.match(template, /slide===5\?'assets\/template-slides\/slide5-only-top-v7\.jpg'/);
   assert.match(template, /\[5,\(\)=>staticSlide\(5\)\]/);
   assert.match(template, /fetch\('assets\/modelo-base\.pptx\?v=3'\)/);
@@ -195,7 +196,8 @@ test("keeps the form and export contract wired", async () => {
   assert.doesNotMatch(template, /\[17,\(\)=>staticSlide\(2\)\]/);
   assert.match(template, /\[5,await staticSlide\(5\)\]/);
   assert.match(template, /for\(const study of studies\)rendered\.push\(\.\.\.await renderStudySlides\(study\)\)/);
-  assert.match(template, /arrowCenters=\[405,645,876\]/);
+  assert.match(template, /arrowCenters=\[382\.5,568\.75,818\.75\]/);
+  assert.match(templateV28, /arrowCenters=\[382\.5,568\.75,818\.75\]/);
   assert.match(template, /for\(let i=11;i<Math\.min\(18,rows\.length\);i\+\+\)/);
   assert.match(template, /const cloneBase=\(await read\('ppt\/slides\/slide11\.xml'\)\).*?<p:timing/);
   assert.match(template, /const sourceXml=\(await read\('ppt\/slides\/slide2\.xml'\)\).*?<p:timing/);

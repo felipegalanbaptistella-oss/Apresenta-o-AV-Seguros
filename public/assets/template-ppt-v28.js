@@ -27,6 +27,7 @@
     ctx.save();ctx.shadowColor='rgba(2,14,56,.95)';ctx.shadowBlur=5;ctx.shadowOffsetY=1;text(ctx,value,x,y,w,{size,color,bold:true,align});ctx.restore();
   }
   function line(ctx,x1,y1,x2,y2,color='#24406e',lw=1,dash=[]){ctx.save();ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.restore();}
+  function progressionArrow(ctx,cx,cy){const x=cx-7.5,y=cy-5;ctx.save();ctx.fillStyle='#d1aa4d';ctx.beginPath();ctx.moveTo(x,y+2.5);ctx.lineTo(x+9,y+2.5);ctx.lineTo(x+9,y);ctx.lineTo(x+15,y+5);ctx.lineTo(x+9,y+10);ctx.lineTo(x+9,y+7.5);ctx.lineTo(x,y+7.5);ctx.closePath();ctx.fill();ctx.restore();}
   function donut(ctx,cx,cy,r,inner,values,colors,{highlightIndex=-1,minHighlightShare=.03}={}){
     const safeValues=values.map(v=>Math.max(0,Number(v)||0));
     const total=safeValues.reduce((a,b)=>a+b,0)||1;
@@ -175,14 +176,27 @@
     const donutBrand=await loadImage('assets/marca.png');ctx.drawImage(donutBrand,214,391,72,28);
     const items=[{label:'Posição em investimentos (XP)',color:GOLD2},{label:'Posição em outras instituições',color:GOLD},{label:'Previdência Privada',color:'#ffbf00'}];
     if(withInsurance)items.push({label:'SEGURO DE VIDA',color:GREEN});if(reallocation)items.push({label:'RESERVA LASTREADA',color:GREEN,bold:true});legend(ctx,items,420,335,55);
-    if(withInsurance){text(ctx,'SEGURO DE VIDA',90,665,340,{size:28,color:GREEN,bold:true});fitText(ctx,brl(d.coverageAfter),430,665,300,{size:28,min:18,color:GREEN,bold:true,align:'right'});text(ctx,'Ativos Financeiros',90,735,340,{size:25,color:MUTED});fitText(ctx,brl(d.financial),430,735,300,{size:25,min:17,color:MUTED,bold:true,align:'right'});text(ctx,'Patrimônio imobilizado',90,802,340,{size:25,color:MUTED});fitText(ctx,brl(d.illiquid),430,802,300,{size:25,min:17,color:MUTED,bold:true,align:'right'});}
-    else if(reallocation){text(ctx,'RESERVA LASTREADA',90,665,340,{size:26,color:GREEN,bold:true});fitText(ctx,brl(d.annualPremium),430,665,300,{size:27,min:18,color:GREEN,bold:true,align:'right'});text(ctx,'ATIVOS FINANCEIROS',90,735,340,{size:24,color:MUTED});fitText(ctx,brl(Math.max(0,d.financial-d.annualPremium)),430,735,300,{size:25,min:17,color:MUTED,bold:true,align:'right'});text(ctx,'Patrimônio imobilizado',90,802,340,{size:24,color:MUTED});fitText(ctx,brl(d.illiquid),430,802,300,{size:25,min:17,color:MUTED,bold:true,align:'right'});}
-    else{text(ctx,'Ativos Financeiros',90,680,340,{size:26,color:MUTED});fitText(ctx,brl(d.financial),430,680,300,{size:28,min:18,color:MUTED,bold:true,align:'right'});text(ctx,'Patrimônio imobilizado',90,738,340,{size:26,color:MUTED});fitText(ctx,brl(d.illiquid),430,738,300,{size:28,min:18,color:MUTED,bold:true,align:'right'});}
+    if(withInsurance){
+      assetBreakdownRow(ctx,'SEGURO DE VIDA',d.coverageAfter,671.25,{color:GREEN,labelSize:28.5,valueSize:28.5,labelBold:true});
+      assetBreakdownRow(ctx,'Ativos Financeiros',d.financial,726.25);
+      assetBreakdownRow(ctx,'Patrimônio imobilizado',d.illiquid,781.25);
+    }else if(reallocation){
+      assetBreakdownRow(ctx,'RESERVA LASTREADA',d.annualPremium,671.25,{color:GREEN,labelSize:27,valueSize:28.5,labelBold:true});
+      assetBreakdownRow(ctx,'ATIVOS FINANCEIROS',Math.max(0,d.financial-d.annualPremium),726.25);
+      assetBreakdownRow(ctx,'Patrimônio imobilizado',d.illiquid,781.25);
+    }else{
+      assetBreakdownRow(ctx,'Ativos Financeiros',d.financial,683.75,{valueSize:28.5});
+      assetBreakdownRow(ctx,'Patrimônio imobilizado',d.illiquid,718.75,{valueSize:28.5});
+    }
     stackedBar(ctx,d,980,285,195,415,withInsurance,reallocation);
     const barLegend=withInsurance?[{label:'Passivo sucessório',color:'#bfc2c8',textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos Financeiros',color:GOLD},{label:'SEGURO DE VIDA',color:GREEN,bold:true}]:reallocation?[{label:'Passivo sucessório',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos Financeiros',color:GOLD},{label:'Reserva lastreada',color:GREEN,bold:true}]:[{label:'PASSIVO SUCESSÓRIO',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos Financeiros',color:GOLD}];
     legend(ctx,barLegend,1250,480,38);return pngBytes(canvas);
   }
 
+  function assetBreakdownRow(ctx,label,value,y,{color='#e3eaf5',labelSize=27,valueSize=27,labelBold=false}={}){
+    text(ctx,label,75,y,347.5,{size:labelSize,color,bold:labelBold,align:'center'});
+    fitText(ctx,brl(value),422.5,y,352.5,{size:valueSize,min:17,color,bold:true,align:'center'});
+  }
   function projection(d){
     const rate=d.ipca/100;
     return Array.from({length:d.projectionYears},(_,year)=>{const yearNumber=year+1;let accumulated=0;for(let i=0;i<Math.min(yearNumber,10);i++)accumulated+=d.annualPremium*Math.pow(1+rate,i);const surrender=Number(d.surrenderValues?.[year])||0,ipcaFactor=Math.pow(1+rate,yearNumber),surrenderCorrected=surrender*ipcaFactor;return{year:yearNumber,age:d.age===null?null:d.age+yearNumber,capital:d.coverageGap*ipcaFactor,premium:yearNumber<=10?d.annualPremium*Math.pow(1+rate,yearNumber-1):0,accumulated:yearNumber<=10?accumulated:0,surrender,surrenderCorrected};});
@@ -216,10 +230,10 @@
       cell.forEach((v,j)=>fitText(ctx,v,cols[j]+4,y+rowH/2,cols[j+1]-cols[j]-8,{size:active&&j>0?19:16,min:10,color:active&&(i===milestone10||i===rows.length-1)&&(j===1||j===4)?GREEN:WHITE,bold:active,align:'center'}));
     });
     if(stage>=3){
-      const arrowCenters=[473,693,956];
+      const arrowCenters=[382.5,568.75,818.75];
       for(let i=11;i<Math.min(18,rows.length);i++){
-        const ay=top+i*rowH+rowH*.48;
-        arrowCenters.forEach(ax=>{line(ctx,ax-14,ay-8,ax,ay+6,'#bc9440',3);line(ctx,ax,ay+6,ax+14,ay-8,'#bc9440',3);});
+        const ay=top+i*rowH+rowH*.46;
+        arrowCenters.forEach(ax=>progressionArrow(ctx,ax,ay));
       }
     }
     const footerY=top+rows.length*rowH;
