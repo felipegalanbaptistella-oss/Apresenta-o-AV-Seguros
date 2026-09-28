@@ -128,7 +128,7 @@ test("keeps the form and export contract wired", async () => {
   assert.match(appCss, /gauge-arc\{background:conic-gradient\(from 270deg at 50% 100%,#ff4848 0 2%,#70b544 2% 16%/);
   assert.match(appCss, /gauge-arc>span\{color:#fff/);
   assert.match(template, /window\.buildTemplatePpt/);
-  assert.match(legacy, /src="assets\/template-ppt-v28\.js\?v=34"/);
+  assert.match(legacy, /src="assets\/template-ppt-v28\.js\?v=35"/);
   assert.match(template, /slide===5\?'assets\/template-slides\/slide5-only-top-v7\.jpg'/);
   assert.match(template, /\[5,\(\)=>staticSlide\(5\)\]/);
   assert.match(template, /fetch\('assets\/modelo-base\.pptx\?v=3'\)/);
@@ -196,8 +196,15 @@ test("keeps the form and export contract wired", async () => {
   assert.doesNotMatch(template, /\[17,\(\)=>staticSlide\(2\)\]/);
   assert.match(template, /\[5,await staticSlide\(5\)\]/);
   assert.match(template, /for\(const study of studies\)rendered\.push\(\.\.\.await renderStudySlides\(study\)\)/);
-  assert.match(template, /arrowCenters=\[382\.5,568\.75,818\.75\]/);
-  assert.match(templateV28, /arrowCenters=\[382\.5,568\.75,818\.75\]/);
+  assert.match(template, /arrowCenters=\[368,578,808\]/);
+  assert.match(templateV28, /arrowCenters=\[368,578,808\]/);
+  assert.match(template, /function justifiedRowCenters\(top,bottom,count,rowHeight=32\)/);
+  assert.match(templateV28, /function justifiedRowCenters\(top,bottom,count,rowHeight=32\)/);
+  assert.match(template, /function downArrow\(ctx,cx,cy\)/);
+  assert.match(template, /lineTo\(x\+6,y\+14\)/);
+  assert.match(template, /rect\(ctx,82,326,1436,276/);
+  assert.match(template, /rect\(ctx,82,618,1436,58/);
+  assert.doesNotMatch(template, /ALCANCE E LIMITES|info\.limit/);
   assert.match(template, /for\(let i=11;i<Math\.min\(18,rows\.length\);i\+\+\)/);
   assert.match(template, /const cloneBase=\(await read\('ppt\/slides\/slide11\.xml'\)\).*?<p:timing/);
   assert.match(template, /const sourceXml=\(await read\('ppt\/slides\/slide2\.xml'\)\).*?<p:timing/);

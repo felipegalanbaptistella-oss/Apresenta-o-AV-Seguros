@@ -27,7 +27,7 @@
     ctx.save();ctx.shadowColor='rgba(2,14,56,.95)';ctx.shadowBlur=5;ctx.shadowOffsetY=1;text(ctx,value,x,y,w,{size,color,bold:true,align});ctx.restore();
   }
   function line(ctx,x1,y1,x2,y2,color='#24406e',lw=1,dash=[]){ctx.save();ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.restore();}
-  function progressionArrow(ctx,cx,cy){const x=cx-7.5,y=cy-5;ctx.save();ctx.fillStyle='#d1aa4d';ctx.beginPath();ctx.moveTo(x,y+2.5);ctx.lineTo(x+9,y+2.5);ctx.lineTo(x+9,y);ctx.lineTo(x+15,y+5);ctx.lineTo(x+9,y+10);ctx.lineTo(x+9,y+7.5);ctx.lineTo(x,y+7.5);ctx.closePath();ctx.fill();ctx.restore();}
+  function downArrow(ctx,cx,cy){const x=cx-6,y=cy-7;ctx.save();ctx.fillStyle='#d1aa4d';ctx.beginPath();ctx.moveTo(x+4,y);ctx.lineTo(x+8,y);ctx.lineTo(x+8,y+7);ctx.lineTo(x+12,y+7);ctx.lineTo(x+6,y+14);ctx.lineTo(x,y+7);ctx.lineTo(x+4,y+7);ctx.closePath();ctx.fill();ctx.restore();}
   function donut(ctx,cx,cy,r,inner,values,colors,{highlightIndex=-1,minHighlightShare=.03}={}){
     const safeValues=values.map(v=>Math.max(0,Number(v)||0));
     const total=safeValues.reduce((a,b)=>a+b,0)||1;
@@ -176,18 +176,21 @@
     const donutBrand=await loadImage('assets/marca.png');ctx.drawImage(donutBrand,214,391,72,28);
     const items=[{label:'Posição em investimentos (XP)',color:GOLD2},{label:'Posição em outras instituições',color:GOLD},{label:'Previdência Privada',color:'#ffbf00'}];
     if(withInsurance)items.push({label:'SEGURO DE VIDA',color:GREEN});if(reallocation)items.push({label:'RESERVA LASTREADA',color:GREEN,bold:true});legend(ctx,items,420,335,55);
-    if(withInsurance){
-      assetBreakdownRow(ctx,'SEGURO DE VIDA',d.coverageAfter,671.25,{color:GREEN,labelSize:28.5,valueSize:28.5,labelBold:true});
-      assetBreakdownRow(ctx,'Ativos Financeiros',d.financial,726.25);
-      assetBreakdownRow(ctx,'Patrimônio imobilizado',d.illiquid,781.25);
-    }else if(reallocation){
-      assetBreakdownRow(ctx,'RESERVA LASTREADA',d.annualPremium,671.25,{color:GREEN,labelSize:27,valueSize:28.5,labelBold:true});
-      assetBreakdownRow(ctx,'ATIVOS FINANCEIROS',Math.max(0,d.financial-d.annualPremium),726.25);
-      assetBreakdownRow(ctx,'Patrimônio imobilizado',d.illiquid,781.25);
-    }else{
-      assetBreakdownRow(ctx,'Ativos Financeiros',d.financial,683.75,{valueSize:28.5});
-      assetBreakdownRow(ctx,'Patrimônio imobilizado',d.illiquid,718.75,{valueSize:28.5});
-    }
+    const breakdownRows=withInsurance?[
+      ['SEGURO DE VIDA',d.coverageAfter,{color:GREEN,labelSize:28.5,valueSize:28.5,labelBold:true}],
+      ['Ativos Financeiros',d.financial,{}],
+      ['Patrimônio imobilizado',d.illiquid,{}]
+    ]:reallocation?[
+      ['RESERVA LASTREADA',d.annualPremium,{color:GREEN,labelSize:27,valueSize:28.5,labelBold:true}],
+      ['ATIVOS FINANCEIROS',Math.max(0,d.financial-d.annualPremium),{}],
+      ['Patrimônio imobilizado',d.illiquid,{}]
+    ]:[
+      ['Ativos Financeiros',d.financial,{valueSize:28.5}],
+      ['Patrimônio imobilizado',d.illiquid,{valueSize:28.5}]
+    ];
+    const breakdownBounds=breakdownRows.length===3?[620,824]:[630,774];
+    const breakdownY=justifiedRowCenters(...breakdownBounds,breakdownRows.length);
+    breakdownRows.forEach(([label,value,options],index)=>assetBreakdownRow(ctx,label,value,breakdownY[index],options));
     stackedBar(ctx,d,980,285,195,415,withInsurance,reallocation);
     const barLegend=withInsurance?[{label:'Passivo sucessório',color:'#bfc2c8',textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos Financeiros',color:GOLD},{label:'SEGURO DE VIDA',color:GREEN,bold:true}]:reallocation?[{label:'Passivo sucessório',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos Financeiros',color:GOLD},{label:'Reserva lastreada',color:GREEN,bold:true}]:[{label:'PASSIVO SUCESSÓRIO',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos Financeiros',color:GOLD}];
     legend(ctx,barLegend,1250,480,38);return pngBytes(canvas);
@@ -196,6 +199,10 @@
   function assetBreakdownRow(ctx,label,value,y,{color='#e3eaf5',labelSize=27,valueSize=27,labelBold=false}={}){
     text(ctx,label,75,y,347.5,{size:labelSize,color,bold:labelBold,align:'center'});
     fitText(ctx,brl(value),422.5,y,352.5,{size:valueSize,min:17,color,bold:true,align:'center'});
+  }
+  function justifiedRowCenters(top,bottom,count,rowHeight=32){
+    const gap=(bottom-top-count*rowHeight)/(count+1);
+    return Array.from({length:count},(_,index)=>top+gap*(index+1)+rowHeight*(index+.5));
   }
   function projection(d){
     const rate=d.ipca/100;
@@ -225,15 +232,15 @@
     rows.forEach((r,i)=>{
       const y=top+i*rowH,active=activeRows.has(i);
       rect(ctx,48,y,1057,rowH,i%2?'#082350':'#061743');
-      if(active)rect(ctx,48,y+1,1057,rowH-2,'rgba(39,91,73,.62)',7,GREEN,2);
+      if(active)rect(ctx,48,y+1,1057,rowH-2,'rgba(39,91,73,.62)',7);
       const cell=[r.age,brl(r.capital),brl(r.premium),brl(r.accumulated),brl(r.surrenderCorrected),brl(r.surrender)];
       cell.forEach((v,j)=>fitText(ctx,v,cols[j]+4,y+rowH/2,cols[j+1]-cols[j]-8,{size:active&&j>0?19:16,min:10,color:active&&(i===milestone10||i===rows.length-1)&&(j===1||j===4||j===5)?GREEN:WHITE,bold:active,align:'center'}));
     });
     if(stage>=3){
-      const arrowCenters=[382.5,568.75,818.75];
+      const arrowCenters=[368,578,808];
       for(let i=11;i<Math.min(18,rows.length);i++){
-        const ay=top+i*rowH+rowH*.46;
-        arrowCenters.forEach(ax=>progressionArrow(ctx,ax,ay));
+        const ay=top+i*rowH+rowH/2;
+        arrowCenters.forEach(ax=>downArrow(ctx,ax,ay));
       }
     }
     const footerY=top+rows.length*rowH;
@@ -324,18 +331,17 @@
   }
 
   const legalInfoSlides=[
-    {key:'incomunicavel',title:'INCOMUNICÁVEL',lead:'O capital por morte é pago ao beneficiário indicado e não integra a herança.',law:'Lei 15.040/2024 · arts. 113 a 116',detail:'A lei permite indicar livremente o beneficiário e estabelece que o capital segurado devido por morte não é herança para nenhum efeito.',limit:'O termo “incomunicável” é uma simplificação comercial, não uma regra absoluta para toda modalidade. Reserva, resgate em vida e regime de bens exigem análise do contrato e do caso concreto.'},
-    {key:'inalienavel',title:'INALIENÁVEL',lead:'A lei protege o crédito securitário contra renúncia ou redução antecipada.',law:'Lei 15.040/2024 · arts. 114 e 117',detail:'É nulo o negócio que implique renúncia ou redução do crédito ao capital segurado ou à reserva matemática.',limit:'Não é indisponibilidade absoluta: a lei admite substituição do beneficiário e ressalva empréstimo técnico e resgate previstos no contrato.'},
-    {key:'impenhoravel',title:'IMPENHORÁVEL',lead:'Os capitais devidos por morte ou perda da integridade física recebem proteção expressa contra penhora.',law:'Lei 15.040/2024 · art. 122  |  CPC · art. 833, VI',detail:'A Lei do Contrato de Seguro e o Código de Processo Civil qualificam o seguro de vida e os capitais securitários como impenhoráveis.',limit:'A proteção pode não alcançar valores resgatados em vida pelo próprio segurado quando passam a ter natureza de investimento (STJ, REsp 2.176.434, 2026).'}
+    {key:'incomunicavel',title:'INCOMUNICÁVEL',lead:'O capital por morte é pago ao beneficiário indicado e não integra a herança.',law:'Lei 15.040/2024 · arts. 113 a 116',detail:'A lei permite indicar livremente o beneficiário e estabelece que o capital segurado devido por morte não é herança para nenhum efeito.'},
+    {key:'inalienavel',title:'INALIENÁVEL',lead:'A lei protege o crédito securitário contra renúncia ou redução antecipada.',law:'Lei 15.040/2024 · arts. 114 e 117',detail:'É nulo o negócio que implique renúncia ou redução do crédito ao capital segurado ou à reserva matemática.'},
+    {key:'impenhoravel',title:'IMPENHORÁVEL',lead:'Os capitais devidos por morte ou perda da integridade física recebem proteção expressa contra penhora.',law:'Lei 15.040/2024 · art. 122  |  CPC · art. 833, VI',detail:'A Lei do Contrato de Seguro e o Código de Processo Civil qualificam o seguro de vida e os capitais securitários como impenhoráveis.'}
   ];
   async function legalInfoSlide(info){
     const {canvas,ctx}=await canvasFor(11);rect(ctx,0,0,W,H,NAVY);
     text(ctx,'GESTÃO DE RISCOS',82,58,440,{size:18,color:GOLD,bold:true,font:'Georgia'});
     text(ctx,'BENEFÍCIOS LEGAIS DO SEGURO DE VIDA',82,120,1180,{size:38,color:WHITE,bold:true});
     rect(ctx,82,174,1436,112,'#0a2050',18,GOLD,2);fitText(ctx,info.title,112,229,430,{size:46,min:34,color:GOLD,bold:true});text(ctx,info.lead,550,229,930,{size:25,color:WHITE,maxLines:2});
-    rect(ctx,82,326,680,208,'#061743',18,'#284878',2);text(ctx,'BASE LEGAL VIGENTE',114,366,610,{size:18,color:GOLD,bold:true});fitText(ctx,info.law,114,414,610,{size:28,min:21,color:WHITE,bold:true});text(ctx,info.detail,114,474,610,{size:20,color:MUTED,maxLines:3});
-    rect(ctx,798,326,720,310,'#061743',18,'#284878',2);text(ctx,'ALCANCE E LIMITES',830,366,650,{size:18,color:GOLD,bold:true});text(ctx,info.limit,830,458,650,{size:22,color:WHITE,maxLines:7});
-    rect(ctx,82,574,680,62,'rgba(197,160,91,.14)',12,GOLD,1);text(ctx,'Base legal federal — não é previsão direta da Constituição Federal.',105,605,635,{size:16,color:GOLD,bold:true,align:'center'});
+    rect(ctx,82,326,1436,276,'#061743',18,'#284878',2);text(ctx,'BASE LEGAL VIGENTE',114,366,1372,{size:18,color:GOLD,bold:true});fitText(ctx,info.law,114,421,1372,{size:28,min:21,color:WHITE,bold:true});text(ctx,info.detail,114,493,1372,{size:22,color:MUTED,maxLines:4});
+    rect(ctx,82,618,1436,58,'rgba(197,160,91,.14)',12,GOLD,1);text(ctx,'Base legal federal — não é previsão direta da Constituição Federal.',105,647,1390,{size:16,color:GOLD,bold:true,align:'center'});
     rect(ctx,82,690,1436,92,'#03143d',16,'#26375f',2);text(ctx,'Leitura orientativa. A aplicação depende da modalidade contratada, das condições da apólice e do caso concreto.',118,735,1364,{size:20,color:MUTED,align:'center',maxLines:2});
     rect(ctx,1350,34,168,52,'#0a2050',12,GOLD,2);text(ctx,'← VOLTAR',1362,60,144,{size:17,color:WHITE,bold:true,align:'center'});
     text(ctx,'Fontes: Lei 15.040/2024 (Planalto) · Lei 13.105/2015, CPC (Planalto) · STJ, quando indicado',82,842,1436,{size:15,color:'#8496bb',align:'center'});
