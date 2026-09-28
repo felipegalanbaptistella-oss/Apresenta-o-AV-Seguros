@@ -188,8 +188,9 @@
       ['Ativos Financeiros',d.financial,{valueSize:28.5}],
       ['Patrimônio imobilizado',d.illiquid,{valueSize:28.5}]
     ];
-    const breakdownBounds=breakdownRows.length===3?[620,824]:[630,774];
-    const breakdownY=justifiedRowCenters(...breakdownBounds,breakdownRows.length);
+    const breakdownY=breakdownRows.length===3
+      ?[655,...justifiedRowCenters(700,824,2)]
+      :justifiedRowCenters(630,774,2);
     breakdownRows.forEach(([label,value,options],index)=>assetBreakdownRow(ctx,label,value,breakdownY[index],options));
     stackedBar(ctx,d,980,285,195,415,withInsurance,reallocation);
     const barLegend=withInsurance?[{label:'Passivo sucessório',color:'#bfc2c8',textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos Financeiros',color:GOLD},{label:'SEGURO DE VIDA',color:GREEN,bold:true}]:reallocation?[{label:'Passivo sucessório',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos Financeiros',color:GOLD},{label:'Reserva lastreada',color:GREEN,bold:true}]:[{label:'PASSIVO SUCESSÓRIO',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos Financeiros',color:GOLD}];
@@ -197,8 +198,8 @@
   }
 
   function assetBreakdownRow(ctx,label,value,y,{color='#e3eaf5',labelSize=27,valueSize=27,labelBold=false}={}){
-    text(ctx,label,75,y,347.5,{size:labelSize,color,bold:labelBold,align:'center'});
-    fitText(ctx,brl(value),422.5,y,352.5,{size:valueSize,min:17,color,bold:true,align:'center'});
+    text(ctx,label,75,y,340,{size:labelSize,color,bold:labelBold,align:'left'});
+    fitText(ctx,brl(value),435,y,340,{size:valueSize,min:17,color,bold:true,align:'left'});
   }
   function justifiedRowCenters(top,bottom,count,rowHeight=32){
     const gap=(bottom-top-count*rowHeight)/(count+1);
@@ -238,7 +239,7 @@
     });
     if(stage>=3){
       const arrowCenters=[368,578,808];
-      for(let i=11;i<Math.min(18,rows.length);i++){
+      for(let i=10;i<Math.min(18,rows.length);i++){
         const ay=top+i*rowH+rowH/2;
         arrowCenters.forEach(ax=>downArrow(ctx,ax,ay));
       }
