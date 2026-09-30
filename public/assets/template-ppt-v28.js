@@ -1,5 +1,5 @@
 (() => {
-  const W=1600,H=900,EMU=7620,NAVY='#020e38',PANEL='#061743',GOLD='#c5a05b',GOLD2='#d5a800',WHITE='#f4f5f8',MUTED='#c6cfdf',GREEN='#70b544',RED='#ff4848',ORANGE='#ff6b00',BLUE='#294878';
+  const W=1600,H=900,EMU=7620,NAVY='#020e38',PANEL='#061743',GOLD='#c5a05b',GOLD2='#d5a800',WHITE='#f4f5f8',MUTED='#c6cfdf',GREEN='#70b544',RED='#ff4848',BLUE='#294878';
   const imageCache=new Map();
   const brl=value=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value)||0);
   const pct=value=>`${(Number(value)||0).toLocaleString('pt-BR',{maximumFractionDigits:2})}%`;
@@ -277,27 +277,24 @@
   async function slide7(d){const {canvas,ctx}=await canvasFor(7);studyTag(ctx,d);return pngBytes(canvas);}
 
   function gauge(ctx,x,y,w,h,title,value){
-    rect(ctx,x,y,w,h,'#03143d',12,'#9d7624',2);
-    text(ctx,title,x+24,y+24,w-48,{size:18,color:GOLD,bold:true,align:'center',maxLines:2});
-    const cx=x+w/2,cy=y+h-25,r=Math.min(170,w*.31),start=Math.PI;
-    const zones=[[0,.035,RED],[.035,.28,GREEN],[.28,.56,'#c9e2ae'],[.56,1,'#f5df8d']];
-    ctx.save();ctx.lineWidth=48;ctx.lineCap='butt';zones.forEach(([a,b,color])=>{ctx.beginPath();ctx.arc(cx,cy,r,start+Math.PI*a,start+Math.PI*b);ctx.strokeStyle=color;ctx.stroke();});ctx.restore();
-    ctx.beginPath();ctx.moveTo(cx-r+20,cy);ctx.arc(cx,cy,r-49,Math.PI,Math.PI*2);ctx.lineTo(cx+r-20,cy);ctx.closePath();ctx.fillStyle='#c7a466';ctx.fill();
-    const normalized=Math.max(0,Math.min(1,value/10)),angle=start+Math.PI*normalized;
-    const directionX=Math.cos(angle),directionY=Math.sin(angle),normalX=-directionY,normalY=directionX;
-    const tipX=cx+directionX*(r+5),tipY=cy+directionY*(r+5),baseX=cx+directionX*18,baseY=cy+directionY*18,needleHalfWidth=10;
-    ctx.save();ctx.shadowColor='rgba(255,107,0,.7)';ctx.shadowBlur=10;ctx.fillStyle=ORANGE;ctx.beginPath();ctx.moveTo(tipX,tipY);ctx.lineTo(baseX+normalX*needleHalfWidth,baseY+normalY*needleHalfWidth);ctx.lineTo(baseX-normalX*needleHalfWidth,baseY-normalY*needleHalfWidth);ctx.closePath();ctx.fill();ctx.restore();
-    ctx.save();ctx.beginPath();ctx.arc(cx,cy,15,0,Math.PI*2);ctx.fillStyle=ORANGE;ctx.fill();ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fillStyle='#f5df8d';ctx.fill();ctx.restore();
-    text(ctx,'Ótimo',x+108,cy-66,112,{size:14,color:WHITE,bold:true,align:'center'});
-    text(ctx,'Recomendado',cx-105,y+86,210,{size:15,color:WHITE,bold:true,align:'center'});
-    text(ctx,'Alta exposição',x+w-198,cy-72,158,{size:14,color:WHITE,bold:true,align:'center',maxLines:2});
-    text(ctx,'Não se aplica',x+24,cy+10,150,{size:16,color:WHITE,bold:true,align:'center'});
-    text(ctx,'Acima de 10%',x+w-180,cy+10,155,{size:16,color:WHITE,bold:true,align:'center'});
-    fitText(ctx,pct(value),cx-92,cy-34,184,{size:36,min:27,color:WHITE,bold:true,align:'center'});
+    const cx=x+w/2,cy=y+h-46,r=Math.min(128,w*.3),segments=10;
+    text(ctx,title,x+26,y+20,w-52,{size:15,color:GOLD,bold:true,align:'center',maxLines:1});
+    fitText(ctx,pct(value),x+35,y+63,w-70,{size:34,min:27,color:WHITE,bold:true,align:'center'});
+    for(let i=0;i<segments;i++){
+      const angle=Math.PI+(i+.5)*Math.PI/segments,px=cx+Math.cos(angle)*r,py=cy+Math.sin(angle)*r;
+      ctx.save();ctx.translate(px,py);ctx.rotate(angle+Math.PI/2);ctx.fillStyle=GOLD;ctx.fillRect(-10,-4,20,8);ctx.restore();
+    }
+    const normalized=Math.max(0,Math.min(1,(Number(value)||0)/10)),angle=Math.PI+Math.PI*normalized;
+    const dx=Math.cos(angle),dy=Math.sin(angle),nx=-dy,ny=dx,tipDistance=r-18,baseDistance=16;
+    ctx.save();ctx.fillStyle=GOLD;ctx.beginPath();ctx.moveTo(cx+dx*tipDistance,cy+dy*tipDistance);ctx.lineTo(cx+dx*baseDistance+nx*7,cy+dy*baseDistance+ny*7);ctx.lineTo(cx+dx*baseDistance-nx*7,cy+dy*baseDistance-ny*7);ctx.closePath();ctx.fill();
+    ctx.beginPath();ctx.arc(cx,cy,12,0,Math.PI*2);ctx.fillStyle=GOLD;ctx.fill();ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fillStyle=NAVY;ctx.fill();ctx.restore();
+    text(ctx,'Não se aplica',x+12,y+h-40,136,{size:11,color:MUTED,align:'center'});
+    text(ctx,'Acima de 10%',x+w-148,y+h-40,136,{size:11,color:MUTED,align:'center'});
+    text(ctx,'Ótimo  ·  Recomendado  ·  Alta exposição',x+22,y+h-16,w-44,{size:10,color:MUTED,align:'center'});
   }
   const monthsAtRate=(d,rate)=>d.financial>0&&d.annualPremium>0?Math.ceil(d.annualPremium/(d.financial*rate)):0;
   const monthsText=months=>months?`${months} ${months===1?'MÊS':'MESES'}`:'—';
-  async function slide13(d){
+  async function slide13(d,{includeGauge=true}={}){
     const {canvas,ctx}=await canvasFor(13);studyTag(ctx,d);rect(ctx,0,150,W,H-150,NAVY);rect(ctx,40,160,1520,420,'#03143d',14,'#9d7624',2);text(ctx,'CENÁRIO DE PAYBACK',75,188,300,{size:18,color:GOLD,bold:true});
     rect(ctx,500,171,300,58,'#bc985d',10);text(ctx,'ATIVOS FINANCEIROS',515,184,270,{size:14,color:WHITE,align:'center'});fitText(ctx,brl(d.financial),515,208,270,{size:28,min:19,color:WHITE,bold:true,align:'center'});
     const monthlyRates=[.006,.008,.01],colors=['#7d6a36','#b88700','#d6a700'];
@@ -314,8 +311,10 @@
     const rateMonths=monthlyRates.map(rate=>monthsAtRate(d,rate));const starColors=['#e9a2a5','#8bd05f','#f0c400'];
     monthlyRates.forEach((rate,i)=>{const x=850+i*230;rect(ctx,x,408,210,100,i===1?'#173c32':'#03143d',5,i===1?GREEN:'#9d7624',2);text(ctx,'★',x+18,438,34,{size:30,color:starColors[i],bold:true});text(ctx,`${(rate*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}% a.m.`,x+55,438,140,{size:18,color:i===1?GREEN:GOLD,bold:true});fitText(ctx,monthsText(rateMonths[i]),x+20,480,170,{size:28,min:20,color:i===1?GREEN:WHITE,bold:true,align:'center'});});
     const currentAllocation=d.total?d.annualPremium/d.total*100:0,proposedAllocation=d.withoutInsurance?d.annualPremium/d.withoutInsurance*100:0;
-    gauge(ctx,40,600,490,275,'ALOCAÇÃO ATUAL VS PATRIMÔNIO TOTAL',currentAllocation);
-    gauge(ctx,555,600,490,275,'ALOCAÇÃO PROPOSTA VS PATRIMÔNIO LÍQUIDO',proposedAllocation);
+    if(includeGauge){
+      gauge(ctx,40,600,490,275,'ALOCAÇÃO ATUAL VS PATRIMÔNIO TOTAL',currentAllocation);
+      gauge(ctx,555,600,490,275,'ALOCAÇÃO PROPOSTA VS PATRIMÔNIO LÍQUIDO',proposedAllocation);
+    }
     rect(ctx,1070,600,490,275,'#03143d',12,'#9d7624',2);text(ctx,'PERFIL DE SAÚDE',1094,634,442,{size:21,color:GOLD,bold:true,align:'center'});text(ctx,'?',1110,738,410,{size:92,color:WHITE,bold:true,align:'center'});text(ctx,'A PREENCHER',1094,842,442,{size:17,color:MUTED,bold:true,align:'center'});
     return pngBytes(canvas);
   }
@@ -338,7 +337,8 @@
   ];
   async function legalInfoSlide(){
     const {canvas,ctx}=await canvasFor(11);rect(ctx,0,0,W,H,NAVY);
-    text(ctx,'GESTÃO DE RISCOS',82,58,440,{size:18,color:GOLD,bold:true,font:'Georgia'});
+    const brandMark=await loadImage('assets/marca.png');ctx.drawImage(brandMark,82,49,43,17);
+    text(ctx,'GESTÃO DE RISCOS',143,58,440,{size:18,color:GOLD,bold:true,font:'Georgia'});
     text(ctx,'BENEFÍCIOS LEGAIS DO SEGURO DE VIDA',82,120,1180,{size:38,color:WHITE,bold:true});
     const rowTops=[160,326,492];
     legalInfoSlides.forEach((info,index)=>{
@@ -360,6 +360,37 @@
     if(hidden)xml=xml.replace(/<p:sld\b/,'<p:sld show="0"');
     let rels=await zip.file(relsPath).async('string');rels=rels.replace(/<Relationship\b[^>]*\bId="rId999"[^>]*\/>/g,'').replace('</Relationships>',`<Relationship Id="rId999" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/custom-slide${no}.png"/></Relationships>`);
     zip.file(xmlPath,xml);zip.file(relsPath,rels);zip.file(mediaPath,bytes);
+  }
+  function editableShape(id,name,{x,y,w,h,rotation=0,geometry='rect',fill}){
+    const transform=`<a:xfrm${rotation?` rot="${Math.round(rotation*60000)}"`:''}><a:off x="${Math.round(x*EMU)}" y="${Math.round(y*EMU)}"/><a:ext cx="${Math.round(w*EMU)}" cy="${Math.round(h*EMU)}"/></a:xfrm>`;
+    return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${esc(name)}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>${transform}<a:prstGeom prst="${geometry}"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="${fill}"/></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p/></p:txBody></p:sp>`;
+  }
+  function editableText(id,name,{x,y,w,h,value,color=WHITE,fontPt=12,bold=false}){
+    const size=Math.round(fontPt*100),body=`<a:bodyPr wrap="none" lIns="0" tIns="0" rIns="0" bIns="0" anchor="ctr"/><a:lstStyle/><a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="pt-BR" sz="${size}" b="${bold?1:0}" dirty="0"><a:solidFill><a:srgbClr val="${color}"/></a:solidFill><a:latin typeface="Arial"/><a:ea typeface="Arial"/><a:cs typeface="Arial"/></a:rPr><a:t>${esc(value)}</a:t></a:r><a:endParaRPr lang="pt-BR" sz="${size}"/></a:p>`;
+    const transform=`<a:xfrm><a:off x="${Math.round(x*EMU)}" y="${Math.round(y*EMU)}"/><a:ext cx="${Math.round(w*EMU)}" cy="${Math.round(h*EMU)}"/></a:xfrm>`;
+    return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${esc(name)}"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr>${transform}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></p:spPr><p:txBody>${body}</p:txBody></p:sp>`;
+  }
+  async function addEditableGauge(zip,slideNo,{x,y,w,h,title,value}){
+    const xmlPath=`ppt/slides/slide${slideNo}.xml`;let xml=await zip.file(xmlPath).async('string');
+    const usedIds=[...xml.matchAll(/<p:cNvPr\b[^>]*\bid="(\d+)"/g)].map(match=>Number(match[1]));let nextId=Math.max(2,...usedIds)+1;
+    const shapes=[],cx=x+w/2,cy=y+h-46,r=Math.min(128,w*.3),segments=10,normalized=Math.max(0,Math.min(1,(Number(value)||0)/10)),angle=Math.PI+Math.PI*normalized;
+    const label=title.includes('ATUAL')?'atual':'proposta';
+    shapes.push(editableText(nextId++,`Título do velocímetro ${label}`,{x:x+26,y:y+20,w:w-52,h:26,value:title,color:'C5A05B',fontPt:11.5,bold:true}));
+    for(let i=0;i<segments;i++){
+      const tickAngle=Math.PI+(i+.5)*Math.PI/segments,px=cx+Math.cos(tickAngle)*r,py=cy+Math.sin(tickAngle)*r;
+      const rotation=(tickAngle*180/Math.PI+90)%360;
+      shapes.push(editableShape(nextId++,`Velocímetro ${label} · marca ${i+1}`,{x:px-10,y:py-4,w:20,h:8,rotation,geometry:'rect',fill:'C5A05B'}));
+    }
+    const directionX=Math.cos(angle),directionY=Math.sin(angle),needleLength=r-18,needleRotation=(angle*180/Math.PI+90+360)%360;
+    const needleCenterX=cx+directionX*needleLength/2,needleCenterY=cy+directionY*needleLength/2;
+    shapes.push(editableShape(nextId++,`Velocímetro ${label} · ponteiro`,{x:needleCenterX-7,y:needleCenterY-needleLength/2,w:14,h:needleLength,rotation:needleRotation,geometry:'triangle',fill:'C5A05B'}));
+    shapes.push(editableShape(nextId++,`Velocímetro ${label} · eixo`,{x:cx-12,y:cy-12,w:24,h:24,geometry:'ellipse',fill:'C5A05B'}));
+    shapes.push(editableShape(nextId++,`Velocímetro ${label} · centro`,{x:cx-5,y:cy-5,w:10,h:10,geometry:'ellipse',fill:'020E38'}));
+    shapes.push(editableText(nextId++,`Velocímetro ${label} · percentual`,{x:x+35,y:y+63,w:w-70,h:40,value:pct(value),color:'F4F5F8',fontPt:25,bold:true}));
+    shapes.push(editableText(nextId++,`Velocímetro ${label} · limite inicial`,{x:x+12,y:y+h-40,w:136,h:16,value:'Não se aplica',color:'C6CFDF',fontPt:8.25}));
+    shapes.push(editableText(nextId++,`Velocímetro ${label} · limite final`,{x:x+w-148,y:y+h-40,w:136,h:16,value:'Acima de 10%',color:'C6CFDF',fontPt:8.25}));
+    shapes.push(editableText(nextId++,`Velocímetro ${label} · faixas`,{x:x+22,y:y+h-16,w:w-44,h:12,value:'Ótimo  ·  Recomendado  ·  Alta exposição',color:'C6CFDF',fontPt:7.5}));
+    xml=xml.replace('</p:spTree>',`${shapes.join('')}</p:spTree>`);zip.file(xmlPath,xml);
   }
 
   async function addSlideJumpHotspot(zip,sourceSlide,targetSlide,{x=0,y=0,w=12192000,h=6858000,name='Atalho interno'}={}){
@@ -442,7 +473,7 @@
   const projectionSlideNumbers=[11,12,15,16];
   const studySlideNumbers=[6,7,8,9,10,11,12,15,16,13];
   async function renderCommonSlides(d){const tasks=[[1,()=>slide1(d)],[3,()=>staticSlide(3)],[4,()=>staticSlide(4)],[5,()=>staticSlide(5)],[14,()=>slide14(d)]];const rendered=[];for(const [no,render] of tasks)rendered.push([no,await render()]);return rendered;}
-  async function renderOverviewSlides(d){const tasks=[[6,()=>slide6(d)],[7,()=>slide7(d)],[8,()=>assetSlide(8,d,'current')],[9,()=>assetSlide(9,d,'reallocation')],[10,()=>assetSlide(10,d,'with')],[13,()=>slide13(d)]];const rendered=[];for(const [no,render] of tasks)rendered.push([no,await render()]);return rendered;}
+  async function renderOverviewSlides(d,{includeGauge=true}={}){const tasks=[[6,()=>slide6(d)],[7,()=>slide7(d)],[8,()=>assetSlide(8,d,'current')],[9,()=>assetSlide(9,d,'reallocation')],[10,()=>assetSlide(10,d,'with')],[13,()=>slide13(d,{includeGauge})]];const rendered=[];for(const [no,render] of tasks)rendered.push([no,await render()]);return rendered;}
   async function renderProjectionSlides(d){const tasks=[[11,()=>slide11(d,0)],[12,()=>slide11(d,1)],[15,()=>slide11(d,2)],[16,()=>slide11(d,3)]];const rendered=[];for(const [no,render] of tasks)rendered.push([no,await render()]);return rendered;}
   async function renderStudySlides(d){const overview=new Map(await renderOverviewSlides(d)),projectionSlides=new Map(await renderProjectionSlides(d));return studySlideNumbers.map(no=>[no,overview.get(no)||projectionSlides.get(no)]);}
   function combineStudiesForPpt(d,studies){
@@ -477,7 +508,10 @@
     for(const [no,bytes] of await renderCommonSlides(d))await replaceSlide(zip,no,bytes,{hidden:no===3});
     await ensureRiskNavigation(zip);
     const combined=combineStudiesForPpt(d,studies);
-    for(const [no,bytes] of await renderOverviewSlides(combined))await replaceSlide(zip,no,bytes);
+    for(const [no,bytes] of await renderOverviewSlides(combined,{includeGauge:false}))await replaceSlide(zip,no,bytes);
+    const currentAllocation=combined.total?combined.annualPremium/combined.total*100:0,proposedAllocation=combined.withoutInsurance?combined.annualPremium/combined.withoutInsurance*100:0;
+    await addEditableGauge(zip,13,{x:40,y:600,w:490,h:275,title:'ALOCAÇÃO ATUAL VS PATRIMÔNIO TOTAL',value:currentAllocation});
+    await addEditableGauge(zip,13,{x:555,y:600,w:490,h:275,title:'ALOCAÇÃO PROPOSTA VS PATRIMÔNIO LÍQUIDO',value:proposedAllocation});
     for(const [no,bytes] of await renderProjectionSlides(studies[0]))await replaceSlide(zip,no,bytes);
     await replaceSlide(zip,legalTarget,await legalInfoSlide(),{hidden:true});await addShowJumpHotspot(zip,legalTarget,{x:1350*EMU,y:34*EMU,w:168*EMU,h:52*EMU,name:'Voltar da base legal'});
     const legalIconCenters=[674,726,778];for(let index=0;index<legalInfoSlides.length;index++)await addSlideJumpHotspot(zip,16,legalTarget,{x:1492*EMU,y:(legalIconCenters[index]-22)*EMU,w:46*EMU,h:44*EMU,name:`Abrir explicação: ${legalInfoSlides[index].title}`});
