@@ -417,6 +417,20 @@
     let rels=await zip.file(relsPath).async('string');rels=rels.replace(/<Relationship\b[^>]*\bId="rId999"[^>]*\/>/g,'').replace('</Relationships>',`<Relationship Id="rId999" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/custom-slide${no}.png"/></Relationships>`);
     zip.file(xmlPath,xml);zip.file(relsPath,rels);zip.file(mediaPath,bytes);
   }
+  async function applyPresentationTransitions(zip){
+    const fade='<p:transition spd="med" advClick="1" xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main" p14:dur="650"><p:fade/></p:transition>';
+    const paths=Object.keys(zip.files).filter(path=>/^ppt\/slides\/slide\d+\.xml$/.test(path));
+    for(const path of paths){
+      let xml=await zip.file(path).async('string');
+      const existing=xml.match(/<p:transition\b[^>]*(?:\/>|>[\s\S]*?<\/p:transition>)/)?.[0];
+      if(existing?.includes('<p:zoom'))continue;
+      if(existing)xml=xml.replace(existing,fade);
+      else if(xml.includes('</p:clrMapOvr>'))xml=xml.replace('</p:clrMapOvr>',`</p:clrMapOvr>${fade}`);
+      else if(xml.includes('</p:cSld>'))xml=xml.replace('</p:cSld>',`</p:cSld>${fade}`);
+      else throw new Error(`Não foi possível inserir a transição em ${path}.`);
+      zip.file(path,xml);
+    }
+  }
   function editableShape(id,name,{x,y,w,h,rotation=0,geometry='rect',fill,gradient=null,adjustment=null}){
     const transform=`<a:xfrm${rotation?` rot="${Math.round(rotation*60000)}"`:''}><a:off x="${Math.round(x*EMU)}" y="${Math.round(y*EMU)}"/><a:ext cx="${Math.round(w*EMU)}" cy="${Math.round(h*EMU)}"/></a:xfrm>`;
     const fillXml=gradient?`<a:gradFill rotWithShape="1"><a:gsLst><a:gs pos="0"><a:srgbClr val="${gradient[0]}"/></a:gs><a:gs pos="100000"><a:srgbClr val="${gradient[1]}"/></a:gs></a:gsLst><a:lin ang="5400000" scaled="1"/></a:gradFill>`:`<a:solidFill><a:srgbClr val="${fill}"/></a:solidFill>`;
@@ -634,6 +648,7 @@
       const spouseFinal=mapping.find(([source])=>source===16)?.[1];if(spouseFinal)for(let index=0;index<legalInfoSlides.length;index++)await addSlideJumpHotspot(zip,spouseFinal,legalTarget,{x:1492*EMU,y:(legalIconCenters[index]-22)*EMU,w:46*EMU,h:44*EMU,name:`Abrir explicação: ${legalInfoSlides[index].title}`});
       for(let index=0;index<hiddenTargets.length;index++)await addSlideJumpHotspot(zip,hiddenTargets[index],hiddenTargets[index+1]||13,{name:index===hiddenTargets.length-1?'Retornar ao estudo familiar':'Avançar projeção do cônjuge'});
     }
+    await applyPresentationTransitions(zip);
     return zip.generateAsync({type:'blob',compression:'DEFLATE'});
   };
   window.buildTemplatePdf=async d=>{
