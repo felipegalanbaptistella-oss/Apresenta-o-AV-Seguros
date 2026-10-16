@@ -317,8 +317,11 @@
   }
   async function slide7(d){
     const {canvas,ctx}=await canvasFor(7);
-    rect(ctx,88,246,740,126,NAVY);
+    const background='#000c34';
+    rect(ctx,88,246,740,126,background);
     fitText(ctx,'GERAR LIQUIDEZ',94,315,755,{size:102,min:64,color:GOLD,bold:true});
+    rect(ctx,88,390,700,53,background);
+    text(ctx,'para os custos da',94,416,680,{size:48,color:WHITE,font:'Arial'});
     studyTag(ctx,d);return pngBytes(canvas);
   }
 
