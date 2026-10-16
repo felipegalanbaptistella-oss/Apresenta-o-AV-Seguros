@@ -343,7 +343,7 @@
     {key:'protecaoCredito',title:'Proteção do crédito',lead:'O crédito ao capital segurado não pode ser renunciado ou reduzido por negócio jurídico, salvo as exceções previstas na lei.',law:'Lei 15.040/2024 · art. 117'},
     {key:'impenhorabilidade',title:'Impenhorabilidade',lead:'Os capitais devidos por morte ou perda da integridade física são impenhoráveis.',law:'Lei 15.040/2024 · art. 122  |  CPC · art. 833, VI'},
     {key:'congelamentoRisco',title:'Congelamento de Risco',lead:'Nos seguros de vida e de integridade física, mesmo diante de agravamento relevante do risco, a seguradora só pode cobrar a diferença de prêmio.',law:'Lei 15.040/2024 · art. 17'},
-    {key:'incomunicabilidade',title:'Incomunicabilidade',lead:'O capital segurado devido por morte é pago ao beneficiário indicado e não integra a herança.',law:'Lei 15.040/2024 · arts. 113 e 116'}
+    {key:'incomunicabilidade',title:'Incomunicabilidade',lead:'O capital segurado devido por morte não integra a herança e, portanto, não se submete à regra da legítima na partilha de bens. É direcionado diretamente aos beneficiários indicados.',law:'Lei 15.040/2024 · arts. 113 e 116'}
   ];
   function legalParagraph(ctx,value,x,top,width,{size,color=WHITE,bold=false}={}){
     ctx.save();ctx.fillStyle=color;ctx.textAlign='left';ctx.textBaseline='top';ctx.font=`${bold?'700':'400'} ${size}px Arial`;
