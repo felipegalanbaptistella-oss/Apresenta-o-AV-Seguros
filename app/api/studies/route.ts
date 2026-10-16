@@ -32,8 +32,9 @@ export async function GET(request: Request) {
                 family_mode, consultant_key, total_assets_cents,
                 coverage_gap_cents, revision, updated_at
            FROM risk_studies
-          WHERE ? = ''
-             OR instr(lower(client_first_name || ' ' || client_last_name || ' ' || coalesce(spouse_name, '')), lower(?)) > 0
+          WHERE family_mode IN ('single', 'couple')
+            AND (? = ''
+             OR instr(lower(client_first_name || ' ' || client_last_name || ' ' || coalesce(spouse_name, '')), lower(?)) > 0)
           ORDER BY updated_at DESC, client_last_name ASC, client_first_name ASC
           LIMIT 50`,
       )

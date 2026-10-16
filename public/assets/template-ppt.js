@@ -129,7 +129,7 @@
     line(ctx,914,450,1538,450,'#63203d',1);text(ctx,'EROSÃO PATRIMONIAL ESTIMADA',940,486,570,{size:22,color:RED,bold:true,align:'center'});fitText(ctx,`-${brl(d.liability)}`,930,540,590,{size:40,min:27,color:RED,bold:true,align:'center'});
 
     rect(ctx,882,610,686,214,'#c3a067',20,'#9d7624',2);
-    text(ctx,'PATRIMÔNIO LÍQUIDO TRANSMITIDO',960,654,530,{size:20,color:WHITE,bold:true,align:'center'});fitText(ctx,brl(d.withoutInsurance),950,716,550,{size:39,min:26,color:'#061743',bold:true,align:'center'});line(ctx,1015,758,1435,758,'#b27f52',1);text(ctx,'A família receberá MENOS patrimônio',955,790,540,{size:20,color:WHITE,bold:true,align:'center'});
+    text(ctx,'PATRIMÔNIO LÍQUIDO TRANSMITIDO',960,654,530,{size:20,color:WHITE,bold:true,align:'center'});fitText(ctx,brl(d.withoutInsurance),950,716,550,{size:39,min:26,color:'#061743',bold:true,align:'center'});line(ctx,1015,758,1435,758,'#b27f52',1);text(ctx,'A família receberá menos patrimônio',955,790,540,{size:20,color:WHITE,bold:true,align:'center'});
     return pngBytes(canvas);
   }
 
@@ -175,17 +175,17 @@
     donut(ctx,250,405,130,62,vals,colors,{highlightIndex:(reallocation||withInsurance)?3:-1,minHighlightShare:.045});
     const donutBrand=await loadImage('assets/marca.png');ctx.drawImage(donutBrand,214,391,72,28);
     const items=[{label:'Posição em investimentos (XP)',color:GOLD2},{label:'Posição em outras instituições',color:GOLD},{label:'Previdência Privada',color:'#ffbf00'}];
-    if(withInsurance)items.push({label:'SEGURO DE VIDA',color:GREEN});if(reallocation)items.push({label:'RESERVA LASTREADA',color:GREEN,bold:true});legend(ctx,items,420,335,55);
+    if(withInsurance)items.push({label:'Seguro de vida',color:GREEN});if(reallocation)items.push({label:'Reserva lastreada',color:GREEN,bold:true});legend(ctx,items,420,335,55);
     const breakdownRows=withInsurance?[
-      ['SEGURO DE VIDA',d.coverageAfter,{color:GREEN,labelSize:28.5,valueSize:28.5,labelBold:true}],
-      ['Ativos Financeiros',d.financial,{}],
+      ['Seguro de vida',d.coverageAfter,{color:GREEN,labelSize:28.5,valueSize:28.5,labelBold:true}],
+      ['Ativos financeiros',d.financial,{}],
       ['Patrimônio imobilizado',d.illiquid,{}]
     ]:reallocation?[
-      ['RESERVA LASTREADA',d.annualPremium,{color:GREEN,labelSize:27,valueSize:28.5,labelBold:true}],
-      ['ATIVOS FINANCEIROS',Math.max(0,d.financial-d.annualPremium),{}],
+      ['Reserva lastreada',d.annualPremium,{color:GREEN,labelSize:27,valueSize:28.5,labelBold:true}],
+      ['Ativos financeiros',Math.max(0,d.financial-d.annualPremium),{}],
       ['Patrimônio imobilizado',d.illiquid,{}]
     ]:[
-      ['Ativos Financeiros',d.financial,{valueSize:28.5}],
+      ['Ativos financeiros',d.financial,{valueSize:28.5}],
       ['Patrimônio imobilizado',d.illiquid,{valueSize:28.5}]
     ];
     const breakdownY=breakdownRows.length===3
@@ -193,7 +193,7 @@
       :justifiedRowCenters(630,774,2);
     breakdownRows.forEach(([label,value,options],index)=>assetBreakdownRow(ctx,label,value,breakdownY[index],options));
     stackedBar(ctx,d,980,285,195,415,withInsurance,reallocation);
-    const barLegend=withInsurance?[{label:'Passivo sucessório',color:'#bfc2c8',textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos Financeiros',color:GOLD},{label:'SEGURO DE VIDA',color:GREEN,bold:true}]:reallocation?[{label:'Passivo sucessório',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos Financeiros',color:GOLD},{label:'Reserva lastreada',color:GREEN,bold:true}]:[{label:'PASSIVO SUCESSÓRIO',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos Financeiros',color:GOLD}];
+    const barLegend=withInsurance?[{label:'Passivo sucessório',color:'#bfc2c8',textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos financeiros',color:GOLD},{label:'Seguro de vida',color:GREEN,bold:true}]:reallocation?[{label:'Passivo sucessório',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos financeiros',color:GOLD},{label:'Reserva lastreada',color:GREEN,bold:true}]:[{label:'PASSIVO SUCESSÓRIO',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos financeiros',color:GOLD}];
     legend(ctx,barLegend,1250,480,38);return pngBytes(canvas);
   }
 
@@ -218,7 +218,7 @@
     text(ctx,title,x+18,y+28,w-36,{size:17,color:active?GOLD:'#63718f',bold:true,align:'center'});
     if(!active)return;
     const start=y+74,gap=(h-86)/Math.max(lines.length,1);
-    lines.forEach((label,index)=>{const cy=start+index*gap;fitText(ctx,label,x+24,cy,w-(infoIcons?92:48),{size:20,min:14,color:GREEN,bold:false,align:'center'});if(infoIcons)infoIcon(ctx,x+w-38,cy);});
+    lines.forEach((label,index)=>{const cy=start+index*gap;fitText(ctx,label,x+24,cy,w-(infoIcons?92:48),{size:20,min:14,color:GREEN,bold:true,align:'center'});if(infoIcons)infoIcon(ctx,x+w-38,cy);});
   }
   async function slide11(d,stage=3){
     const {canvas,ctx}=await canvasFor(11),rows=projection(d);
@@ -245,12 +245,12 @@
       }
     }
     const footerY=top+rows.length*rowH;
-    if(stage>=3){rect(ctx,48,footerY,1057,40,'#ad8a3c',0);text(ctx,'∞  C a p i t a l   S e g u r a d o   e   R e s g a t e   s e g u e m   v i t a l í c i o s  ∞',65,footerY+20,1025,{size:17,color:WHITE,align:'center',font:'Georgia'});}
+    if(stage>=3){rect(ctx,48,footerY,1057,40,'#ad8a3c',0);text(ctx,'∞  Capital segurado e resgate seguem vitalícios  ∞',65,footerY+20,1025,{size:17,color:WHITE,align:'center',font:'Georgia'});}
 
     rect(ctx,1128,88,432,758,NAVY);
-    benefitPanel(ctx,1148,94,405,204,'BENEFÍCIOS SECURITÁRIOS',['CONGELAMENTO DE RISCO','CONGELAMENTO DE IDADE'],stage>=1);
-    benefitPanel(ctx,1148,310,405,278,'BENEFÍCIOS FINANCEIROS E TRIBUTÁRIOS',['ALAVANCAGEM · Liquidez em D+0','ISENÇÃO DE IMPOSTOS*','QUITAÇÃO NO 10º ANO','sem necessidade de novos aportes'],stage>=2);
-    benefitPanel(ctx,1148,600,405,242,'BENEFÍCIOS LEGAIS',['INCOMUNICÁVEL','INALIENÁVEL','IMPENHORÁVEL'],stage>=3,{infoIcons:true});
+    benefitPanel(ctx,1148,94,405,204,'BENEFÍCIOS SECURITÁRIOS',['AGRAVAMENTO DO RISCO','CONGELAMENTO DE IDADE'],stage>=1);
+    benefitPanel(ctx,1148,310,405,278,'BENEFÍCIOS FINANCEIROS E TRIBUTÁRIOS',['ALAVANCAGEM · LIQUIDEZ EM D+0','ISENÇÃO DE IMPOSTOS*','QUITAÇÃO NO 10º ANO','SEM NECESSIDADE DE NOVOS APORTES'],stage>=2);
+    benefitPanel(ctx,1148,600,405,242,'BENEFÍCIOS LEGAIS',['Inalienabilidade','Impenhorabilidade','Congelamento de Risco','Incomunicabilidade'],stage>=3,{infoIcons:true});
     return pngBytes(canvas);
   }
 
@@ -280,7 +280,7 @@
     rect(ctx,x,y,w,h,'#03143d',12,'#9d7624',2);
     text(ctx,title,x+24,y+24,w-48,{size:18,color:GOLD,bold:true,align:'center',maxLines:2});
     const cx=x+w/2,cy=y+h-25,r=Math.min(170,w*.31),start=Math.PI;
-    const zones=[[0,.035,RED],[.035,.28,GREEN],[.28,.56,'#c9e2ae'],[.56,1,'#f5df8d']];
+    const zones=[[0,.3,GREEN],[.3,.6,'#c9e2ae'],[.6,1,'#f5df8d']];
     ctx.save();ctx.lineWidth=48;ctx.lineCap='butt';zones.forEach(([a,b,color])=>{ctx.beginPath();ctx.arc(cx,cy,r,start+Math.PI*a,start+Math.PI*b);ctx.strokeStyle=color;ctx.stroke();});ctx.restore();
     ctx.beginPath();ctx.moveTo(cx-r+20,cy);ctx.arc(cx,cy,r-49,Math.PI,Math.PI*2);ctx.lineTo(cx+r-20,cy);ctx.closePath();ctx.fillStyle='#c7a466';ctx.fill();
     const normalized=Math.max(0,Math.min(1,value/10)),angle=start+Math.PI*normalized;
@@ -299,7 +299,7 @@
   const monthsText=months=>months?`${months} ${months===1?'MÊS':'MESES'}`:'—';
   async function slide13(d){
     const {canvas,ctx}=await canvasFor(13);studyTag(ctx,d);rect(ctx,0,150,W,H-150,NAVY);rect(ctx,40,160,1520,420,'#03143d',14,'#9d7624',2);text(ctx,'CENÁRIO DE PAYBACK',75,188,300,{size:18,color:GOLD,bold:true});
-    rect(ctx,500,171,300,58,'#bc985d',10);text(ctx,'ATIVOS FINANCEIROS',515,184,270,{size:14,color:WHITE,align:'center'});fitText(ctx,brl(d.financial),515,208,270,{size:28,min:19,color:WHITE,bold:true,align:'center'});
+    rect(ctx,500,171,300,58,'#bc985d',10);text(ctx,'Ativos financeiros',515,184,270,{size:14,color:WHITE,align:'center'});fitText(ctx,brl(d.financial),515,208,270,{size:28,min:19,color:WHITE,bold:true,align:'center'});
     const monthlyRates=[.006,.008,.01],colors=['#7d6a36','#b88700','#d6a700'];
     const x0=170,y0=500,x1=805,y1=245,max=Math.max(d.annualPremium*1.25,d.financial*.01*12,1);
     for(let i=0;i<=5;i++){const y=y0-(y0-y1)*i/5;line(ctx,x0,y,x1,y,'#1d3764',1);fitText(ctx,brl(max*i/5),55,y,100,{size:12,min:9,color:WHITE,bold:true,align:'right'});}
@@ -307,15 +307,15 @@
     monthlyRates.forEach((rate,i)=>{ctx.save();ctx.strokeStyle=colors[i];ctx.lineWidth=4;ctx.beginPath();for(let m=0;m<=12;m++){const x=x0+(x1-x0)*m/12,y=y0-(y0-y1)*(d.financial*rate*m/max);m?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();ctx.restore();});
     const py=y0-(y0-y1)*(d.annualPremium/max);line(ctx,x0,py,x1,py,GREEN,4,[16,12]);fitText(ctx,brl(d.annualPremium),640,py-24,150,{size:19,min:14,color:WHITE,bold:true,align:'center'});
     monthlyRates.forEach((rate,i)=>{const month=monthsAtRate(d,rate);if(month<0||month>12)return;const mx=x0+(x1-x0)*month/12,my=y0-(y0-y1)*(d.financial*rate*month/max);text(ctx,'★',mx-18,my,36,{size:34,color:i===1?'#8bd05f':i===0?'#e9a2a5':'#f0c400',bold:true,align:'center'});});
-    const legendItems=[{label:'VALOR DO SEGURO',color:GREEN,dash:true},...monthlyRates.map((rate,i)=>({label:`Rentabilidade ${(rate*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}% a.m.`,color:colors[i]}))];
+    const legendItems=[{label:'Valor do seguro',color:GREEN,dash:true},...monthlyRates.map((rate,i)=>({label:`Rentabilidade ${(rate*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}% a.m.`,color:colors[i]}))];
     legendItems.forEach((item,i)=>{const lx=95+i*185;line(ctx,lx,552,lx+25,552,item.color,3,item.dash?[10,7]:[]);text(ctx,item.label,lx+33,552,145,{size:11,color:WHITE,bold:item.dash});});
     rect(ctx,850,177,680,120,'#03143d',5,'#9d7624',2);text(ctx,'ALOCAÇÃO ANUAL',875,203,630,{size:18,color:GOLD,bold:true,align:'center'});fitText(ctx,brl(d.annualPremium),875,257,630,{size:44,min:30,color:'#8bd05f',bold:true,align:'center'});
     rect(ctx,850,318,680,66,'#03143d',5,'#9d7624',2);text(ctx,'RENDIMENTOS PAGAM A ALOCAÇÃO ANUAL EM',870,351,640,{size:18,color:GOLD,bold:true,align:'center'});
     const rateMonths=monthlyRates.map(rate=>monthsAtRate(d,rate));const starColors=['#e9a2a5','#8bd05f','#f0c400'];
     monthlyRates.forEach((rate,i)=>{const x=850+i*230;rect(ctx,x,408,210,100,i===1?'#173c32':'#03143d',5,i===1?GREEN:'#9d7624',2);text(ctx,'★',x+18,438,34,{size:30,color:starColors[i],bold:true});text(ctx,`${(rate*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}% a.m.`,x+55,438,140,{size:18,color:i===1?GREEN:GOLD,bold:true});fitText(ctx,monthsText(rateMonths[i]),x+20,480,170,{size:28,min:20,color:i===1?GREEN:WHITE,bold:true,align:'center'});});
-    const currentAllocation=d.total?d.annualPremium/d.total*100:0,proposedAllocation=d.withoutInsurance?d.annualPremium/d.withoutInsurance*100:0;
-    gauge(ctx,40,600,490,275,'ALOCAÇÃO ATUAL VS PATRIMÔNIO TOTAL',currentAllocation);
-    gauge(ctx,555,600,490,275,'ALOCAÇÃO PROPOSTA VS PATRIMÔNIO LÍQUIDO',proposedAllocation);
+    const currentAllocation=d.total?d.annualPremium/d.total*100:0,proposedAllocation=d.financial?d.annualPremium/d.financial*100:0;
+    gauge(ctx,40,600,490,275,'Alocação atual vs patrimônio total',currentAllocation);
+    gauge(ctx,555,600,490,275,'Alocação proposta vs ativos financeiros',proposedAllocation);
     rect(ctx,1070,600,490,275,'#03143d',12,'#9d7624',2);text(ctx,'PERFIL DE SAÚDE',1094,634,442,{size:21,color:GOLD,bold:true,align:'center'});text(ctx,'?',1110,738,410,{size:92,color:WHITE,bold:true,align:'center'});text(ctx,'A PREENCHER',1094,842,442,{size:17,color:MUTED,bold:true,align:'center'});
     return pngBytes(canvas);
   }
@@ -332,24 +332,42 @@
   }
 
   const legalInfoSlides=[
-    {key:'incomunicavel',title:'INCOMUNICÁVEL',lead:'O capital por morte é pago ao beneficiário indicado e não integra a herança.',law:'Lei 15.040/2024 · arts. 113 a 116',detail:'A lei permite indicar livremente o beneficiário e estabelece que o capital segurado devido por morte não é herança para nenhum efeito.'},
-    {key:'inalienavel',title:'INALIENÁVEL',lead:'A lei protege o crédito securitário contra renúncia ou redução antecipada.',law:'Lei 15.040/2024 · arts. 114 e 117',detail:'É nulo o negócio que implique renúncia ou redução do crédito ao capital segurado ou à reserva matemática.'},
-    {key:'impenhoravel',title:'IMPENHORÁVEL',lead:'Os capitais devidos por morte ou perda da integridade física recebem proteção expressa contra penhora.',law:'Lei 15.040/2024 · art. 122  |  CPC · art. 833, VI',detail:'A Lei do Contrato de Seguro e o Código de Processo Civil qualificam o seguro de vida e os capitais securitários como impenhoráveis.'}
+    {key:'inalienabilidade',title:'Inalienabilidade',lead:'O direito ao recebimento do capital segurado ou a própria titularidade da apólice não podem ser transferidos, cedidos, alienados ou vendidos a terceiros.',law:'Lei 15.040/2024 · arts. 111, 114 e 117'},
+    {key:'impenhorabilidade',title:'Impenhorabilidade',lead:'O capital da indenização pago aos beneficiários não pode ser retido ou penhorado para pagar dívidas deixadas pelo segurado falecido.',law:'Lei 15.040/2024 · art. 122; CPC · art. 833, VI'},
+    {key:'congelamentoRisco',title:'Congelamento de Risco',lead:'A seguradora congela o risco na contratação — renuncia contratualmente ao Art. 769 do Código Civil, garantindo a proteção independente de qualquer mudança futura na saúde, carreira ou perfil de risco do cliente.',law:'Lei 15.040/2024 · arts. 14 e 17'},
+    {key:'incomunicabilidade',title:'Incomunicabilidade',lead:'O capital segurado devido por morte não integra a herança e, portanto, não compõe a partilha de bens nem o cálculo da legítima; é pago aos beneficiários indicados.',law:'Lei 15.040/2024 · arts. 116 e 122; CPC · art. 833, VI',complement:'E complementado pelo Art. 833, VI do CPC (Código de Processo Civil).'}
   ];
+  function legalParagraph(ctx,value,x,top,width,{size,color=WHITE,bold=false}={}){
+    ctx.save();ctx.fillStyle=color;ctx.textAlign='left';ctx.textBaseline='top';ctx.font=`${bold?'700':'400'} ${size}px Arial`;
+    const lines=[],words=String(value).trim().split(/\s+/);let current=[];
+    for(const word of words){const candidate=[...current,word];if(current.length&&ctx.measureText(candidate.join(' ')).width>width){lines.push(current);current=[word];}else current=candidate;}
+    if(current.length)lines.push(current);
+    const height=size+(lines.length-1)*size*1.5;
+    if(top===null){ctx.restore();return height;}
+    lines.forEach((line,index)=>{
+      const y=top+index*size*1.5;
+      if(index===lines.length-1||line.length===1){ctx.fillText(line.join(' '),x,y);return;}
+      const wordWidths=line.map(word=>ctx.measureText(word).width),gap=(width-wordWidths.reduce((sum,n)=>sum+n,0))/(line.length-1);
+      let cursor=x;line.forEach((word,i)=>{ctx.fillText(word,cursor,y);cursor+=wordWidths[i]+gap;});
+    });
+    ctx.restore();return height;
+  }
   async function legalInfoSlide(){
     const {canvas,ctx}=await canvasFor(11);rect(ctx,0,0,W,H,NAVY);
     text(ctx,'GESTÃO DE RISCOS',82,58,440,{size:18,color:GOLD,bold:true,font:'Georgia'});
     text(ctx,'BENEFÍCIOS LEGAIS DO SEGURO DE VIDA',82,120,1180,{size:38,color:WHITE,bold:true});
-    const rowTops=[160,326,492];
+    const rowTops=[150,278,406,534],rowHeight=116;
     legalInfoSlides.forEach((info,index)=>{
-      const y=rowTops[index];rect(ctx,82,y,1436,152,'#061743',18,'#284878',2);
-      text(ctx,info.title,112,y+46,270,{size:24,color:GOLD,bold:true});text(ctx,info.law,112,y+105,270,{size:15,color:WHITE,bold:true,maxLines:2});
-      line(ctx,408,y+20,408,y+132,'#284878',1);text(ctx,info.lead,440,y+43,1048,{size:19,color:WHITE,bold:true,maxLines:2});text(ctx,info.detail,440,y+103,1048,{size:16,color:MUTED,maxLines:3});
+      const y=rowTops[index];rect(ctx,82,y,1436,rowHeight,'#061743',14,'#284878',2);
+      fitText(ctx,info.title,112,y+31,270,{size:20,min:15,color:GOLD,bold:true});legalParagraph(ctx,info.law,112,y+70,270,{size:13,bold:true});
+      const leadHeight=legalParagraph(ctx,info.lead,440,null,1048,{size:17,bold:true});
+      const complementHeight=info.complement?legalParagraph(ctx,info.complement,440,null,1048,{size:14}):0;
+      const paragraphGap=info.complement?10:0,bodyTop=y+(rowHeight-leadHeight-complementHeight-paragraphGap)/2;
+      line(ctx,408,y+12,408,y+104,'#284878',1);
+      legalParagraph(ctx,info.lead,440,bodyTop,1048,{size:17,bold:true});
+      if(info.complement)legalParagraph(ctx,info.complement,440,bodyTop+leadHeight+paragraphGap,1048,{size:14,color:MUTED});
     });
-    rect(ctx,82,666,1436,48,'rgba(197,160,91,.14)',12,GOLD,1);text(ctx,'Base legal federal — não é previsão direta da Constituição Federal.',105,690,1390,{size:16,color:GOLD,bold:true,align:'center'});
-    rect(ctx,82,728,1436,80,'#03143d',16,'#26375f',2);text(ctx,'Leitura orientativa. A aplicação depende da modalidade contratada, das condições da apólice e do caso concreto.',118,768,1364,{size:19,color:MUTED,align:'center',maxLines:2});
     rect(ctx,1350,34,168,52,'#0a2050',12,GOLD,2);text(ctx,'← VOLTAR',1362,60,144,{size:17,color:WHITE,bold:true,align:'center'});
-    text(ctx,'Fontes: Lei 15.040/2024 (Planalto) · Lei 13.105/2015, CPC (Planalto) · STJ, quando indicado',82,842,1436,{size:15,color:'#8496bb',align:'center'});
     return pngBytes(canvas);
   }
 
@@ -480,7 +498,7 @@
     for(const [no,bytes] of await renderOverviewSlides(combined))await replaceSlide(zip,no,bytes);
     for(const [no,bytes] of await renderProjectionSlides(studies[0]))await replaceSlide(zip,no,bytes);
     await replaceSlide(zip,legalTarget,await legalInfoSlide(),{hidden:true});await addShowJumpHotspot(zip,legalTarget,{x:1350*EMU,y:34*EMU,w:168*EMU,h:52*EMU,name:'Voltar da base legal'});
-    const legalIconCenters=[674,726,778];for(let index=0;index<legalInfoSlides.length;index++)await addSlideJumpHotspot(zip,16,legalTarget,{x:1492*EMU,y:(legalIconCenters[index]-22)*EMU,w:46*EMU,h:44*EMU,name:`Abrir explicação: ${legalInfoSlides[index].title}`});
+    const legalIconCenters=[674,713,752,791];for(let index=0;index<legalInfoSlides.length;index++)await addSlideJumpHotspot(zip,16,legalTarget,{x:1492*EMU,y:(legalIconCenters[index]-22)*EMU,w:46*EMU,h:44*EMU,name:`Abrir explicação: ${legalInfoSlides[index].title}`});
     if(studies.length>1){
       const mapping=await cloneHiddenProjectionSlides(zip),spouseSlides=new Map(await renderProjectionSlides(studies[1])),hiddenTargets=mapping.map(([,target])=>target);
       for(const [source,target] of mapping)await replaceSlide(zip,target,spouseSlides.get(source),{hidden:true});

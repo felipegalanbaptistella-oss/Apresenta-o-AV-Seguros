@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <title>Gestão de Riscos — Sucessão empresarial</title>
+  <link rel="icon" href="/favicon.svg" />
+  <link rel="stylesheet" href="assets/business-app.css?v=2" />
+  <script src="assets/jszip.min.js"></script>
+  <script src="assets/pptxgen.min.js"></script>
+  <script src="assets/pdflib/pdf-lib.min.js"></script>
+  <script src="assets/ocr/tesseract.min.js?v=1"></script>
+</head>
+<body>
+  <main class="shell">
+    <nav class="generator-tabs" aria-label="Tipos de apresentação">
+      <a href="/legacy-v7.html">Sucessão patrimonial</a>
+      <a class="active" aria-current="page" href="/sucessao-empresarial.html">Sucessão empresarial</a>
+    </nav>
+    <header class="page-header">
+      <div class="brand"><span class="brand-symbol"><img src="assets/logo-alta-vista.png" alt="Alta Vista" /></span><span>GESTÃO DE RISCOS</span></div>
+      <h1>Gerador de apresentação comercial</h1>
+      <p>Cadastre os dados da empresa e de cada sócio. Informe os valores das cotações para montar a apresentação de sucessão empresarial.</p>
+    </header>
+
+    <section class="card study-vault" aria-labelledby="vaultTitle">
+      <div class="section-heading">
+        <div><span class="eyebrow">BANCO DE ESTUDOS</span><h2 id="vaultTitle">Empresas salvas</h2>
+          <p>Salve os dados da empresa e retome o estudo depois. Os PDFs importados ficam neste navegador.</p></div>
+        <button class="btn secondary" id="newStudyBtn" type="button">Novo estudo</button>
+      </div>
+      <div class="search-row"><label for="studySearch">Buscar por empresa ou sócio</label>
+        <div><input id="studySearch" type="search" autocomplete="off" placeholder="Digite um nome" /><button id="refreshStudiesBtn" type="button">Atualizar</button></div></div>
+      <p id="databaseStatus" class="status-line" role="status" aria-live="polite">Carregando estudos…</p>
+      <p id="studyMeta" class="study-meta">Novo estudo ainda não salvo.</p>
+      <div id="studyList" class="study-list"></div>
+    </section>
+
+    <div class="layout">
+      <form id="businessForm" class="card form-card" autocomplete="off">
+        <div class="section-heading"><div><span class="eyebrow">DADOS DO CLIENTE</span><h2>Empresa</h2></div></div>
+        <div class="grid">
+          <div class="field wide"><label for="companyName">Nome da empresa</label><input id="companyName" maxlength="160" required placeholder="Razão social ou nome de apresentação" /></div>
+          <div class="field"><label for="cnpj">CNPJ (opcional)</label><input id="cnpj" inputmode="numeric" maxlength="18" placeholder="00.000.000/0000-00" /></div>
+          <div class="field"><label for="valuation">Valuation informado (R$)</label><input id="valuation" inputmode="decimal" data-money placeholder="Informe o valor da empresa" /></div>
+          <div class="field"><label for="ipca">IPCA projetado (% a.a.)</label><input id="ipca" inputmode="decimal" data-percent value="5,00" /><small>Premissa editável usada na projeção, conforme o modelo.</small></div>
+          <div class="field"><label for="consultant">Corretor responsável</label><select id="consultant"><option value="fabio">Fabio Kenji Hassui</option><option value="alexandre">Alexandre Faustino</option><option value="moises">Moisés Santos</option></select></div>
+        </div>
+        <div class="section-heading partners-heading"><div><span class="eyebrow">PARTICIPAÇÕES E COTAÇÕES</span><h2>Sócios</h2>
+          <p>Cadastre até 8 sócios. Para cada um, informe a participação e os números exatos das propostas de seguro.</p></div>
+          <button class="btn secondary" id="addPartnerBtn" type="button">Adicionar sócio</button></div>
+        <div id="partnerList" class="partner-list"></div>
+        <p class="help">A projeção WL10 considera 10 aportes anuais e 20 anos visíveis. Os anos 1 e 2 de resgate ficam zerados, como no modelo. Após o décimo aporte, o acumulado pago continua visível.</p>
+        <div class="actions">
+          <button class="btn secondary" id="saveStudyBtn" type="button">Salvar estudo</button>
+          <button class="btn primary" id="generatePptBtn" type="submit">Gerar PowerPoint</button>
+          <button class="btn pdf" id="generatePdfBtn" type="button">Gerar PDF</button>
+        </div>
+        <p id="formStatus" class="status-line" role="status" aria-live="polite"></p>
+      </form>
+      <aside class="card summary">
+        <span class="eyebrow">PRÉVIA EM TEMPO REAL</span><h2>Resumo do estudo</h2>
+        <div class="metric"><span>Valuation</span><strong id="sumValuation">R$ 0,00</strong></div>
+        <div class="metric"><span>Participações cadastradas</span><strong id="sumShares">0%</strong></div>
+        <div class="metric"><span>Capital WL10 cotado</span><strong id="sumCoverage">R$ 0,00</strong></div>
+        <div class="metric"><span>Prêmios WL10 anuais</span><strong id="sumPremium">R$ 0,00</strong></div>
+        <div id="partnerSummary" class="partner-summary"></div>
+        <p class="note">O valor da participação é o valuation informado multiplicado pelo percentual de cada sócio. O capital indicado depende da cotação e da análise do consultor.</p>
+      </aside>
+    </div>
+    <footer>Material informativo. Projeções dependem das premissas e cotações informadas; regras contratuais devem ser confirmadas na proposta da seguradora.</footer>
+  </main>
+  <script src="assets/surrender-pdf.js?v=15"></script>
+  <script src="assets/business-model.js?v=1"></script>
+  <script src="assets/business-deck.js?v=1"></script>
+  <script src="assets/business-app.js?v=2"></script>
+</body>
+</html>

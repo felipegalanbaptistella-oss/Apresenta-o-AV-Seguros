@@ -34,7 +34,7 @@ export async function GET(_request: Request, context: RouteContext) {
         `SELECT id, client_first_name, client_last_name, consultant_key,
                 payload_json, revision, created_by, updated_by, created_at, updated_at
            FROM risk_studies
-          WHERE id = ?`,
+          WHERE id = ? AND family_mode IN ('single', 'couple')`,
       )
       .bind(id)
       .first<StudyRow>();
@@ -79,7 +79,7 @@ export async function PUT(request: Request, context: RouteContext) {
 
     const d1 = getD1();
     const current = await d1
-      .prepare("SELECT revision FROM risk_studies WHERE id = ?")
+      .prepare("SELECT revision FROM risk_studies WHERE id = ? AND family_mode IN ('single', 'couple')")
       .bind(id)
       .first<{ revision: number }>();
     if (!current) {
@@ -102,7 +102,7 @@ export async function PUT(request: Request, context: RouteContext) {
                 marital_regime = ?, family_mode = ?, consultant_key = ?,
                 total_assets_cents = ?, coverage_gap_cents = ?, payload_json = ?,
                 revision = ?, updated_by = ?, updated_at = ?
-          WHERE id = ? AND revision = ?`,
+          WHERE id = ? AND revision = ? AND family_mode IN ('single', 'couple')`,
       ).bind(
         study.clientFirstName,
         study.clientLastName,
@@ -137,7 +137,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     if (!isValidStudyId(id)) throw new StudyInputError("Identificador de estudo inválido.");
 
     const result = await getD1()
-      .prepare("DELETE FROM risk_studies WHERE id = ?")
+      .prepare("DELETE FROM risk_studies WHERE id = ? AND family_mode IN ('single', 'couple')")
       .bind(id)
       .run();
 

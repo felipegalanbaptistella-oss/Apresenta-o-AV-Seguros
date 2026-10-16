@@ -3,6 +3,17 @@
   const imageCache=new Map();
   const brl=value=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value)||0);
   const pct=value=>`${(Number(value)||0).toLocaleString('pt-BR',{maximumFractionDigits:2})}%`;
+  function gaugeProfile(title=''){
+    const proposed=String(title).toLocaleLowerCase('pt-BR').includes('proposta');
+    return proposed?{key:'financial',label:'Ativos financeiros',optimalStart:3,optimalEnd:6}:{key:'total',label:'Patrimônio total',optimalStart:1,optimalEnd:3,highExposureStart:6};
+  }
+  // Keep the benchmark markers legible while mapping each percentage to a stable dial angle.
+  const gaugeScale=[[0,0],[3,80],[6,140],[10,180]];
+  function gaugeAngle(value){const number=Math.max(0,Math.min(10,Number(value)||0));for(let i=1;i<gaugeScale.length;i++){const [to,toAngle]=gaugeScale[i],[from,fromAngle]=gaugeScale[i-1];if(number<=to)return fromAngle+(number-from)*(toAngle-fromAngle)/(to-from);}return 180;}
+  function gaugePoint(value,rx=215,ry=190){const angle=Math.PI+gaugeAngle(value)*Math.PI/180;return {x:296+Math.cos(angle)*rx,y:370+Math.sin(angle)*ry};}
+  function gaugeNeedlePoints(value){const pivot={x:246,y:349},tip=gaugePoint(value,200,170),dx=tip.x-pivot.x,dy=tip.y-pivot.y,length=Math.hypot(dx,dy)||1,ux=dx/length,uy=dy/length,nx=-uy,ny=ux,bx=pivot.x-ux*12,by=pivot.y-uy*12;return [tip,{x:bx+nx*16,y:by+ny*16},{x:bx-nx*16,y:by-ny*16}];}
+  function gaugeFrame(x,y,w,h){const scale=Math.min(w/520,(h-30)/265),left=x+(w-520*scale)/2-40*scale,top=y+30-120*scale;return {scale,left,top,map:p=>({x:left+p.x*scale,y:top+p.y*scale})};}
+  function gaugeBandPoints(){const points=[];for(let i=0;i<=64;i++){const a=Math.PI+Math.PI*i/64;points.push({x:296+215*Math.cos(a),y:370+190*Math.sin(a)});}points.push({x:402,y:370});const cubic=(start,c1,c2,end)=>{for(let i=1;i<=32;i++){const t=i/32,u=1-t;points.push({x:u*u*u*start.x+3*u*u*t*c1.x+3*u*t*t*c2.x+t*t*t*end.x,y:u*u*u*start.y+3*u*u*t*c1.y+3*u*t*t*c2.y+t*t*t*end.y});}};cubic({x:402,y:370},{x:370,y:305},{x:318,y:272},{x:260,y:272});cubic({x:260,y:272},{x:180,y:272},{x:108,y:317},{x:81,y:370});return points;}
   const esc=value=>String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const clientLabel=d=>d.name;
 
@@ -129,7 +140,7 @@
     line(ctx,914,450,1538,450,'#63203d',1);text(ctx,'EROSÃO PATRIMONIAL ESTIMADA',940,486,570,{size:22,color:RED,bold:true,align:'center'});fitText(ctx,`-${brl(d.liability)}`,930,540,590,{size:40,min:27,color:RED,bold:true,align:'center'});
 
     rect(ctx,882,610,686,214,'#c3a067',20,'#9d7624',2);
-    text(ctx,'PATRIMÔNIO LÍQUIDO TRANSMITIDO',960,654,530,{size:20,color:WHITE,bold:true,align:'center'});fitText(ctx,brl(d.withoutInsurance),950,716,550,{size:39,min:26,color:'#061743',bold:true,align:'center'});line(ctx,1015,758,1435,758,'#b27f52',1);text(ctx,'A família receberá MENOS patrimônio',955,790,540,{size:20,color:WHITE,bold:true,align:'center'});
+    text(ctx,'PATRIMÔNIO LÍQUIDO TRANSMITIDO',960,654,530,{size:20,color:WHITE,bold:true,align:'center'});fitText(ctx,brl(d.withoutInsurance),950,716,550,{size:39,min:26,color:'#061743',bold:true,align:'center'});line(ctx,1015,758,1435,758,'#b27f52',1);text(ctx,'A família receberá menos patrimônio',955,790,540,{size:20,color:WHITE,bold:true,align:'center'});
     return pngBytes(canvas);
   }
 
@@ -175,17 +186,17 @@
     donut(ctx,250,405,130,62,vals,colors,{highlightIndex:(reallocation||withInsurance)?3:-1,minHighlightShare:.045});
     const donutBrand=await loadImage('assets/marca.png');ctx.drawImage(donutBrand,214,391,72,28);
     const items=[{label:'Posição em investimentos (XP)',color:GOLD2},{label:'Posição em outras instituições',color:GOLD},{label:'Previdência Privada',color:'#ffbf00'}];
-    if(withInsurance)items.push({label:'SEGURO DE VIDA',color:GREEN});if(reallocation)items.push({label:'RESERVA LASTREADA',color:GREEN,bold:true});legend(ctx,items,420,335,55);
+    if(withInsurance)items.push({label:'Seguro de vida',color:GREEN});if(reallocation)items.push({label:'Reserva lastreada',color:GREEN,bold:true});legend(ctx,items,420,335,55);
     const breakdownRows=withInsurance?[
-      ['SEGURO DE VIDA',d.coverageAfter,{color:GREEN,labelSize:28.5,valueSize:28.5,labelBold:true}],
-      ['Ativos Financeiros',d.financial,{}],
+      ['Seguro de vida',d.coverageAfter,{color:GREEN,labelSize:28.5,valueSize:28.5,labelBold:true}],
+      ['Ativos financeiros',d.financial,{}],
       ['Patrimônio imobilizado',d.illiquid,{}]
     ]:reallocation?[
-      ['RESERVA LASTREADA',d.annualPremium,{color:GREEN,labelSize:27,valueSize:28.5,labelBold:true}],
-      ['ATIVOS FINANCEIROS',Math.max(0,d.financial-d.annualPremium),{}],
+      ['Reserva lastreada',d.annualPremium,{color:GREEN,labelSize:27,valueSize:28.5,labelBold:true}],
+      ['Ativos financeiros',Math.max(0,d.financial-d.annualPremium),{}],
       ['Patrimônio imobilizado',d.illiquid,{}]
     ]:[
-      ['Ativos Financeiros',d.financial,{valueSize:28.5}],
+      ['Ativos financeiros',d.financial,{valueSize:28.5}],
       ['Patrimônio imobilizado',d.illiquid,{valueSize:28.5}]
     ];
     const breakdownY=breakdownRows.length===3
@@ -193,7 +204,7 @@
       :justifiedRowCenters(630,774,2);
     breakdownRows.forEach(([label,value,options],index)=>assetBreakdownRow(ctx,label,value,breakdownY[index],options));
     stackedBar(ctx,d,980,285,195,415,withInsurance,reallocation);
-    const barLegend=withInsurance?[{label:'Passivo sucessório',color:'#bfc2c8',textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos Financeiros',color:GOLD},{label:'SEGURO DE VIDA',color:GREEN,bold:true}]:reallocation?[{label:'Passivo sucessório',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos Financeiros',color:GOLD},{label:'Reserva lastreada',color:GREEN,bold:true}]:[{label:'PASSIVO SUCESSÓRIO',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos Financeiros',color:GOLD}];
+    const barLegend=withInsurance?[{label:'Passivo sucessório',color:'#bfc2c8',textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos financeiros',color:GOLD},{label:'Seguro de vida',color:GREEN,bold:true}]:reallocation?[{label:'Passivo sucessório',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos financeiros',color:GOLD},{label:'Reserva lastreada',color:GREEN,bold:true}]:[{label:'PASSIVO SUCESSÓRIO',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos financeiros',color:GOLD}];
     legend(ctx,barLegend,1250,480,38);return pngBytes(canvas);
   }
 
@@ -218,7 +229,7 @@
     text(ctx,title,x+18,y+28,w-36,{size:17,color:active?GOLD:'#63718f',bold:true,align:'center'});
     if(!active)return;
     const start=y+74,gap=(h-86)/Math.max(lines.length,1);
-    lines.forEach((label,index)=>{const cy=start+index*gap;fitText(ctx,label,x+24,cy,w-(infoIcons?92:48),{size:20,min:14,color:GREEN,bold:false,align:'center'});if(infoIcons)infoIcon(ctx,x+w-38,cy);});
+    lines.forEach((label,index)=>{const cy=start+index*gap;fitText(ctx,label,x+24,cy,w-(infoIcons?92:48),{size:20,min:14,color:GREEN,bold:true,align:'center'});if(infoIcons)infoIcon(ctx,x+w-38,cy);});
   }
   async function slide11(d,stage=3){
     const {canvas,ctx}=await canvasFor(11),rows=projection(d);
@@ -245,12 +256,12 @@
       }
     }
     const footerY=top+rows.length*rowH;
-    if(stage>=3){rect(ctx,48,footerY,1057,40,'#ad8a3c',0);text(ctx,'∞  C a p i t a l   S e g u r a d o   e   R e s g a t e   s e g u e m   v i t a l í c i o s  ∞',65,footerY+20,1025,{size:17,color:WHITE,align:'center',font:'Georgia'});}
+    if(stage>=3){rect(ctx,48,footerY,1057,40,'#ad8a3c',0);text(ctx,'∞  Capital segurado e resgate seguem vitalícios  ∞',65,footerY+20,1025,{size:17,color:WHITE,align:'center',font:'Georgia'});}
 
     rect(ctx,1128,88,432,758,NAVY);
-    benefitPanel(ctx,1148,94,405,204,'BENEFÍCIOS SECURITÁRIOS',['CONGELAMENTO DE RISCO','CONGELAMENTO DE IDADE'],stage>=1);
-    benefitPanel(ctx,1148,310,405,278,'BENEFÍCIOS FINANCEIROS E TRIBUTÁRIOS',['ALAVANCAGEM · Liquidez em D+0','ISENÇÃO DE IMPOSTOS*','QUITAÇÃO NO 10º ANO','sem necessidade de novos aportes'],stage>=2);
-    benefitPanel(ctx,1148,600,405,242,'BENEFÍCIOS LEGAIS',['INCOMUNICÁVEL','INALIENÁVEL','IMPENHORÁVEL'],stage>=3,{infoIcons:true});
+    benefitPanel(ctx,1148,94,405,204,'BENEFÍCIOS SECURITÁRIOS',['AGRAVAMENTO DO RISCO','CONGELAMENTO DE IDADE'],stage>=1);
+    benefitPanel(ctx,1148,310,405,278,'BENEFÍCIOS FINANCEIROS E TRIBUTÁRIOS',['ALAVANCAGEM · LIQUIDEZ EM D+0','ISENÇÃO DE IMPOSTOS*','QUITAÇÃO NO 10º ANO','SEM NECESSIDADE DE NOVOS APORTES'],stage>=2);
+    benefitPanel(ctx,1148,600,405,242,'BENEFÍCIOS LEGAIS',['Proteção do crédito','Impenhorabilidade','Congelamento de Risco','Incomunicabilidade'],stage>=3,{infoIcons:true});
     return pngBytes(canvas);
   }
 
@@ -277,26 +288,24 @@
   async function slide7(d){const {canvas,ctx}=await canvasFor(7);studyTag(ctx,d);return pngBytes(canvas);}
 
   function gauge(ctx,x,y,w,h,title,value){
-    const cx=x+w/2,cy=y+h-46,r=Math.min(128,w*.3),segments=10;
-    text(ctx,title,x+26,y+20,w-52,{size:15,color:GOLD,bold:true,align:'center',maxLines:1});
-    fitText(ctx,pct(value),x+35,y+63,w-70,{size:34,min:27,color:WHITE,bold:true,align:'center'});
-    for(let i=0;i<segments;i++){
-      const angle=Math.PI+(i+.5)*Math.PI/segments,px=cx+Math.cos(angle)*r,py=cy+Math.sin(angle)*r;
-      ctx.save();ctx.translate(px,py);ctx.rotate(angle+Math.PI/2);ctx.fillStyle=GOLD;ctx.fillRect(-10,-4,20,8);ctx.restore();
-    }
-    const normalized=Math.max(0,Math.min(1,(Number(value)||0)/10)),angle=Math.PI+Math.PI*normalized;
-    const dx=Math.cos(angle),dy=Math.sin(angle),nx=-dy,ny=dx,tipDistance=r-18,baseDistance=16;
-    ctx.save();ctx.fillStyle=GOLD;ctx.beginPath();ctx.moveTo(cx+dx*tipDistance,cy+dy*tipDistance);ctx.lineTo(cx+dx*baseDistance+nx*7,cy+dy*baseDistance+ny*7);ctx.lineTo(cx+dx*baseDistance-nx*7,cy+dy*baseDistance-ny*7);ctx.closePath();ctx.fill();
-    ctx.beginPath();ctx.arc(cx,cy,12,0,Math.PI*2);ctx.fillStyle=GOLD;ctx.fill();ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fillStyle=NAVY;ctx.fill();ctx.restore();
-    text(ctx,'Não se aplica',x+12,y+h-40,136,{size:11,color:MUTED,align:'center'});
-    text(ctx,'Acima de 10%',x+w-148,y+h-40,136,{size:11,color:MUTED,align:'center'});
-    text(ctx,'Ótimo  ·  Recomendado  ·  Alta exposição',x+22,y+h-16,w-44,{size:10,color:MUTED,align:'center'});
+    const profile=gaugeProfile(title),frame=gaugeFrame(x,y,w,h),background=ctx.createLinearGradient(x,y,x,y+h);background.addColorStop(0,'#001740');background.addColorStop(1,'#001233');rect(ctx,x,y,w,h,background);
+    text(ctx,title,x+24,y+15,w-48,{size:15,color:'#d0ad75',bold:true,align:'center'});
+    ctx.save();ctx.translate(frame.left,frame.top);ctx.scale(frame.scale,frame.scale);
+    ctx.beginPath();ctx.moveTo(81,370);ctx.ellipse(296,370,215,190,0,Math.PI,2*Math.PI);ctx.lineTo(402,370);ctx.bezierCurveTo(370,305,318,272,260,272);ctx.bezierCurveTo(180,272,108,317,81,370);ctx.closePath();ctx.fillStyle='#d0ad75';ctx.fill();
+    const markers=[profile.optimalStart,profile.optimalEnd,...(profile.highExposureStart?[profile.highExposureStart]:[])];
+    markers.forEach(mark=>{const inside=mark===1?{x:207,y:274}:mark===3?{x:260,y:272}:{x:381,y:328},outside=gaugePoint(mark);line(ctx,inside.x,inside.y,outside.x,outside.y,'#001233',7);text(ctx,`${mark}%`,outside.x-32,outside.y-25,64,{size:20,color:'#fff',bold:true,align:'center'});});
+    const needle=gaugeNeedlePoints(value);ctx.beginPath();ctx.moveTo(needle[0].x,needle[0].y);ctx.lineTo(needle[1].x,needle[1].y);ctx.lineTo(needle[2].x,needle[2].y);ctx.closePath();ctx.fillStyle='#fff';ctx.fill();ctx.beginPath();ctx.arc(246,349,22,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(246,349,9,0,Math.PI*2);ctx.fillStyle='#001233';ctx.fill();
+    text(ctx,'Ótimo',profile.key==='total'?146:131,258,68,{size:15,color:'#001233',bold:true,align:'center'});
+    text(ctx,'Recomendado',profile.key==='total'?292:250,239,116,{size:15,color:'#001233',bold:true,align:'center'});
+    text(ctx,'Alta',413,296,70,{size:16,color:'#001233',bold:true,align:'center'});text(ctx,'Exposição',399,314,98,{size:16,color:'#001233',bold:true,align:'center'});
+    rect(ctx,128,317,80,50,'#ffc971',25);fitText(ctx,pct(value),132,342,72,{size:18,min:13,color:'#001233',bold:true,align:'center'});
+    text(ctx,'10%',526,370,62,{size:20,color:'#fff',bold:true});ctx.restore();
   }
   const monthsAtRate=(d,rate)=>d.financial>0&&d.annualPremium>0?Math.ceil(d.annualPremium/(d.financial*rate)):0;
   const monthsText=months=>months?`${months} ${months===1?'MÊS':'MESES'}`:'—';
   async function slide13(d,{includeGauge=true}={}){
     const {canvas,ctx}=await canvasFor(13);studyTag(ctx,d);rect(ctx,0,150,W,H-150,NAVY);rect(ctx,40,160,1520,420,'#03143d',14,'#9d7624',2);text(ctx,'CENÁRIO DE PAYBACK',75,188,300,{size:18,color:GOLD,bold:true});
-    rect(ctx,500,171,300,58,'#bc985d',10);text(ctx,'ATIVOS FINANCEIROS',515,184,270,{size:14,color:WHITE,align:'center'});fitText(ctx,brl(d.financial),515,208,270,{size:28,min:19,color:WHITE,bold:true,align:'center'});
+    rect(ctx,500,171,300,58,'#bc985d',10);text(ctx,'Ativos financeiros',515,184,270,{size:14,color:WHITE,align:'center'});fitText(ctx,brl(d.financial),515,208,270,{size:28,min:19,color:WHITE,bold:true,align:'center'});
     const monthlyRates=[.006,.008,.01],colors=['#7d6a36','#b88700','#d6a700'];
     const x0=170,y0=500,x1=805,y1=245,max=Math.max(d.annualPremium*1.25,d.financial*.01*12,1);
     for(let i=0;i<=5;i++){const y=y0-(y0-y1)*i/5;line(ctx,x0,y,x1,y,'#1d3764',1);fitText(ctx,brl(max*i/5),55,y,100,{size:12,min:9,color:WHITE,bold:true,align:'right'});}
@@ -304,16 +313,16 @@
     monthlyRates.forEach((rate,i)=>{ctx.save();ctx.strokeStyle=colors[i];ctx.lineWidth=4;ctx.beginPath();for(let m=0;m<=12;m++){const x=x0+(x1-x0)*m/12,y=y0-(y0-y1)*(d.financial*rate*m/max);m?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();ctx.restore();});
     const py=y0-(y0-y1)*(d.annualPremium/max);line(ctx,x0,py,x1,py,GREEN,4,[16,12]);fitText(ctx,brl(d.annualPremium),640,py-24,150,{size:19,min:14,color:WHITE,bold:true,align:'center'});
     monthlyRates.forEach((rate,i)=>{const month=monthsAtRate(d,rate);if(month<0||month>12)return;const mx=x0+(x1-x0)*month/12,my=y0-(y0-y1)*(d.financial*rate*month/max);text(ctx,'★',mx-18,my,36,{size:34,color:i===1?'#8bd05f':i===0?'#e9a2a5':'#f0c400',bold:true,align:'center'});});
-    const legendItems=[{label:'VALOR DO SEGURO',color:GREEN,dash:true},...monthlyRates.map((rate,i)=>({label:`Rentabilidade ${(rate*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}% a.m.`,color:colors[i]}))];
+    const legendItems=[{label:'Valor do seguro',color:GREEN,dash:true},...monthlyRates.map((rate,i)=>({label:`Rentabilidade ${(rate*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}% a.m.`,color:colors[i]}))];
     legendItems.forEach((item,i)=>{const lx=95+i*185;line(ctx,lx,552,lx+25,552,item.color,3,item.dash?[10,7]:[]);text(ctx,item.label,lx+33,552,145,{size:11,color:WHITE,bold:item.dash});});
     rect(ctx,850,177,680,120,'#03143d',5,'#9d7624',2);text(ctx,'ALOCAÇÃO ANUAL',875,203,630,{size:18,color:GOLD,bold:true,align:'center'});fitText(ctx,brl(d.annualPremium),875,257,630,{size:44,min:30,color:'#8bd05f',bold:true,align:'center'});
     rect(ctx,850,318,680,66,'#03143d',5,'#9d7624',2);text(ctx,'RENDIMENTOS PAGAM A ALOCAÇÃO ANUAL EM',870,351,640,{size:18,color:GOLD,bold:true,align:'center'});
     const rateMonths=monthlyRates.map(rate=>monthsAtRate(d,rate));const starColors=['#e9a2a5','#8bd05f','#f0c400'];
     monthlyRates.forEach((rate,i)=>{const x=850+i*230;rect(ctx,x,408,210,100,i===1?'#173c32':'#03143d',5,i===1?GREEN:'#9d7624',2);text(ctx,'★',x+18,438,34,{size:30,color:starColors[i],bold:true});text(ctx,`${(rate*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}% a.m.`,x+55,438,140,{size:18,color:i===1?GREEN:GOLD,bold:true});fitText(ctx,monthsText(rateMonths[i]),x+20,480,170,{size:28,min:20,color:i===1?GREEN:WHITE,bold:true,align:'center'});});
-    const currentAllocation=d.total?d.annualPremium/d.total*100:0,proposedAllocation=d.withoutInsurance?d.annualPremium/d.withoutInsurance*100:0;
+    const currentAllocation=d.total?d.annualPremium/d.total*100:0,proposedAllocation=d.financial?d.annualPremium/d.financial*100:0;
     if(includeGauge){
-      gauge(ctx,40,600,490,275,'ALOCAÇÃO ATUAL VS PATRIMÔNIO TOTAL',currentAllocation);
-      gauge(ctx,555,600,490,275,'ALOCAÇÃO PROPOSTA VS PATRIMÔNIO LÍQUIDO',proposedAllocation);
+      gauge(ctx,40,600,490,275,'Alocação atual vs patrimônio total',currentAllocation);
+      gauge(ctx,555,600,490,275,'Alocação proposta vs ativos financeiros',proposedAllocation);
     }
     rect(ctx,1070,600,490,275,'#03143d',12,'#9d7624',2);text(ctx,'PERFIL DE SAÚDE',1094,634,442,{size:21,color:GOLD,bold:true,align:'center'});text(ctx,'?',1110,738,410,{size:92,color:WHITE,bold:true,align:'center'});text(ctx,'A PREENCHER',1094,842,442,{size:17,color:MUTED,bold:true,align:'center'});
     return pngBytes(canvas);
@@ -331,28 +340,45 @@
   }
 
   const legalInfoSlides=[
-    {key:'incomunicavel',title:'INCOMUNICÁVEL',lead:'O capital por morte é pago ao beneficiário indicado e não integra a herança.',law:'Lei 15.040/2024 · arts. 113 a 116',detail:'A lei permite indicar livremente o beneficiário e estabelece que o capital segurado devido por morte não é herança para nenhum efeito.'},
-    {key:'inalienavel',title:'INALIENÁVEL',lead:'A lei protege o crédito securitário contra renúncia ou redução antecipada.',law:'Lei 15.040/2024 · arts. 114 e 117',detail:'É nulo o negócio que implique renúncia ou redução do crédito ao capital segurado ou à reserva matemática.'},
-    {key:'impenhoravel',title:'IMPENHORÁVEL',lead:'Os capitais devidos por morte ou perda da integridade física recebem proteção expressa contra penhora.',law:'Lei 15.040/2024 · art. 122  |  CPC · art. 833, VI',detail:'A Lei do Contrato de Seguro e o Código de Processo Civil qualificam o seguro de vida e os capitais securitários como impenhoráveis.'}
+    {key:'protecaoCredito',title:'Proteção do crédito',lead:'O crédito ao capital segurado não pode ser renunciado ou reduzido por negócio jurídico, salvo as exceções previstas na lei.',law:'Lei 15.040/2024 · art. 117'},
+    {key:'impenhorabilidade',title:'Impenhorabilidade',lead:'Os capitais devidos por morte ou perda da integridade física são impenhoráveis.',law:'Lei 15.040/2024 · art. 122  |  CPC · art. 833, VI'},
+    {key:'congelamentoRisco',title:'Congelamento de Risco',lead:'Nos seguros de vida e de integridade física, mesmo diante de agravamento relevante do risco, a seguradora só pode cobrar a diferença de prêmio.',law:'Lei 15.040/2024 · art. 17'},
+    {key:'incomunicabilidade',title:'Incomunicabilidade',lead:'O capital segurado devido por morte é pago ao beneficiário indicado e não integra a herança.',law:'Lei 15.040/2024 · arts. 113 e 116'}
   ];
+  function legalParagraph(ctx,value,x,top,width,{size,color=WHITE,bold=false}={}){
+    ctx.save();ctx.fillStyle=color;ctx.textAlign='left';ctx.textBaseline='top';ctx.font=`${bold?'700':'400'} ${size}px Arial`;
+    const lines=[],words=String(value).trim().split(/\s+/);let current=[];
+    for(const word of words){const candidate=[...current,word];if(current.length&&ctx.measureText(candidate.join(' ')).width>width){lines.push(current);current=[word];}else current=candidate;}
+    if(current.length)lines.push(current);
+    const height=size+(lines.length-1)*size*1.5;
+    if(top===null){ctx.restore();return height;}
+    lines.forEach((line,index)=>{
+      const y=top+index*size*1.5;
+      if(index===lines.length-1||line.length===1){ctx.fillText(line.join(' '),x,y);return;}
+      const wordWidths=line.map(word=>ctx.measureText(word).width),gap=(width-wordWidths.reduce((sum,n)=>sum+n,0))/(line.length-1);
+      let cursor=x;line.forEach((word,i)=>{ctx.fillText(word,cursor,y);cursor+=wordWidths[i]+gap;});
+    });
+    ctx.restore();return height;
+  }
   async function legalInfoSlide(){
     const {canvas,ctx}=await canvasFor(11);rect(ctx,0,0,W,H,NAVY);
     const brandMark=await loadImage('assets/marca.png');ctx.drawImage(brandMark,82,49,43,17);
     text(ctx,'GESTÃO DE RISCOS',143,58,440,{size:18,color:GOLD,bold:true,font:'Georgia'});
     text(ctx,'BENEFÍCIOS LEGAIS DO SEGURO DE VIDA',82,120,1180,{size:38,color:WHITE,bold:true});
-    const rowTops=[160,326,492];
+    const rowTops=[150,278,406,534],rowHeight=116;
     legalInfoSlides.forEach((info,index)=>{
-      const y=rowTops[index];rect(ctx,82,y,1436,152,'#061743',18,'#284878',2);
-      text(ctx,info.title,112,y+46,270,{size:24,color:GOLD,bold:true});text(ctx,info.law,112,y+105,270,{size:15,color:WHITE,bold:true,maxLines:2});
-      line(ctx,408,y+20,408,y+132,'#284878',1);text(ctx,info.lead,440,y+43,1048,{size:19,color:WHITE,bold:true,maxLines:2});text(ctx,info.detail,440,y+103,1048,{size:16,color:MUTED,maxLines:3});
+      const y=rowTops[index];rect(ctx,82,y,1436,rowHeight,'#061743',14,'#284878',2);
+      fitText(ctx,info.title,112,y+31,270,{size:20,min:15,color:GOLD,bold:true});
+      const leadHeight=legalParagraph(ctx,info.lead,440,null,1048,{size:17,bold:true});
+      const lawHeight=legalParagraph(ctx,info.law,440,null,1048,{size:14,bold:true});
+      const paragraphGap=8,bodyTop=y+(rowHeight-leadHeight-lawHeight-paragraphGap)/2;
+      line(ctx,408,y+12,408,y+104,'#284878',1);
+      legalParagraph(ctx,info.lead,440,bodyTop,1048,{size:17,bold:true});
+      legalParagraph(ctx,info.law,440,bodyTop+leadHeight+paragraphGap,1048,{size:14,color:GOLD,bold:true});
     });
-    rect(ctx,82,666,1436,48,'rgba(197,160,91,.14)',12,GOLD,1);text(ctx,'Base legal federal — não é previsão direta da Constituição Federal.',105,690,1390,{size:16,color:GOLD,bold:true,align:'center'});
-    rect(ctx,82,728,1436,80,'#03143d',16,'#26375f',2);text(ctx,'Leitura orientativa. A aplicação depende da modalidade contratada, das condições da apólice e do caso concreto.',118,768,1364,{size:19,color:MUTED,align:'center',maxLines:2});
     rect(ctx,1350,34,168,52,'#0a2050',12,GOLD,2);text(ctx,'← VOLTAR',1362,60,144,{size:17,color:WHITE,bold:true,align:'center'});
-    text(ctx,'Fontes: Lei 15.040/2024 (Planalto) · Lei 13.105/2015, CPC (Planalto) · STJ, quando indicado',82,842,1436,{size:15,color:'#8496bb',align:'center'});
     return pngBytes(canvas);
   }
-
   const fullSlidePic=()=>`<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr><p:pic><p:nvPicPr><p:cNvPr id="2" name="Slide personalizado"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rId999"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="12192000" cy="6858000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic></p:spTree>`;
   async function replaceSlide(zip,no,bytes,{hidden=false}={}){
     const xmlPath=`ppt/slides/slide${no}.xml`,relsPath=`ppt/slides/_rels/slide${no}.xml.rels`,mediaPath=`ppt/media/custom-slide${no}.png`;
@@ -361,35 +387,50 @@
     let rels=await zip.file(relsPath).async('string');rels=rels.replace(/<Relationship\b[^>]*\bId="rId999"[^>]*\/>/g,'').replace('</Relationships>',`<Relationship Id="rId999" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/custom-slide${no}.png"/></Relationships>`);
     zip.file(xmlPath,xml);zip.file(relsPath,rels);zip.file(mediaPath,bytes);
   }
-  function editableShape(id,name,{x,y,w,h,rotation=0,geometry='rect',fill}){
+  function editableShape(id,name,{x,y,w,h,rotation=0,geometry='rect',fill,gradient=null,adjustment=null}){
     const transform=`<a:xfrm${rotation?` rot="${Math.round(rotation*60000)}"`:''}><a:off x="${Math.round(x*EMU)}" y="${Math.round(y*EMU)}"/><a:ext cx="${Math.round(w*EMU)}" cy="${Math.round(h*EMU)}"/></a:xfrm>`;
-    return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${esc(name)}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>${transform}<a:prstGeom prst="${geometry}"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="${fill}"/></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p/></p:txBody></p:sp>`;
+    const fillXml=gradient?`<a:gradFill rotWithShape="1"><a:gsLst><a:gs pos="0"><a:srgbClr val="${gradient[0]}"/></a:gs><a:gs pos="100000"><a:srgbClr val="${gradient[1]}"/></a:gs></a:gsLst><a:lin ang="5400000" scaled="1"/></a:gradFill>`:`<a:solidFill><a:srgbClr val="${fill}"/></a:solidFill>`;
+    return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${esc(name)}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>${transform}<a:prstGeom prst="${geometry}"><a:avLst>${adjustment===null?'':`<a:gd name="adj" fmla="val ${adjustment}"/>`}</a:avLst></a:prstGeom>${fillXml}<a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p/></p:txBody></p:sp>`;
   }
-  function editableText(id,name,{x,y,w,h,value,color=WHITE,fontPt=12,bold=false}){
-    const size=Math.round(fontPt*100),body=`<a:bodyPr wrap="none" lIns="0" tIns="0" rIns="0" bIns="0" anchor="ctr"/><a:lstStyle/><a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="pt-BR" sz="${size}" b="${bold?1:0}" dirty="0"><a:solidFill><a:srgbClr val="${color}"/></a:solidFill><a:latin typeface="Arial"/><a:ea typeface="Arial"/><a:cs typeface="Arial"/></a:rPr><a:t>${esc(value)}</a:t></a:r><a:endParaRPr lang="pt-BR" sz="${size}"/></a:p>`;
+  function editableText(id,name,{x,y,w,h,value,color=WHITE,fontPt=12,bold=false,fontFace='Arial'}){
+    const size=Math.round(fontPt*100),body=`<a:bodyPr wrap="none" lIns="0" tIns="0" rIns="0" bIns="0" anchor="ctr"/><a:lstStyle/><a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="pt-BR" sz="${size}" b="${bold?1:0}" dirty="0"><a:solidFill><a:srgbClr val="${color}"/></a:solidFill><a:latin typeface="${fontFace}"/><a:ea typeface="${fontFace}"/><a:cs typeface="${fontFace}"/></a:rPr><a:t>${esc(value)}</a:t></a:r><a:endParaRPr lang="pt-BR" sz="${size}"/></a:p>`;
     const transform=`<a:xfrm><a:off x="${Math.round(x*EMU)}" y="${Math.round(y*EMU)}"/><a:ext cx="${Math.round(w*EMU)}" cy="${Math.round(h*EMU)}"/></a:xfrm>`;
     return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${esc(name)}"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr>${transform}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></p:spPr><p:txBody>${body}</p:txBody></p:sp>`;
+  }
+  function editableFreeform(id,name,{x,y,w,h,points,fill}){
+    const pathW=Math.max(1,Math.round(w*EMU)),pathH=Math.max(1,Math.round(h*EMU));
+    const local=points.map(point=>({x:Math.round((point.x-x)*EMU),y:Math.round((point.y-y)*EMU)}));
+    const commands=local.map((point,index)=>`<a:${index?'lnTo':'moveTo'}><a:pt x="${point.x}" y="${point.y}"/></a:${index?'lnTo':'moveTo'}>`).join('');
+    const transform=`<a:xfrm><a:off x="${Math.round(x*EMU)}" y="${Math.round(y*EMU)}"/><a:ext cx="${pathW}" cy="${pathH}"/></a:xfrm>`;
+    const geometry=`<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="0" t="0" r="${pathW}" b="${pathH}"/><a:pathLst><a:path w="${pathW}" h="${pathH}" fill="norm" stroke="0">${commands}<a:close/></a:path></a:pathLst></a:custGeom>`;
+    return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${esc(name)}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>${transform}${geometry}<a:solidFill><a:srgbClr val="${fill}"/></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p/></p:txBody></p:sp>`;
   }
   async function addEditableGauge(zip,slideNo,{x,y,w,h,title,value}){
     const xmlPath=`ppt/slides/slide${slideNo}.xml`;let xml=await zip.file(xmlPath).async('string');
     const usedIds=[...xml.matchAll(/<p:cNvPr\b[^>]*\bid="(\d+)"/g)].map(match=>Number(match[1]));let nextId=Math.max(2,...usedIds)+1;
-    const shapes=[],cx=x+w/2,cy=y+h-46,r=Math.min(128,w*.3),segments=10,normalized=Math.max(0,Math.min(1,(Number(value)||0)/10)),angle=Math.PI+Math.PI*normalized;
+    const shapes=[],profile=gaugeProfile(title),frame=gaugeFrame(x,y,w,h),map=frame.map;
     const label=title.includes('ATUAL')?'atual':'proposta';
-    shapes.push(editableText(nextId++,`Título do velocímetro ${label}`,{x:x+26,y:y+20,w:w-52,h:26,value:title,color:'C5A05B',fontPt:11.5,bold:true}));
-    for(let i=0;i<segments;i++){
-      const tickAngle=Math.PI+(i+.5)*Math.PI/segments,px=cx+Math.cos(tickAngle)*r,py=cy+Math.sin(tickAngle)*r;
-      const rotation=(tickAngle*180/Math.PI+90)%360;
-      shapes.push(editableShape(nextId++,`Velocímetro ${label} · marca ${i+1}`,{x:px-10,y:py-4,w:20,h:8,rotation,geometry:'rect',fill:'C5A05B'}));
-    }
-    const directionX=Math.cos(angle),directionY=Math.sin(angle),needleLength=r-18,needleRotation=(angle*180/Math.PI+90+360)%360;
-    const needleCenterX=cx+directionX*needleLength/2,needleCenterY=cy+directionY*needleLength/2;
-    shapes.push(editableShape(nextId++,`Velocímetro ${label} · ponteiro`,{x:needleCenterX-7,y:needleCenterY-needleLength/2,w:14,h:needleLength,rotation:needleRotation,geometry:'triangle',fill:'C5A05B'}));
-    shapes.push(editableShape(nextId++,`Velocímetro ${label} · eixo`,{x:cx-12,y:cy-12,w:24,h:24,geometry:'ellipse',fill:'C5A05B'}));
-    shapes.push(editableShape(nextId++,`Velocímetro ${label} · centro`,{x:cx-5,y:cy-5,w:10,h:10,geometry:'ellipse',fill:'020E38'}));
-    shapes.push(editableText(nextId++,`Velocímetro ${label} · percentual`,{x:x+35,y:y+63,w:w-70,h:40,value:pct(value),color:'F4F5F8',fontPt:25,bold:true}));
-    shapes.push(editableText(nextId++,`Velocímetro ${label} · limite inicial`,{x:x+12,y:y+h-40,w:136,h:16,value:'Não se aplica',color:'C6CFDF',fontPt:8.25}));
-    shapes.push(editableText(nextId++,`Velocímetro ${label} · limite final`,{x:x+w-148,y:y+h-40,w:136,h:16,value:'Acima de 10%',color:'C6CFDF',fontPt:8.25}));
-    shapes.push(editableText(nextId++,`Velocímetro ${label} · faixas`,{x:x+22,y:y+h-16,w:w-44,h:12,value:'Ótimo  ·  Recomendado  ·  Alta exposição',color:'C6CFDF',fontPt:7.5}));
+    const addText=(name,value,cx,cy,sw,sh,fontPt,color)=>{const p=map({x:cx,y:cy}),width=sw*frame.scale,height=sh*frame.scale;shapes.push(editableText(nextId++,`Velocímetro ${label} · ${name}`,{x:p.x-width/2,y:p.y-height/2,w:width,h:height,value,color,fontPt,bold:true,fontFace:name==='faixa ótima'?'Arial Black':'Arial'}));};
+    shapes.push(editableShape(nextId++,`Velocímetro ${label} · fundo azul`,{x,y,w,h,geometry:'rect',gradient:['001740','001233']}));
+    shapes.push(editableText(nextId++,`Título do velocímetro ${label}`,{x:x+26,y:y+6,w:w-52,h:18,value:title,color:'D0AD75',fontPt:8.5,bold:true}));
+    shapes.push(editableFreeform(nextId++,`Velocímetro ${label} · arco dourado`,{x,y,w,h,points:gaugeBandPoints().map(map),fill:'D0AD75'}));
+    const markers=[profile.optimalStart,profile.optimalEnd,...(profile.highExposureStart?[profile.highExposureStart]:[])];
+    markers.forEach(mark=>{
+      const inside=mark===1?{x:207,y:274}:mark===3?{x:260,y:272}:{x:381,y:328},outside=gaugePoint(mark),dx=outside.x-inside.x,dy=outside.y-inside.y,len=Math.hypot(dx,dy)||1,nx=-dy/len*3.5,ny=dx/len*3.5;
+      const divider=[{x:inside.x+nx,y:inside.y+ny},{x:outside.x+nx,y:outside.y+ny},{x:outside.x-nx,y:outside.y-ny},{x:inside.x-nx,y:inside.y-ny}].map(map);
+      shapes.push(editableFreeform(nextId++,`Velocímetro ${label} · limite ${mark}%`,{x,y,w,h,points:divider,fill:'001233'}));
+      addText(`referência ${mark}%`,`${mark}%`,outside.x,outside.y-25,64,26,11,'FFFFFF');
+    });
+    shapes.push(editableFreeform(nextId++,`Velocímetro ${label} · ponteiro branco`,{x,y,w,h,points:gaugeNeedlePoints(value).map(map),fill:'FFFFFF'}));
+    const pivot=map({x:246,y:349}),pill=map({x:128,y:317});
+    shapes.push(editableShape(nextId++,`Velocímetro ${label} · eixo branco`,{x:pivot.x-22*frame.scale,y:pivot.y-22*frame.scale,w:44*frame.scale,h:44*frame.scale,geometry:'ellipse',fill:'FFFFFF'}));
+    shapes.push(editableShape(nextId++,`Velocímetro ${label} · centro azul`,{x:pivot.x-9*frame.scale,y:pivot.y-9*frame.scale,w:18*frame.scale,h:18*frame.scale,geometry:'ellipse',fill:'001233'}));
+    addText('faixa ótima','Ótimo',profile.key==='total'?180:165,258,68,26,10,'001233');
+    addText('faixa recomendada','Recomendado',profile.key==='total'?350:308,239,116,26,10,'001233');
+    addText('alta exposição · linha 1','Alta',448,296,70,22,9.5,'001233');addText('alta exposição · linha 2','Exposição',448,314,98,22,9.5,'001233');
+    shapes.push(editableShape(nextId++,`Velocímetro ${label} · cápsula do percentual`,{x:pill.x,y:pill.y,w:80*frame.scale,h:50*frame.scale,geometry:'roundRect',fill:'FFC971',adjustment:50000}));
+    addText('percentual',pct(value),168,342,76,44,12.5,'001233');
+    addText('limite da escala','10%',553,370,54,28,11,'FFFFFF');
     xml=xml.replace('</p:spTree>',`${shapes.join('')}</p:spTree>`);zip.file(xmlPath,xml);
   }
 
@@ -509,12 +550,12 @@
     await ensureRiskNavigation(zip);
     const combined=combineStudiesForPpt(d,studies);
     for(const [no,bytes] of await renderOverviewSlides(combined,{includeGauge:false}))await replaceSlide(zip,no,bytes);
-    const currentAllocation=combined.total?combined.annualPremium/combined.total*100:0,proposedAllocation=combined.withoutInsurance?combined.annualPremium/combined.withoutInsurance*100:0;
-    await addEditableGauge(zip,13,{x:40,y:600,w:490,h:275,title:'ALOCAÇÃO ATUAL VS PATRIMÔNIO TOTAL',value:currentAllocation});
-    await addEditableGauge(zip,13,{x:555,y:600,w:490,h:275,title:'ALOCAÇÃO PROPOSTA VS PATRIMÔNIO LÍQUIDO',value:proposedAllocation});
+    const currentAllocation=combined.total?combined.annualPremium/combined.total*100:0,proposedAllocation=combined.financial?combined.annualPremium/combined.financial*100:0;
+    await addEditableGauge(zip,13,{x:40,y:600,w:490,h:275,title:'Alocação atual vs patrimônio total',value:currentAllocation});
+    await addEditableGauge(zip,13,{x:555,y:600,w:490,h:275,title:'Alocação proposta vs ativos financeiros',value:proposedAllocation});
     for(const [no,bytes] of await renderProjectionSlides(studies[0]))await replaceSlide(zip,no,bytes);
     await replaceSlide(zip,legalTarget,await legalInfoSlide(),{hidden:true});await addShowJumpHotspot(zip,legalTarget,{x:1350*EMU,y:34*EMU,w:168*EMU,h:52*EMU,name:'Voltar da base legal'});
-    const legalIconCenters=[674,726,778];for(let index=0;index<legalInfoSlides.length;index++)await addSlideJumpHotspot(zip,16,legalTarget,{x:1492*EMU,y:(legalIconCenters[index]-22)*EMU,w:46*EMU,h:44*EMU,name:`Abrir explicação: ${legalInfoSlides[index].title}`});
+    const legalIconCenters=[674,713,752,791];for(let index=0;index<legalInfoSlides.length;index++)await addSlideJumpHotspot(zip,16,legalTarget,{x:1492*EMU,y:(legalIconCenters[index]-22)*EMU,w:46*EMU,h:44*EMU,name:`Abrir explicação: ${legalInfoSlides[index].title}`});
     if(studies.length>1){
       const mapping=await cloneHiddenProjectionSlides(zip),spouseSlides=new Map(await renderProjectionSlides(studies[1])),hiddenTargets=mapping.map(([,target])=>target);
       for(const [source,target] of mapping)await replaceSlide(zip,target,spouseSlides.get(source),{hidden:true});

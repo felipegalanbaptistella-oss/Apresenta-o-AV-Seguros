@@ -25,7 +25,7 @@ async function render(credentials = { username: TEST_USERNAME, password: TEST_PA
 }
 
 test("fails closed without valid login credentials", async () => {
-  for (const pathname of ["/", "/legacy-v7.html", "/assets/modelo-base.pptx"]) {
+  for (const pathname of ["/", "/legacy-v7.html", "/sucessao-empresarial.html", "/assets/modelo-base.pptx"]) {
     const anonymous = await render(null, pathname);
     assert.equal(anonymous.status, 401);
     assert.match(anonymous.headers.get("www-authenticate") ?? "", /^Basic realm=/);
@@ -126,13 +126,19 @@ test("keeps the form and export contract wired", async () => {
   assert.match(app, /studies=hasSpouse\?\[primary,personData\('spouse'\)\]:\[primary\]/);
   assert.match(app, /const paybackAtRate=/);
   assert.match(app, /currentAllocation=d\.total\?d\.annualPremium\/d\.total\*100:0/);
-  assert.match(app, /proposedAllocation=d\.withoutInsurance\?d\.annualPremium\/d\.withoutInsurance\*100:0/);
+  assert.match(app, /gaugeProposed:\{key:'financial',label:'ativos financeiros',optimalStart:3,optimalEnd:6\}/);
+  assert.match(app, /const gaugeScale=\[\[0,0\],\[3,80\],\[6,140\],\[10,180\]\]/);
+  assert.match(app, /return \{key:'high',label:'Alta exposição'\}/);
+  assert.match(app, /number>10\?benchmark\.label\+' · acima de 10%, fora da escala'/);
+  assert.match(legacy, /Faixa recomendada entre 3% e 6% dos ativos financeiros/);
+  assert.doesNotMatch(templateV28, /RESERVA LASTREADA|ATIVOS FINANCEIROS/);
+  assert.match(app, /proposedAllocation=d\.financial\?d\.annualPremium\/d\.financial\*100:0/);
   assert.match(appCss, /gauge-arc:after\{[^}]*width:6px;[^}]*background:#ff6b00;[^}]*box-shadow:/);
-  assert.match(appCss, /gauge-arc\{background:conic-gradient\(from 270deg at 50% 100%,#ff4848 0 2%,#70b544 2% 16%/);
+  assert.match(appCss, /gauge-arc\{background:conic-gradient\(from 270deg at 50% 100%,#70b544 0 15%,#c9e2ae 15% 30%/);
   assert.match(appCss, /gauge-arc>span\{color:#fff/);
   assert.match(template, /window\.buildTemplatePpt/);
-  assert.match(legacy, /src="assets\/template-ppt-v28\.js\?v=37"/);
-  assert.match(legacyHtml, /src="assets\/template-ppt-v28\.js\?v=37"/);
+  assert.match(legacy, /src="assets\/template-ppt-v28\.js\?v=\d+"/);
+  assert.match(legacyHtml, /src="assets\/template-ppt-v28\.js\?v=\d+"/);
   assert.match(template, /slide===5\?'assets\/template-slides\/slide5-only-top-v7\.jpg'/);
   assert.match(template, /\[5,\(\)=>staticSlide\(5\)\]/);
   assert.match(template, /fetch\('assets\/modelo-base\.pptx\?v=3'\)/);
@@ -142,7 +148,10 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /fitText\(ctx,brl\(d\.total\),455,794/);
   assert.match(template, /const label=pct\(actualShares\[i\]\*100\)/);
   assert.match(template, /donutPercentText\(ctx,label,lx-42,ly,84/);
-  assert.match(template, /d\.annualPremium\/d\.total\*100:0,proposedAllocation=d\.withoutInsurance\?d\.annualPremium\/d\.withoutInsurance\*100:0/);
+  assert.match(template, /d\.annualPremium\/d\.total\*100:0,proposedAllocation=d\.financial\?d\.annualPremium\/d\.financial\*100:0/);
+  assert.match(templateV28, /return proposed\?\{key:'financial',label:'Ativos financeiros',optimalStart:3,optimalEnd:6\}/);
+  assert.doesNotMatch(templateV28, /optimalStart:1,optimalEnd:6/);
+  assert.match(template, /zones=\[\[0,\.3,GREEN\],\[\.3,\.6,'#c9e2ae'\],\[\.6,1,'#f5df8d'\]\]/);
   assert.match(template, /ORANGE='#ff6b00'/);
   assert.match(template, /ctx\.lineWidth=6;ctx\.lineJoin='round'/);
   assert.match(template, /ctx\.shadowColor='rgba\(255,107,0,\.7\)'/);
@@ -156,11 +165,14 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /studyLabel:'Estudo familiar consolidado'/);
   assert.match(template, /async function cloneHiddenProjectionSlides\(zip\)/);
   assert.match(template, /const legalInfoSlides=\[/);
-  assert.match(template, /Lei 15\.040\/2024 · arts\. 113 a 116/);
-  assert.match(template, /Lei 15\.040\/2024 · arts\. 114 e 117/);
-  assert.match(template, /Lei 15\.040\/2024 · art\. 122  \|  CPC · art\. 833, VI/);
+  assert.match(template, /complement:'E complementado pelo Art\. 833, VI do CPC \(Código de Processo Civil\)\.'/);
+  for (const title of ['Inalienabilidade', 'Impenhorabilidade', 'Congelamento de Risco', 'Incomunicabilidade']) {
+    assert.match(template, new RegExp(`title:'${title}'`));
+    assert.match(templateV28, new RegExp(`title:'${title}'`));
+  }
+  assert.match(templateV28, /fontFace:name==='faixa ótima'\?'Arial Black':'Arial'/);
   assert.match(template, /async function legalInfoSlide\(\)/);
-  assert.match(template, /const rowTops=\[160,326,492\]/);
+  assert.match(template, /const rowTops=\[150,278,406,534\],rowHeight=116/);
   assert.match(template, /async function prepareLegalInfoSlides\(zip\)/);
   assert.match(template, /const slideNumber=17;if\(\[17,18,19\]/);
   assert.match(template, /const legalTarget=await prepareLegalInfoSlides\(zip\)/);
@@ -168,7 +180,18 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /benefitPanel\(ctx,1148,600,405,242,[\s\S]*?\{infoIcons:true\}\)/);
   assert.match(template, /addSlideJumpHotspot\(zip,16,legalTarget/);
   assert.match(template, /addSlideJumpHotspot\(zip,spouseFinal,legalTarget/);
-  assert.match(templateV28, /const rowTops=\[160,326,492\]/);
+  assert.match(templateV28, /complement:'E complementado pelo Art\. 833, VI do CPC \(Código de Processo Civil\)\.'/);
+  assert.match(templateV28, /lead:'O capital segurado devido por morte não integra a herança e, portanto, não compõe a partilha de bens nem o cálculo da legítima; é pago aos beneficiários indicados\.'/);
+  for (const law of [
+    'Lei 15.040/2024 · arts. 111, 114 e 117',
+    'Lei 15.040/2024 · art. 122; CPC · art. 833, VI',
+    'Lei 15.040/2024 · arts. 14 e 17',
+    'Lei 15.040/2024 · arts. 116 e 122; CPC · art. 833, VI'
+  ]) assert.ok(templateV28.includes(`law:'${law}'`));
+  assert.match(templateV28, /fitText\(ctx,info\.title,112,y\+31,270/);
+  assert.match(templateV28, /legalParagraph\(ctx,info\.law,112,y\+70,270/);
+  assert.doesNotMatch(templateV28, /Nota legal:|Leitura orientativa|As proteções têm limites/);
+  assert.match(templateV28, /const rowTops=\[150,278,406,534\],rowHeight=116/);
   assert.match(templateV28, /const slideNumber=17;if\(\[17,18,19\]/);
   assert.match(templateV28, /addSlideJumpHotspot\(zip,16,legalTarget/);
   assert.match(template, /async function addShowJumpHotspot\(zip,sourceSlide/);
@@ -187,7 +210,7 @@ test("keeps the form and export contract wired", async () => {
   assert.match(template, /\[16,\(\)=>slide11\(d,3\)\]/);
   assert.match(template, /if\(stage>=3\)\{rect\(ctx,48,footerY/);
   assert.match(template, /RENDIMENTOS PAGAM A ALOCAÇÃO ANUAL EM/);
-  assert.match(template, /ALOCAÇÃO PROPOSTA VS PATRIMÔNIO LÍQUIDO/);
+  assert.match(template, /Alocação proposta vs ativos financeiros/);
   assert.match(template, /const directionX=Math\.cos\(angle\),directionY=Math\.sin\(angle\),normalX=-directionY,normalY=directionX/);
   assert.match(template, /ctx\.moveTo\(tipX,tipY\).*ctx\.lineTo\(baseX\+normalX\*needleHalfWidth,baseY\+normalY\*needleHalfWidth\)/);
   assert.match(template, /ctx\.arc\(cx,cy,15,0,Math\.PI\*2\)/);
@@ -214,9 +237,9 @@ test("keeps the form and export contract wired", async () => {
   assert.match(templateV28, /function justifiedRowCenters\(top,bottom,count,rowHeight=32\)/);
   assert.match(template, /function downArrow\(ctx,cx,cy\)/);
   assert.match(template, /lineTo\(x\+6,y\+14\)/);
-  assert.match(template, /rect\(ctx,82,y,1436,152/);
-  assert.match(template, /rect\(ctx,82,666,1436,48/);
-  assert.match(template, /rect\(ctx,82,728,1436,80/);
+  assert.match(template, /rect\(ctx,82,y,1436,rowHeight/);
+  assert.doesNotMatch(template, /rect\(ctx,82,664,1436,50/);
+  assert.doesNotMatch(template, /rect\(ctx,82,728,1436,80/);
   assert.doesNotMatch(template, /ALCANCE E LIMITES|info\.limit/);
   assert.match(template, /for\(let i=10;i<Math\.min\(18,rows\.length\);i\+\+\)/);
   assert.match(template, /const cloneBase=\(await read\('ppt\/slides\/slide11\.xml'\)\).*?<p:timing/);

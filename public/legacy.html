@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <title>Gestão de Riscos — Gerador de apresentação</title>
-  <link rel="stylesheet" href="assets/app.css?v=20" />
+  <link rel="stylesheet" href="assets/app.css?v=21" />
+  <link rel="stylesheet" href="assets/gauge-benchmark.css?v=7" />
   <script src="assets/jszip.min.js"></script>
   <script src="assets/pptxgen.min.js"></script>
   <script src="assets/pdflib/pdf-lib.min.js"></script>
@@ -13,6 +14,7 @@
 </head>
 <body>
   <main class="shell">
+    <nav class="generator-tabs" aria-label="Tipos de apresentação"><a class="active" aria-current="page" href="/legacy-v7.html">Sucessão patrimonial</a><a href="/sucessao-empresarial.html">Sucessão empresarial</a></nav>
     <header class="page-header">
       <div class="brand"><span class="brand-symbol"><img src="assets/logo-alta-vista.png" alt="Alta Vista" /></span><span>GESTÃO DE RISCOS</span></div>
       <h1>Gerador de apresentação comercial</h1>
@@ -161,17 +163,17 @@
 
       <article class="preview-slide" id="previewWithout">
         <div class="slide-brand">GESTÃO DE RISCOS</div><span class="study-person-label" data-study-label>ESTUDO INDIVIDUAL</span><h3>PATRIMÔNIO ATUAL — SEM SEGURO</h3>
-        <div class="wealth-layout"><div><div class="slide-panel donut-panel"><h4>ATIVOS FINANCEIROS</h4><div class="donut-row"><div class="donut" id="donutWithout"><span class="donut-center" id="donutWithoutCenter">0%</span></div><div class="chart-legend" id="legendWithout"></div></div></div><div class="value-list"><div><span>Ativos financeiros</span><strong id="withoutFinancial">R$ 0,00</strong></div><div><span>Patrimônio imobilizado</span><strong id="withoutIlliquid">R$ 0,00</strong></div></div></div><div class="slide-panel wealth-panel"><h4>PATRIMÔNIO TOTAL</h4><div class="wealth-bar-wrap"><div class="wealth-bar"><div class="wealth-financial" id="withoutBarFinancial"></div><div class="wealth-illiquid" id="withoutBarIlliquid"></div><div class="wealth-cost" id="withoutBarCost"></div></div><div class="bar-labels"><span class="red">■ PASSIVO SUCESSÓRIO</span><span>■ PATRIMÔNIO IMOBILIZADO</span><span class="gold">■ ATIVOS FINANCEIROS</span></div></div></div></div>
+        <div class="wealth-layout"><div><div class="slide-panel donut-panel"><h4>Ativos financeiros</h4><div class="donut-row"><div class="donut" id="donutWithout"><span class="donut-center" id="donutWithoutCenter">0%</span></div><div class="chart-legend" id="legendWithout"></div></div></div><div class="value-list"><div><span>Ativos financeiros</span><strong id="withoutFinancial">R$ 0,00</strong></div><div><span>Patrimônio imobilizado</span><strong id="withoutIlliquid">R$ 0,00</strong></div></div></div><div class="slide-panel wealth-panel"><h4>PATRIMÔNIO TOTAL</h4><div class="wealth-bar-wrap"><div class="wealth-bar"><div class="wealth-financial" id="withoutBarFinancial"></div><div class="wealth-illiquid" id="withoutBarIlliquid"></div><div class="wealth-cost" id="withoutBarCost"></div></div><div class="bar-labels"><span class="red">■ Passivo sucessório</span><span>■ Patrimônio imobilizado</span><span class="gold">■ Ativos financeiros</span></div></div></div></div>
       </article>
 
       <article class="preview-slide" id="previewWith">
-        <div class="slide-brand">GESTÃO DE RISCOS</div><span class="study-person-label" data-study-label>ESTUDO INDIVIDUAL</span><h3>PATRIMÔNIO <em>COM SEGURO DE VIDA RESGATÁVEL</em></h3>
-        <div class="wealth-layout"><div><div class="slide-panel donut-panel"><h4>ATIVOS E PROTEÇÃO</h4><div class="donut-row"><div class="donut" id="donutWith"><span class="donut-center" id="donutWithCenter">0%</span></div><div class="chart-legend" id="legendWith"></div></div></div><div class="value-list green-list"><div><span>Seguro de vida</span><strong id="withInsurance">R$ 0,00</strong></div><div><span>Patrimônio transmitido</span><strong id="withTransmitted">R$ 0,00</strong></div></div></div><div class="slide-panel wealth-panel"><h4>PATRIMÔNIO PROTEGIDO</h4><div class="wealth-bar-wrap"><div class="wealth-bar protected"><div class="wealth-insurance" id="withBarInsurance"></div><div class="wealth-financial" id="withBarFinancial"></div><div class="wealth-illiquid" id="withBarIlliquid"></div><div class="wealth-cost covered" id="withBarCost"></div></div><div class="bar-labels"><span class="green">■ SEGURO DE VIDA</span><span>■ PATRIMÔNIO IMOBILIZADO</span><span class="gold">■ ATIVOS FINANCEIROS</span><span class="red">■ PASSIVO SUCESSÓRIO</span></div></div></div></div>
+        <div class="slide-brand">GESTÃO DE RISCOS</div><span class="study-person-label" data-study-label>ESTUDO INDIVIDUAL</span><h3>PATRIMÔNIO <em>COM Seguro de vida RESGATÁVEL</em></h3>
+        <div class="wealth-layout"><div><div class="slide-panel donut-panel"><h4>ATIVOS E PROTEÇÃO</h4><div class="donut-row"><div class="donut" id="donutWith"><span class="donut-center" id="donutWithCenter">0%</span></div><div class="chart-legend" id="legendWith"></div></div></div><div class="value-list green-list"><div><span>Seguro de vida</span><strong id="withInsurance">R$ 0,00</strong></div><div><span>Patrimônio transmitido</span><strong id="withTransmitted">R$ 0,00</strong></div></div></div><div class="slide-panel wealth-panel"><h4>PATRIMÔNIO PROTEGIDO</h4><div class="wealth-bar-wrap"><div class="wealth-bar protected"><div class="wealth-insurance" id="withBarInsurance"></div><div class="wealth-financial" id="withBarFinancial"></div><div class="wealth-illiquid" id="withBarIlliquid"></div><div class="wealth-cost covered" id="withBarCost"></div></div><div class="bar-labels"><span class="green">■ Seguro de vida</span><span>■ Patrimônio imobilizado</span><span class="gold">■ Ativos financeiros</span><span class="red">■ Passivo sucessório</span></div></div></div></div>
       </article>
 
       <article class="preview-slide wl-slide" id="previewWL10">
         <div class="wl-title"><h3>PROJEÇÃO <em>VITALÍCIA</em></h3><strong id="projectionIpca">IPCA 5% + 3% a.a.</strong><span id="projectionClientName">CLIENTE</span></div>
-        <div class="wl-layout"><div class="wl-table-shell"><table class="wl-table"><thead><tr><th>IDADE</th><th>CAPITAL SEGURADO</th><th>APORTE ANUAL</th><th>APORTE ACUMULADO</th><th>RESGATE CORRIGIDO</th></tr></thead><tbody id="wlTableBody"></tbody></table><div class="wl-lifetime">∞ Capital Segurado e Resgate seguem vitalícios ∞</div></div><div class="wl-benefits"><div><h4>BENEFÍCIOS SECURITÁRIOS</h4><p>CONGELAMENTO DE RISCO</p><p>CONGELAMENTO DE IDADE</p></div><div><h4>BENEFÍCIOS FINANCEIROS E TRIBUTÁRIOS</h4><p>ALAVANCAGEM <small>(Liquidez em D+0)</small></p><p>ISENÇÃO DE IMPOSTOS*</p><p>QUITAÇÃO NO 10º ANO <small>(sem novos aportes)</small></p></div><div><h4>BENEFÍCIOS LEGAIS</h4><p>INCOMUNICÁVEL</p><p>INALIENÁVEL</p><p>IMPENHORÁVEL</p></div></div></div>
+        <div class="wl-layout"><div class="wl-table-shell"><table class="wl-table"><thead><tr><th>IDADE</th><th>CAPITAL SEGURADO</th><th>APORTE ANUAL</th><th>APORTE ACUMULADO</th><th>RESGATE CORRIGIDO</th></tr></thead><tbody id="wlTableBody"></tbody></table><div class="wl-lifetime">∞ Capital segurado e resgate seguem vitalícios ∞</div></div><div class="wl-benefits"><div><h4>BENEFÍCIOS SECURITÁRIOS</h4><p>AGRAVAMENTO DO RISCO</p><p>CONGELAMENTO DE IDADE</p></div><div><h4>BENEFÍCIOS FINANCEIROS E TRIBUTÁRIOS</h4><p>ALAVANCAGEM <small>(LIQUIDEZ EM D+0)</small></p><p>ISENÇÃO DE IMPOSTOS*</p><p>QUITAÇÃO NO 10º ANO <small>(SEM NOVOS APORTES)</small></p></div><div><h4>BENEFÍCIOS LEGAIS</h4><p>PROTEÇÃO DO CRÉDITO</p><p>IMPENHORABILIDADE</p><p>AGRAVAMENTO DO RISCO</p><p>FORA DA HERANÇA</p></div></div></div>
         <div class="wl-footnotes"><span>Rentabilidade futura não é garantida. Material informativo.</span><span>*Tabela progressiva sobre o lucro em caso de resgate.</span></div>
       </article>
 
@@ -179,19 +181,29 @@
         <div class="slide-brand">GESTÃO DE RISCOS</div><span class="study-person-label" data-study-label>ESTUDO INDIVIDUAL</span><h3>COMO <em>DIVERSIFICAR COM SEUS RENDIMENTOS</em></h3>
         <div class="payback-layout">
           <div class="slide-panel payback-main">
-            <div class="payback-chart-column"><div class="chart-head"><span>CENÁRIO DE PAYBACK</span><strong><small>ATIVOS FINANCEIROS</small><b id="paybackAssets">R$ 0,00</b></strong></div><canvas id="paybackChart" aria-label="Evolução dos rendimentos mensais comparada à alocação anual"></canvas></div>
+            <div class="payback-chart-column"><div class="chart-head"><span>CENÁRIO DE PAYBACK</span><strong><small>Ativos financeiros</small><b id="paybackAssets">R$ 0,00</b></strong></div><canvas id="paybackChart" aria-label="Evolução dos rendimentos mensais comparada à alocação anual"></canvas></div>
             <div class="payback-scenarios"><div class="annual-allocation"><span>ALOCAÇÃO ANUAL</span><strong id="paybackPremium">R$ 0,00</strong></div><div class="scenario-title">RENDIMENTOS PAGAM A ALOCAÇÃO ANUAL EM</div><div class="scenario-grid"><div><span>★ 0,6% a.m.</span><strong id="paybackMonths06">—</strong></div><div class="highlight"><span>★ 0,8% a.m.</span><strong id="paybackMonths08">—</strong></div><div><span>★ 1,0% a.m.</span><strong id="paybackMonths10">—</strong></div></div></div>
           </div>
-          <div class="payback-gauges"><div class="web-gauge" id="gaugeCurrent"><h4>ALOCAÇÃO ATUAL VS<br>PATRIMÔNIO TOTAL</h4><div class="gauge-arc"><span class="gauge-optimal">Ótimo</span><span class="gauge-recommended">Recomendado</span><span class="gauge-high">Alta<br>exposição</span><strong id="gaugeCurrentValue">0%</strong></div><div class="gauge-scale"><span>Não se aplica</span><span>Acima de 10%</span></div></div><div class="web-gauge" id="gaugeProposed"><h4>ALOCAÇÃO PROPOSTA VS<br>PATRIMÔNIO LÍQUIDO</h4><div class="gauge-arc"><span class="gauge-optimal">Ótimo</span><span class="gauge-recommended">Recomendado</span><span class="gauge-high">Alta<br>exposição</span><strong id="gaugeProposedValue">0%</strong></div><div class="gauge-scale"><span>Não se aplica</span><span>Acima de 10%</span></div></div><div class="health-profile-card" id="healthProfileCard"><h4>PERFIL DE SAÚDE</h4><strong id="previewHealthProfile">?</strong><small id="previewHealthStatus">A PREENCHER</small></div></div>
+          <div class="payback-gauges">
+  <div class="web-gauge" id="gaugeCurrent">
+    <h4>Alocação atual vs<br>patrimônio total</h4>
+    <div class="gauge-visual"><svg class="gauge-svg" viewBox="40 120 520 265" role="img" aria-label="Ótimo entre 1% e 3%; recomendado acima de 3% e abaixo de 6%; alta exposição a partir de 6% do patrimônio total"></svg><div class="gauge-value-pill"><strong id="gaugeCurrentValue">0%</strong></div></div>
+    <span class="gauge-benchmark visually-hidden" id="gaugeCurrentBenchmark" aria-live="polite"></span>
+  </div>
+  <div class="web-gauge" id="gaugeProposed">
+    <h4>Alocação proposta vs<br>ativos financeiros</h4>
+    <div class="gauge-visual"><svg class="gauge-svg" viewBox="40 120 520 265" role="img" aria-label="Faixa recomendada entre 3% e 6% dos ativos financeiros"></svg><div class="gauge-value-pill"><strong id="gaugeProposedValue">0%</strong></div></div>
+    <span class="gauge-benchmark visually-hidden" id="gaugeProposedBenchmark" aria-live="polite"></span>
+  </div><div class="health-profile-card" id="healthProfileCard"><h4>PERFIL DE SAÚDE</h4><strong id="previewHealthProfile">?</strong><small id="previewHealthStatus">A PREENCHER</small></div></div>
         </div>
       </article>
     </section>
 
     <footer>Material informativo — os valores projetados dependem das premissas preenchidas e da cotação da seguradora.</footer>
   </main>
-  <script src="assets/template-ppt-v28.js?v=38"></script>
+  <script src="assets/template-ppt-v28.js?v=59"></script>
   <script src="assets/surrender-pdf.js?v=15"></script>
   <script src="assets/study-model.js?v=1"></script>
-  <script src="assets/app.js?v=21"></script>
+  <script src="assets/app.js?v=30"></script>
 </body>
 </html>
