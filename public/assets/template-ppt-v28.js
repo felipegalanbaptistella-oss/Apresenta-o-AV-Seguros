@@ -147,9 +147,8 @@
       ctx.fillStyle=backdrop;ctx.fillRect(0,181,W,645);
       ctx.save();ctx.strokeStyle='rgba(41,72,120,.16)';ctx.lineWidth=1;
       for(let x=-900;x<2400;x+=172){ctx.beginPath();ctx.moveTo(x,181);ctx.lineTo(x+645,826);ctx.stroke();ctx.beginPath();ctx.moveTo(x+645,181);ctx.lineTo(x,826);ctx.stroke();}ctx.restore();
-      const reveal=(x,y,w,h)=>ctx.drawImage(complete,x,y,w,h,x,y,w,h);
-      if(stage>=1)reveal(30,197,837,628);
-      if(stage>=2)reveal(881,197,688,392);
+      const panels=[[881,197,688,392],[881,609,688,216],[30,197,837,628]];
+      panels.slice(0,stage).forEach(([x,y,w,h])=>ctx.drawImage(complete,x,y,w,h,x,y,w,h));
     }
     return pngBytes(canvas);
   }
@@ -217,8 +216,8 @@
     const barLegend=withInsurance?[{label:'Passivo sucessório',color:'#bfc2c8',textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos financeiros',color:GOLD},{label:'Seguro de vida',color:GREEN,bold:true}]:reallocation?[{label:'Passivo sucessório',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos financeiros',color:GOLD},{label:'Reserva lastreada',color:GREEN,bold:true}]:[{label:'PASSIVO SUCESSÓRIO',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos financeiros',color:GOLD}];
     legend(ctx,barLegend,1250,480,38);
     const panels=slide===8
-      ?[[50,180,740,429],[50,628,740,148],[808,180,760,647]]
-      :[[50,180,740,428],[50,618,740,74],[50,698,740,129],[808,180,760,647]];
+      ?[[808,180,760,647],[50,180,740,429],[50,628,740,148]]
+      :[[808,180,760,647],[50,180,740,428],[50,618,740,74],[50,698,740,129]];
     if(stage<panels.length){
       const complete=document.createElement('canvas');complete.width=W;complete.height=H;complete.getContext('2d').drawImage(canvas,0,0);
       const backdrop=ctx.createLinearGradient(0,180,0,827);backdrop.addColorStop(0,'#03103a');backdrop.addColorStop(1,'#010a2d');
