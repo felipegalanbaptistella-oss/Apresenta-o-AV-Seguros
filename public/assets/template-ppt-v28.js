@@ -185,7 +185,7 @@
     rect(ctx,x,costY,w,costH,withInsurance?'#bfc2c8':RED,[0,0,12,12]);
     fitText(ctx,`-${brl(d.liability)}`,x+6,costY+costH/2,w-12,{size:16,min:11,color:WHITE,bold:true,align:'center'});
   }
-  async function assetSlide(slide,d,type){
+  async function assetSlide(slide,d,type,stage=4){
     const {canvas,ctx}=await canvasFor(slide);const withInsurance=type==='with';const reallocation=type==='reallocation';studyTag(ctx,d);
     rect(ctx,70,230,700,374,'#03143d');rect(ctx,825,230,720,570,'#03143d');
     if(withInsurance){rect(ctx,56,620,732,70,'#173c32',14,'#d6dfeb',2);rect(ctx,56,700,732,124,'#03143d',14,'#9d7624',2);}
@@ -215,7 +215,17 @@
     breakdownRows.forEach(([label,value,options],index)=>assetBreakdownRow(ctx,label,value,breakdownY[index],options));
     stackedBar(ctx,d,980,285,195,415,withInsurance,reallocation);
     const barLegend=withInsurance?[{label:'Passivo sucessório',color:'#bfc2c8',textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos financeiros',color:GOLD},{label:'Seguro de vida',color:GREEN,bold:true}]:reallocation?[{label:'Passivo sucessório',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos financeiros',color:GOLD},{label:'Reserva lastreada',color:GREEN,bold:true}]:[{label:'PASSIVO SUCESSÓRIO',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos financeiros',color:GOLD}];
-    legend(ctx,barLegend,1250,480,38);return pngBytes(canvas);
+    legend(ctx,barLegend,1250,480,38);
+    if(stage<4){
+      const complete=document.createElement('canvas');complete.width=W;complete.height=H;complete.getContext('2d').drawImage(canvas,0,0);
+      const backdrop=ctx.createLinearGradient(0,180,0,827);backdrop.addColorStop(0,'#03103a');backdrop.addColorStop(1,'#010a2d');
+      ctx.fillStyle=backdrop;ctx.fillRect(0,180,W,647);
+      ctx.save();ctx.strokeStyle='rgba(41,72,120,.16)';ctx.lineWidth=1;
+      for(let x=-900;x<2400;x+=172){ctx.beginPath();ctx.moveTo(x,180);ctx.lineTo(x+647,827);ctx.stroke();ctx.beginPath();ctx.moveTo(x+647,180);ctx.lineTo(x,827);ctx.stroke();}ctx.restore();
+      const panels=[[50,180,740,428],[50,618,740,74],[50,698,740,129],[808,180,760,647]];
+      panels.slice(0,stage).forEach(([x,y,w,h])=>ctx.drawImage(complete,x,y,w,h,x,y,w,h));
+    }
+    return pngBytes(canvas);
   }
 
   function assetBreakdownRow(ctx,label,value,y,{color='#e3eaf5',labelSize=27,valueSize=27,labelBold=false}={}){
@@ -527,29 +537,29 @@
     const appFile=zip.file('docProps/app.xml');if(appFile){let app=await appFile.async('string');app=app.replace(/<Slides>(\d+)<\/Slides>/,(_,n)=>`<Slides>${Number(n)+1}</Slides>`);if(/<HiddenSlides>\d+<\/HiddenSlides>/.test(app))app=app.replace(/<HiddenSlides>(\d+)<\/HiddenSlides>/,(_,n)=>`<HiddenSlides>${Number(n)+1}</HiddenSlides>`);else app=app.replace(/(<Slides>\d+<\/Slides>)/,`$1<HiddenSlides>1</HiddenSlides>`);app=app.replace(/(<TitlesOfParts><vt:vector\b[^>]*\bsize=")(\d+)("[^>]*>)([\s\S]*?)(<\/vt:vector><\/TitlesOfParts>)/,(_,before,size,middle,body,after)=>`${before}${Number(size)+1}${middle}${body}<vt:lpstr>Benefícios legais do seguro de vida</vt:lpstr>${after}`);zip.file('docProps/app.xml',app);}
     return slideNumber;
   }
-  async function prepareCostStages(zip){
+  async function prepareClickRevealStages(zip,sourceSlide,count,label){
     const read=async path=>{const file=zip.file(path);if(!file)throw new Error(`Parte OOXML ausente: ${path}`);return file.async('string');};
     const existing=Object.keys(zip.files).map(path=>path.match(/^ppt\/slides\/slide(\d+)\.xml$/)?.[1]).filter(Boolean).map(Number);
-    const targets=[1,2,3].map(index=>Math.max(...existing)+index);
-    const source=(await read('ppt/slides/slide6.xml')).replace(/\s+show="0"(?=[\s>])/g,'').replace(/<p:timing\b[^>]*>[\s\S]*?<\/p:timing>/g,'').replace(/<p:transition\b[^>]*>[\s\S]*?<\/p:transition>/g,'').replace(/<p:transition\b[^>]*\/>/g,'');
-    const sourceRels=(await read('ppt/slides/_rels/slide6.xml.rels')).replace(/<Relationship\b(?=[^>]*\bType="[^"]*\/notesSlide")[^>]*\/>/g,'');
+    const targets=Array.from({length:count},(_,index)=>Math.max(...existing)+index+1);
+    const source=(await read(`ppt/slides/slide${sourceSlide}.xml`)).replace(/\s+show="0"(?=[\s>])/g,'').replace(/<p:timing\b[^>]*>[\s\S]*?<\/p:timing>/g,'').replace(/<p:transition\b[^>]*>[\s\S]*?<\/p:transition>/g,'').replace(/<p:transition\b[^>]*\/>/g,'');
+    const sourceRels=(await read(`ppt/slides/_rels/slide${sourceSlide}.xml.rels`)).replace(/<Relationship\b(?=[^>]*\bType="[^"]*\/notesSlide")[^>]*\/>/g,'');
     const relPath='ppt/_rels/presentation.xml.rels';let rels=await read(relPath),presentation=await read('ppt/presentation.xml'),types=await read('[Content_Types].xml');
-    const slide6Relation=[...rels.matchAll(/<Relationship\b[^>]*\/>/g)].map(match=>match[0]).find(tag=>/Target="slides\/slide6\.xml"/.test(tag));
-    const slide6Rid=slide6Relation?.match(/\bId="([^"]+)"/)?.[1];if(!slide6Rid)throw new Error('Relacionamento do slide de custos não encontrado.');
-    const slide6Pattern=new RegExp(`<p:sldId\\b(?=[^>]*\\br:id="${slide6Rid}")[^>]*/>`),slide6Tag=presentation.match(slide6Pattern)?.[0];if(!slide6Tag)throw new Error('Posição do slide de custos não encontrada.');
+    const sourceRelation=[...rels.matchAll(/<Relationship\b[^>]*\/>/g)].map(match=>match[0]).find(tag=>tag.includes(`Target="slides/slide${sourceSlide}.xml"`));
+    const sourceRid=sourceRelation?.match(/\bId="([^"]+)"/)?.[1];if(!sourceRid)throw new Error(`Relacionamento do slide ${sourceSlide} não encontrado.`);
+    const sourcePattern=new RegExp(`<p:sldId\\b(?=[^>]*\\br:id="${sourceRid}")[^>]*/>`),sourceTag=presentation.match(sourcePattern)?.[0];if(!sourceTag)throw new Error(`Posição do slide ${sourceSlide} não encontrada.`);
     const firstRid=Math.max(0,...[...rels.matchAll(/\bId="rId(\d+)"/g)].map(match=>Number(match[1])))+1;
     let nextId=Math.max(255,...[...presentation.matchAll(/<p:sldId\b[^>]*\bid="(\d+)"/g)].map(match=>Number(match[1])))+1,inserted='';
     for(let index=0;index<targets.length;index++){
       const target=targets[index],rid=`rId${firstRid+index}`;
-      const xml=source.replace(/(<p14:creationId\b[^>]*\bval=")\d+("[^>]*\/>)/,(_,before,after)=>`${before}${3720000200+index}${after}`);
+      const xml=source.replace(/(<p14:creationId\b[^>]*\bval=")\d+("[^>]*\/>)/,(_,before,after)=>`${before}${3720000200+target}${after}`);
       zip.file(`ppt/slides/slide${target}.xml`,xml);zip.file(`ppt/slides/_rels/slide${target}.xml.rels`,sourceRels);
       rels=rels.replace('</Relationships>',`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${target}.xml"/></Relationships>`);
       types=types.replace('</Types>',`<Override PartName="/ppt/slides/slide${target}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>`);
       inserted+=`<p:sldId id="${nextId++}" r:id="${rid}"/>`;
     }
-    presentation=presentation.replace(slide6Pattern,`${slide6Tag}${inserted}`);
+    presentation=presentation.replace(sourcePattern,`${sourceTag}${inserted}`);
     zip.file(relPath,rels);zip.file('ppt/presentation.xml',presentation);zip.file('[Content_Types].xml',types);
-    const appFile=zip.file('docProps/app.xml');if(appFile){let app=await appFile.async('string');app=app.replace(/<Slides>(\d+)<\/Slides>/,(_,n)=>`<Slides>${Number(n)+targets.length}</Slides>`);app=app.replace(/(<TitlesOfParts><vt:vector\b[^>]*\bsize=")(\d+)("[^>]*>)([\s\S]*?)(<\/vt:vector><\/TitlesOfParts>)/,(_,before,size,middle,body,after)=>`${before}${Number(size)+targets.length}${middle}${body}${'<vt:lpstr>Custos da sucessão</vt:lpstr>'.repeat(targets.length)}${after}`);zip.file('docProps/app.xml',app);}
+    const appFile=zip.file('docProps/app.xml');if(appFile){let app=await appFile.async('string');app=app.replace(/<Slides>(\d+)<\/Slides>/,(_,n)=>`<Slides>${Number(n)+targets.length}</Slides>`);app=app.replace(/(<TitlesOfParts><vt:vector\b[^>]*\bsize=")(\d+)("[^>]*>)([\s\S]*?)(<\/vt:vector><\/TitlesOfParts>)/,(_,before,size,middle,body,after)=>`${before}${Number(size)+targets.length}${middle}${body}${`<vt:lpstr>${esc(label)}</vt:lpstr>`.repeat(targets.length)}${after}`);zip.file('docProps/app.xml',app);}
     return targets;
   }
   async function preparePlanningStages(zip){
@@ -597,7 +607,9 @@
     const zip=await JSZip.loadAsync(await response.arrayBuffer());
     await prepareProjectionStages(zip);
     const legalTarget=await prepareLegalInfoSlides(zip);
-    const costStageTargets=await prepareCostStages(zip);
+    const costStageTargets=await prepareClickRevealStages(zip,6,3,'Custos da sucessão');
+    const reallocationStageTargets=await prepareClickRevealStages(zip,9,4,'Patrimônio em realocação');
+    const insuranceStageTargets=await prepareClickRevealStages(zip,10,4,'Patrimônio com seguro de vida');
     const studies=Array.isArray(d.studies)&&d.studies.length?d.studies:[d];
     for(const [no,bytes] of await renderCommonSlides(d))await replaceSlide(zip,no,bytes,{hidden:no===3});
     await ensureRiskNavigation(zip);
@@ -605,6 +617,10 @@
     for(const [no,bytes] of await renderOverviewSlides(combined,{includeGauge:false}))await replaceSlide(zip,no,bytes);
     await replaceSlide(zip,6,await slide6(combined,0));
     for(let index=0;index<costStageTargets.length;index++)await replaceSlide(zip,costStageTargets[index],await slide6(combined,index+1));
+    await replaceSlide(zip,9,await assetSlide(9,combined,'reallocation',0));
+    for(let index=0;index<reallocationStageTargets.length;index++)await replaceSlide(zip,reallocationStageTargets[index],await assetSlide(9,combined,'reallocation',index+1));
+    await replaceSlide(zip,10,await assetSlide(10,combined,'with',0));
+    for(let index=0;index<insuranceStageTargets.length;index++)await replaceSlide(zip,insuranceStageTargets[index],await assetSlide(10,combined,'with',index+1));
     const currentAllocation=combined.total?combined.annualPremium/combined.total*100:0,proposedAllocation=combined.financial?combined.annualPremium/combined.financial*100:0;
     await addEditableGauge(zip,13,{x:40,y:600,w:490,h:275,title:'Alocação atual vs patrimônio total',value:currentAllocation});
     await addEditableGauge(zip,13,{x:555,y:600,w:490,h:275,title:'Alocação proposta vs ativos financeiros',value:proposedAllocation});
