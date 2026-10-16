@@ -231,6 +231,15 @@
     const start=y+74,gap=(h-86)/Math.max(lines.length,1);
     lines.forEach((label,index)=>{const cy=start+index*gap;fitText(ctx,label,x+24,cy,w-(infoIcons?92:48),{size:20,min:14,color:GREEN,bold:true,align:'center'});if(infoIcons)infoIcon(ctx,x+w-38,cy);});
   }
+  function projectionFirstRowZoom(ctx,canvas,rowH){
+    const cropX=47,cropY=94,cropW=1060,cropH=Math.ceil(48+rowH);
+    const crop=document.createElement('canvas');crop.width=cropW;crop.height=cropH;
+    crop.getContext('2d').drawImage(canvas,cropX,cropY,cropW,cropH,0,0,cropW,cropH);
+    const zoomW=1440,zoomH=cropH*zoomW/cropW,zoomX=(W-zoomW)/2,zoomY=380;
+    ctx.save();ctx.shadowColor='rgba(0,0,0,.65)';ctx.shadowBlur=24;
+    rect(ctx,zoomX-12,zoomY-12,zoomW+24,zoomH+24,'#03143d',14,'#ad8a3c',3);
+    ctx.restore();ctx.drawImage(crop,zoomX,zoomY,zoomW,zoomH);
+  }
   async function slide11(d,stage=3){
     const {canvas,ctx}=await canvasFor(11),rows=projection(d);
     rect(ctx,30,70,1090,770,NAVY);rect(ctx,47,95,1060,46,'#ad8a3c',18);
@@ -262,6 +271,7 @@
     benefitPanel(ctx,1148,94,405,204,'BENEFÍCIOS SECURITÁRIOS',['AGRAVAMENTO DO RISCO','CONGELAMENTO DE IDADE'],stage>=1);
     benefitPanel(ctx,1148,310,405,278,'BENEFÍCIOS FINANCEIROS E TRIBUTÁRIOS',['ALAVANCAGEM','ISENÇÃO DE IMPOSTOS*','QUITAÇÃO NO 10º ANO','SEM NECESSIDADE DE NOVOS APORTES'],stage>=2);
     benefitPanel(ctx,1148,600,405,242,'BENEFÍCIOS LEGAIS',['Proteção do crédito','Impenhorabilidade','Congelamento de Risco','Incomunicabilidade'],stage>=3,{infoIcons:true});
+    if(stage===1)projectionFirstRowZoom(ctx,canvas,rowH);
     return pngBytes(canvas);
   }
 
@@ -468,6 +478,10 @@
     let slide12=await read('ppt/slides/slide12.xml');
     const slide12WasHidden=/<p:sld\b[^>]*\bshow="0"/.test(slide12);
     slide12=slide12.replace(/\s+show="0"(?=[\s>])/,'');
+    const firstRowZoomTransition='<p:transition spd="slow" p14:dur="800" advClick="1"><p:zoom dir="in"/></p:transition>';
+    const priorSlide12=slide12;
+    slide12=slide12.replace(/<p:transition\b[^>]*>[\s\S]*?<\/p:transition>/,firstRowZoomTransition);
+    if(slide12===priorSlide12)throw new Error('Transição do primeiro destaque não encontrada no modelo.');
     zip.file('ppt/slides/slide12.xml',slide12);
 
     const cloneBase=(await read('ppt/slides/slide11.xml')).replace(/\s+show="0"(?=[\s>])/g,'').replace(/<p:timing\b[^>]*>[\s\S]*?<\/p:timing>/g,'');
