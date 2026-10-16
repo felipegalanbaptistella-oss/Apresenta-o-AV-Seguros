@@ -440,52 +440,47 @@
   const paybackAtRate=(d,rate)=>d.financial>0&&d.annualPremium>0?Math.ceil(d.annualPremium/(d.financial*rate)):0;
   const monthLabel=months=>months?`${months} ${months===1?'MÊS':'MESES'}`:'—';
   const webGaugeProfiles={
-    gaugeCurrent:{key:'total',label:'patrimônio total',optimalStart:1,optimalEnd:3,highExposureStart:6,markers:[1,3,6]},
+    gaugeCurrent:{key:'total',label:'patrimônio total',optimalStart:1,optimalEnd:3,markers:[1,3]},
     gaugeProposed:{key:'financial',label:'ativos financeiros',optimalStart:3,optimalEnd:6}
   };
   function webGaugeBenchmark(value,profile){
     const number=Math.max(0,Number(value)||0);
-    if(profile.highExposureStart){
-      if(number<profile.optimalStart)return {key:'below-optimal',label:'Abaixo da faixa ótima'};
-      if(number<=profile.optimalEnd)return {key:'optimal',label:'Ótimo'};
-      if(number<profile.highExposureStart)return {key:'recommended',label:'Recomendado'};
-      return {key:'high',label:'Alta exposição'};
-    }
     if(number<profile.optimalStart)return {key:'below-optimal',label:'Ótimo'};
     if(number<=profile.optimalEnd)return {key:'optimal',label:'Recomendado'};
     return {key:'high',label:'Alta exposição'};
   }
   // The marked values spread the benchmark band to match the supplied dial; the reading remains exact.
-  const gaugeScale=[[0,0],[3,80],[6,140],[10,180]];
-  function gaugeAngle(value){const number=clamp(Number(value)||0,0,10);for(let i=1;i<gaugeScale.length;i++){const [to,toAngle]=gaugeScale[i],[from,fromAngle]=gaugeScale[i-1];if(number<=to)return fromAngle+(number-from)*(toAngle-fromAngle)/(to-from);}return 180;}
-  function gaugePoint(value,rx=215,ry=190){const angle=Math.PI+gaugeAngle(value)*Math.PI/180;return {x:296+Math.cos(angle)*rx,y:370+Math.sin(angle)*ry};}
-  function gaugeNeedlePath(value){
-    const pivot={x:246,y:349},tip=gaugePoint(value,200,170),dx=tip.x-pivot.x,dy=tip.y-pivot.y,length=Math.hypot(dx,dy)||1;
+  const gaugeScales={total:[[0,0],[1,40],[3,140],[10,180]],financial:[[0,0],[3,80],[6,140],[10,180]]};
+  function gaugeAngle(value,profile){const scale=gaugeScales[profile.key],number=clamp(Number(value)||0,0,10);for(let i=1;i<scale.length;i++){const [to,toAngle]=scale[i],[from,fromAngle]=scale[i-1];if(number<=to)return fromAngle+(number-from)*(toAngle-fromAngle)/(to-from);}return 180;}
+  function gaugePoint(value,profile,rx=215,ry=190){const angle=Math.PI+gaugeAngle(value,profile)*Math.PI/180;return {x:296+Math.cos(angle)*rx,y:370+Math.sin(angle)*ry};}
+  function gaugeNeedlePath(value,profile){
+    const pivot={x:246,y:349},tip=gaugePoint(value,profile,200,170),dx=tip.x-pivot.x,dy=tip.y-pivot.y,length=Math.hypot(dx,dy)||1;
     const ux=dx/length,uy=dy/length,nx=-uy,ny=ux,bx=pivot.x-ux*12,by=pivot.y-uy*12;
     return `M ${tip.x.toFixed(1)} ${tip.y.toFixed(1)} L ${(bx+nx*16).toFixed(1)} ${(by+ny*16).toFixed(1)} L ${(bx-nx*16).toFixed(1)} ${(by-ny*16).toFixed(1)} Z`;
   }
   function gaugeSvgMarkup(profile,value){
-    const innerPoint=mark=>mark===3?{x:260,y:272}:{x:381,y:328};
-    const markers=(profile.markers||[profile.optimalStart,profile.optimalEnd]).map(mark=>{const outside=gaugePoint(mark),label={x:outside.x,y:outside.y-25};let divider='';if(!(profile.key==='total'&&mark===profile.optimalStart)){const inside=innerPoint(mark);divider=`<line x1="${inside.x}" y1="${inside.y}" x2="${outside.x.toFixed(1)}" y2="${outside.y.toFixed(1)}" stroke="#001233" stroke-width="7"/>`;}return `${divider}<text x="${label.x.toFixed(1)}" y="${label.y.toFixed(1)}" text-anchor="middle" class="gauge-svg-scale">${mark}%</text>`;}).join('');
+    const innerPoint=mark=>mark===profile.optimalEnd?{x:381,y:328}:{x:260,y:272};
+    const markers=(profile.markers||[profile.optimalStart,profile.optimalEnd]).map(mark=>{const outside=gaugePoint(mark,profile),label={x:outside.x,y:outside.y-25};let divider='';if(!(profile.key==='total'&&mark===profile.optimalStart)){const inside=innerPoint(mark);divider=`<line x1="${inside.x}" y1="${inside.y}" x2="${outside.x.toFixed(1)}" y2="${outside.y.toFixed(1)}" stroke="#001233" stroke-width="7"/>`;}return `${divider}<text x="${label.x.toFixed(1)}" y="${label.y.toFixed(1)}" text-anchor="middle" class="gauge-svg-scale">${mark}%</text>`;}).join('');
     const recommended={x:profile.key==='total'?350:308,y:239};
     const high='<text x="448" y="296" text-anchor="middle" class="gauge-svg-label-compact"><tspan x="448">Alta</tspan><tspan x="448" dy="18">Exposição</tspan></text>';
     const optimalLabelX=profile.key==='total'?180:165;
-    return `<path d="M 81 370 A 215 190 0 0 1 511 370 L 402 370 C 370 305 318 272 260 272 C 180 272 108 317 81 370 Z" fill="#d0ad75"/>${markers}<path class="gauge-needle" d="${gaugeNeedlePath(value)}" fill="#fff"/><circle cx="246" cy="349" r="22" fill="#fff"/><circle cx="246" cy="349" r="9" fill="#001233"/><text x="${optimalLabelX}" y="258" text-anchor="middle" class="gauge-svg-label-compact">Ótimo</text><text x="${recommended.x}" y="${recommended.y}" text-anchor="middle" class="gauge-svg-label-compact">Recomendado</text>${high}<text x="526" y="377" text-anchor="start" class="gauge-svg-scale">10%</text>`;
+    const scaleEnd=profile.key==='financial'?'<text x="526" y="377" text-anchor="start" class="gauge-svg-scale">10%</text>':'';
+    return `<path d="M 81 370 A 215 190 0 0 1 511 370 L 402 370 C 370 305 318 272 260 272 C 180 272 108 317 81 370 Z" fill="#d0ad75"/>${markers}<path class="gauge-needle" d="${gaugeNeedlePath(value,profile)}" fill="#fff"/><circle cx="246" cy="349" r="22" fill="#fff"/><circle cx="246" cy="349" r="9" fill="#001233"/><text x="${optimalLabelX}" y="258" text-anchor="middle" class="gauge-svg-label-compact">Ótimo</text><text x="${recommended.x}" y="${recommended.y}" text-anchor="middle" class="gauge-svg-label-compact">Recomendado</text>${high}${scaleEnd}`;
   }
   function setWebGauge(id,value){
     const gauge=$(id),number=Math.max(0,Number(value)||0),safe=clamp(number,0,10),profile=webGaugeProfiles[id];
     if(!gauge||!profile)return;
     const benchmark=webGaugeBenchmark(number,profile),formatted=`${number.toLocaleString('pt-BR',{maximumFractionDigits:2})}%`;
-    const rangeSummary=profile.highExposureStart?`ótimo ${profile.optimalStart}%–${profile.optimalEnd}%; recomendado acima de ${profile.optimalEnd}% e abaixo de ${profile.highExposureStart}%; alta exposição a partir de ${profile.highExposureStart}%`:`faixa recomendada ${profile.optimalStart}%–${profile.optimalEnd}%`;
-    const reading=number>10?benchmark.label+' · acima de 10%, fora da escala':`${benchmark.label} · ${rangeSummary}`;
+    const rangeSummary=profile.key==='total'?`ótimo abaixo de 1%; recomendado de 1% a 3%; alta exposição acima de 3%`:`faixa recomendada ${profile.optimalStart}%–${profile.optimalEnd}%`;
+    const reading=number>10&&profile.key==='financial'?benchmark.label+' · acima de 10%, fora da escala':`${benchmark.label} · ${rangeSummary}`;
     gauge.dataset.benchmark=benchmark.key;gauge.dataset.optimalStart=String(profile.optimalStart);gauge.dataset.optimalEnd=String(profile.optimalEnd);
-    if(profile.highExposureStart)gauge.dataset.highExposureStart=String(profile.highExposureStart);
+    delete gauge.dataset.highExposureStart;
     const svg=gauge.querySelector('.gauge-svg');
     if(svg){
       if(svg.dataset.initialized!=='true'){svg.innerHTML=gaugeSvgMarkup(profile,safe);svg.dataset.initialized='true';}
-      else svg.querySelector('.gauge-needle')?.setAttribute('d',gaugeNeedlePath(safe));
-      const ariaRange=profile.highExposureStart?`Ótimo entre ${profile.optimalStart}% e ${profile.optimalEnd}%; recomendado acima de ${profile.optimalEnd}% e abaixo de ${profile.highExposureStart}%; alta exposição a partir de ${profile.highExposureStart}%.`:`Recomendado entre ${profile.optimalStart}% e ${profile.optimalEnd}% do ${profile.label}.`;
-      svg.setAttribute('aria-label',`${formatted}; ${benchmark.label}. ${ariaRange} Escala até 10%.`);
+      else svg.querySelector('.gauge-needle')?.setAttribute('d',gaugeNeedlePath(safe,profile));
+      const ariaRange=profile.key==='total'?'Ótimo abaixo de 1%; recomendado de 1% a 3%; alta exposição acima de 3%.':`Recomendado entre ${profile.optimalStart}% e ${profile.optimalEnd}% do ${profile.label}. Escala até 10%.`;
+      svg.setAttribute('aria-label',`${formatted}; ${benchmark.label}. ${ariaRange}`);
     }
     setText(`${id}Value`,formatted);setText(`${id}Benchmark`,reading);
   }

@@ -5,13 +5,13 @@
   const pct=value=>`${(Number(value)||0).toLocaleString('pt-BR',{maximumFractionDigits:2})}%`;
   function gaugeProfile(title=''){
     const proposed=String(title).toLocaleLowerCase('pt-BR').includes('proposta');
-    return proposed?{key:'financial',label:'Ativos financeiros',optimalStart:3,optimalEnd:6}:{key:'total',label:'Patrimônio total',optimalStart:1,optimalEnd:3,highExposureStart:6};
+    return proposed?{key:'financial',label:'Ativos financeiros',optimalStart:3,optimalEnd:6}:{key:'total',label:'Patrimônio total',optimalStart:1,optimalEnd:3};
   }
   // Keep the benchmark markers legible while mapping each percentage to a stable dial angle.
-  const gaugeScale=[[0,0],[3,80],[6,140],[10,180]];
-  function gaugeAngle(value){const number=Math.max(0,Math.min(10,Number(value)||0));for(let i=1;i<gaugeScale.length;i++){const [to,toAngle]=gaugeScale[i],[from,fromAngle]=gaugeScale[i-1];if(number<=to)return fromAngle+(number-from)*(toAngle-fromAngle)/(to-from);}return 180;}
-  function gaugePoint(value,rx=215,ry=190){const angle=Math.PI+gaugeAngle(value)*Math.PI/180;return {x:296+Math.cos(angle)*rx,y:370+Math.sin(angle)*ry};}
-  function gaugeNeedlePoints(value){const pivot={x:246,y:349},tip=gaugePoint(value,200,170),dx=tip.x-pivot.x,dy=tip.y-pivot.y,length=Math.hypot(dx,dy)||1,ux=dx/length,uy=dy/length,nx=-uy,ny=ux,bx=pivot.x-ux*12,by=pivot.y-uy*12;return [tip,{x:bx+nx*16,y:by+ny*16},{x:bx-nx*16,y:by-ny*16}];}
+  const gaugeScales={total:[[0,0],[1,40],[3,140],[10,180]],financial:[[0,0],[3,80],[6,140],[10,180]]};
+  function gaugeAngle(value,profile){const scale=gaugeScales[profile.key],number=Math.max(0,Math.min(10,Number(value)||0));for(let i=1;i<scale.length;i++){const [to,toAngle]=scale[i],[from,fromAngle]=scale[i-1];if(number<=to)return fromAngle+(number-from)*(toAngle-fromAngle)/(to-from);}return 180;}
+  function gaugePoint(value,profile,rx=215,ry=190){const angle=Math.PI+gaugeAngle(value,profile)*Math.PI/180;return {x:296+Math.cos(angle)*rx,y:370+Math.sin(angle)*ry};}
+  function gaugeNeedlePoints(value,profile){const pivot={x:246,y:349},tip=gaugePoint(value,profile,200,170),dx=tip.x-pivot.x,dy=tip.y-pivot.y,length=Math.hypot(dx,dy)||1,ux=dx/length,uy=dy/length,nx=-uy,ny=ux,bx=pivot.x-ux*12,by=pivot.y-uy*12;return [tip,{x:bx+nx*16,y:by+ny*16},{x:bx-nx*16,y:by-ny*16}];}
   function gaugeFrame(x,y,w,h){const scale=Math.min(w/520,(h-30)/265),left=x+(w-520*scale)/2-40*scale,top=y+30-120*scale;return {scale,left,top,map:p=>({x:left+p.x*scale,y:top+p.y*scale})};}
   function gaugeBandPoints(){const points=[];for(let i=0;i<=64;i++){const a=Math.PI+Math.PI*i/64;points.push({x:296+215*Math.cos(a),y:370+190*Math.sin(a)});}points.push({x:402,y:370});const cubic=(start,c1,c2,end)=>{for(let i=1;i<=32;i++){const t=i/32,u=1-t;points.push({x:u*u*u*start.x+3*u*u*t*c1.x+3*u*t*t*c2.x+t*t*t*end.x,y:u*u*u*start.y+3*u*u*t*c1.y+3*u*t*t*c2.y+t*t*t*end.y});}};cubic({x:402,y:370},{x:370,y:305},{x:318,y:272},{x:260,y:272});cubic({x:260,y:272},{x:180,y:272},{x:108,y:317},{x:81,y:370});return points;}
   const esc=value=>String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -327,14 +327,14 @@
     text(ctx,title,x+24,y+15,w-48,{size:15,color:'#d0ad75',bold:true,align:'center'});
     ctx.save();ctx.translate(frame.left,frame.top);ctx.scale(frame.scale,frame.scale);
     ctx.beginPath();ctx.moveTo(81,370);ctx.ellipse(296,370,215,190,0,Math.PI,2*Math.PI);ctx.lineTo(402,370);ctx.bezierCurveTo(370,305,318,272,260,272);ctx.bezierCurveTo(180,272,108,317,81,370);ctx.closePath();ctx.fillStyle='#d0ad75';ctx.fill();
-    const markers=[profile.optimalStart,profile.optimalEnd,...(profile.highExposureStart?[profile.highExposureStart]:[])];
-    markers.forEach(mark=>{const outside=gaugePoint(mark);if(!(profile.key==='total'&&mark===profile.optimalStart)){const inside=mark===3?{x:260,y:272}:{x:381,y:328};line(ctx,inside.x,inside.y,outside.x,outside.y,'#001233',7);}text(ctx,`${mark}%`,outside.x-32,outside.y-25,64,{size:20,color:'#fff',bold:true,align:'center'});});
-    const needle=gaugeNeedlePoints(value);ctx.beginPath();ctx.moveTo(needle[0].x,needle[0].y);ctx.lineTo(needle[1].x,needle[1].y);ctx.lineTo(needle[2].x,needle[2].y);ctx.closePath();ctx.fillStyle='#fff';ctx.fill();ctx.beginPath();ctx.arc(246,349,22,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(246,349,9,0,Math.PI*2);ctx.fillStyle='#001233';ctx.fill();
+    const markers=[profile.optimalStart,profile.optimalEnd];
+    markers.forEach(mark=>{const outside=gaugePoint(mark,profile);if(!(profile.key==='total'&&mark===profile.optimalStart)){const inside=mark===profile.optimalEnd?{x:381,y:328}:{x:260,y:272};line(ctx,inside.x,inside.y,outside.x,outside.y,'#001233',7);}text(ctx,`${mark}%`,outside.x-32,outside.y-25,64,{size:20,color:'#fff',bold:true,align:'center'});});
+    const needle=gaugeNeedlePoints(value,profile);ctx.beginPath();ctx.moveTo(needle[0].x,needle[0].y);ctx.lineTo(needle[1].x,needle[1].y);ctx.lineTo(needle[2].x,needle[2].y);ctx.closePath();ctx.fillStyle='#fff';ctx.fill();ctx.beginPath();ctx.arc(246,349,22,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(246,349,9,0,Math.PI*2);ctx.fillStyle='#001233';ctx.fill();
     text(ctx,'Ótimo',profile.key==='total'?146:131,258,68,{size:15,color:'#001233',bold:true,align:'center'});
     text(ctx,'Recomendado',profile.key==='total'?292:250,239,116,{size:15,color:'#001233',bold:true,align:'center'});
     text(ctx,'Alta',413,296,70,{size:16,color:'#001233',bold:true,align:'center'});text(ctx,'Exposição',399,314,98,{size:16,color:'#001233',bold:true,align:'center'});
     rect(ctx,128,317,80,50,'#ffc971',25);fitText(ctx,pct(value),132,342,72,{size:18,min:13,color:'#001233',bold:true,align:'center'});
-    text(ctx,'10%',526,370,62,{size:20,color:'#fff',bold:true});ctx.restore();
+    if(profile.key==='financial')text(ctx,'10%',526,370,62,{size:20,color:'#fff',bold:true});ctx.restore();
   }
   const monthsAtRate=(d,rate)=>d.financial>0&&d.annualPremium>0?Math.ceil(d.annualPremium/(d.financial*rate)):0;
   const monthsText=months=>months?`${months} ${months===1?'MÊS':'MESES'}`:'—';
@@ -462,17 +462,17 @@
     shapes.push(editableShape(nextId++,`Velocímetro ${label} · fundo azul`,{x,y,w,h,geometry:'rect',gradient:['001740','001233']}));
     shapes.push(editableText(nextId++,`Título do velocímetro ${label}`,{x:x+26,y:y+6,w:w-52,h:18,value:title,color:'D0AD75',fontPt:8.5,bold:true}));
     shapes.push(editableFreeform(nextId++,`Velocímetro ${label} · arco dourado`,{x,y,w,h,points:gaugeBandPoints().map(map),fill:'D0AD75'}));
-    const markers=[profile.optimalStart,profile.optimalEnd,...(profile.highExposureStart?[profile.highExposureStart]:[])];
+    const markers=[profile.optimalStart,profile.optimalEnd];
     markers.forEach(mark=>{
-      const outside=gaugePoint(mark);
+      const outside=gaugePoint(mark,profile);
       if(!(profile.key==='total'&&mark===profile.optimalStart)){
-        const inside=mark===3?{x:260,y:272}:{x:381,y:328},dx=outside.x-inside.x,dy=outside.y-inside.y,len=Math.hypot(dx,dy)||1,nx=-dy/len*3.5,ny=dx/len*3.5;
+        const inside=mark===profile.optimalEnd?{x:381,y:328}:{x:260,y:272},dx=outside.x-inside.x,dy=outside.y-inside.y,len=Math.hypot(dx,dy)||1,nx=-dy/len*3.5,ny=dx/len*3.5;
         const divider=[{x:inside.x+nx,y:inside.y+ny},{x:outside.x+nx,y:outside.y+ny},{x:outside.x-nx,y:outside.y-ny},{x:inside.x-nx,y:inside.y-ny}].map(map);
         shapes.push(editableFreeform(nextId++,`Velocímetro ${label} · limite ${mark}%`,{x,y,w,h,points:divider,fill:'001233'}));
       }
       addText(`referência ${mark}%`,`${mark}%`,outside.x,outside.y-25,64,26,11,'FFFFFF');
     });
-    shapes.push(editableFreeform(nextId++,`Velocímetro ${label} · ponteiro branco`,{x,y,w,h,points:gaugeNeedlePoints(value).map(map),fill:'FFFFFF'}));
+    shapes.push(editableFreeform(nextId++,`Velocímetro ${label} · ponteiro branco`,{x,y,w,h,points:gaugeNeedlePoints(value,profile).map(map),fill:'FFFFFF'}));
     const pivot=map({x:246,y:349}),pill=map({x:128,y:317});
     shapes.push(editableShape(nextId++,`Velocímetro ${label} · eixo branco`,{x:pivot.x-22*frame.scale,y:pivot.y-22*frame.scale,w:44*frame.scale,h:44*frame.scale,geometry:'ellipse',fill:'FFFFFF'}));
     shapes.push(editableShape(nextId++,`Velocímetro ${label} · centro azul`,{x:pivot.x-9*frame.scale,y:pivot.y-9*frame.scale,w:18*frame.scale,h:18*frame.scale,geometry:'ellipse',fill:'001233'}));
@@ -481,7 +481,7 @@
     addText('alta exposição · linha 1','Alta',448,296,70,22,9.5,'001233');addText('alta exposição · linha 2','Exposição',448,314,98,22,9.5,'001233');
     shapes.push(editableShape(nextId++,`Velocímetro ${label} · cápsula do percentual`,{x:pill.x,y:pill.y,w:80*frame.scale,h:50*frame.scale,geometry:'roundRect',fill:'FFC971',adjustment:50000}));
     addText('percentual',pct(value),168,342,76,44,12.5,'001233');
-    addText('limite da escala','10%',553,370,54,28,11,'FFFFFF');
+    if(profile.key==='financial')addText('limite da escala','10%',553,370,54,28,11,'FFFFFF');
     xml=xml.replace('</p:spTree>',`${shapes.join('')}</p:spTree>`);zip.file(xmlPath,xml);
   }
 
