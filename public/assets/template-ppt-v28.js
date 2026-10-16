@@ -315,7 +315,12 @@
     ctx.fillText(label,x+w/2,y+h/2,w-pad*2);
     ctx.restore();
   }
-  async function slide7(d){const {canvas,ctx}=await canvasFor(7);studyTag(ctx,d);return pngBytes(canvas);}
+  async function slide7(d){
+    const {canvas,ctx}=await canvasFor(7);
+    rect(ctx,88,246,740,126,NAVY);
+    fitText(ctx,'GERAR LIQUIDEZ',94,315,755,{size:102,min:64,color:GOLD,bold:true});
+    studyTag(ctx,d);return pngBytes(canvas);
+  }
 
   function gauge(ctx,x,y,w,h,title,value){
     const profile=gaugeProfile(title),frame=gaugeFrame(x,y,w,h),background=ctx.createLinearGradient(x,y,x,y+h);background.addColorStop(0,'#001740');background.addColorStop(1,'#001233');rect(ctx,x,y,w,h,background);
