@@ -260,7 +260,7 @@
 
     rect(ctx,1128,88,432,758,NAVY);
     benefitPanel(ctx,1148,94,405,204,'BENEFÍCIOS SECURITÁRIOS',['AGRAVAMENTO DO RISCO','CONGELAMENTO DE IDADE'],stage>=1);
-    benefitPanel(ctx,1148,310,405,278,'BENEFÍCIOS FINANCEIROS E TRIBUTÁRIOS',['ALAVANCAGEM · LIQUIDEZ EM D+0','ISENÇÃO DE IMPOSTOS*','QUITAÇÃO NO 10º ANO','SEM NECESSIDADE DE NOVOS APORTES'],stage>=2);
+    benefitPanel(ctx,1148,310,405,278,'BENEFÍCIOS FINANCEIROS E TRIBUTÁRIOS',['ALAVANCAGEM','ISENÇÃO DE IMPOSTOS*','QUITAÇÃO NO 10º ANO','SEM NECESSIDADE DE NOVOS APORTES'],stage>=2);
     benefitPanel(ctx,1148,600,405,242,'BENEFÍCIOS LEGAIS',['Proteção do crédito','Impenhorabilidade','Congelamento de Risco','Incomunicabilidade'],stage>=3,{infoIcons:true});
     return pngBytes(canvas);
   }
