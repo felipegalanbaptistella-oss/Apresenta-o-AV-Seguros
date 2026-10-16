@@ -293,7 +293,7 @@
     ctx.save();ctx.translate(frame.left,frame.top);ctx.scale(frame.scale,frame.scale);
     ctx.beginPath();ctx.moveTo(81,370);ctx.ellipse(296,370,215,190,0,Math.PI,2*Math.PI);ctx.lineTo(402,370);ctx.bezierCurveTo(370,305,318,272,260,272);ctx.bezierCurveTo(180,272,108,317,81,370);ctx.closePath();ctx.fillStyle='#d0ad75';ctx.fill();
     const markers=[profile.optimalStart,profile.optimalEnd,...(profile.highExposureStart?[profile.highExposureStart]:[])];
-    markers.forEach(mark=>{const inside=mark===1?{x:207,y:274}:mark===3?{x:260,y:272}:{x:381,y:328},outside=gaugePoint(mark);line(ctx,inside.x,inside.y,outside.x,outside.y,'#001233',7);text(ctx,`${mark}%`,outside.x-32,outside.y-25,64,{size:20,color:'#fff',bold:true,align:'center'});});
+    markers.forEach(mark=>{const outside=gaugePoint(mark);if(!(profile.key==='total'&&mark===profile.optimalStart)){const inside=mark===3?{x:260,y:272}:{x:381,y:328};line(ctx,inside.x,inside.y,outside.x,outside.y,'#001233',7);}text(ctx,`${mark}%`,outside.x-32,outside.y-25,64,{size:20,color:'#fff',bold:true,align:'center'});});
     const needle=gaugeNeedlePoints(value);ctx.beginPath();ctx.moveTo(needle[0].x,needle[0].y);ctx.lineTo(needle[1].x,needle[1].y);ctx.lineTo(needle[2].x,needle[2].y);ctx.closePath();ctx.fillStyle='#fff';ctx.fill();ctx.beginPath();ctx.arc(246,349,22,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(246,349,9,0,Math.PI*2);ctx.fillStyle='#001233';ctx.fill();
     text(ctx,'Ótimo',profile.key==='total'?146:131,258,68,{size:15,color:'#001233',bold:true,align:'center'});
     text(ctx,'Recomendado',profile.key==='total'?292:250,239,116,{size:15,color:'#001233',bold:true,align:'center'});
@@ -416,9 +416,12 @@
     shapes.push(editableFreeform(nextId++,`Velocímetro ${label} · arco dourado`,{x,y,w,h,points:gaugeBandPoints().map(map),fill:'D0AD75'}));
     const markers=[profile.optimalStart,profile.optimalEnd,...(profile.highExposureStart?[profile.highExposureStart]:[])];
     markers.forEach(mark=>{
-      const inside=mark===1?{x:207,y:274}:mark===3?{x:260,y:272}:{x:381,y:328},outside=gaugePoint(mark),dx=outside.x-inside.x,dy=outside.y-inside.y,len=Math.hypot(dx,dy)||1,nx=-dy/len*3.5,ny=dx/len*3.5;
-      const divider=[{x:inside.x+nx,y:inside.y+ny},{x:outside.x+nx,y:outside.y+ny},{x:outside.x-nx,y:outside.y-ny},{x:inside.x-nx,y:inside.y-ny}].map(map);
-      shapes.push(editableFreeform(nextId++,`Velocímetro ${label} · limite ${mark}%`,{x,y,w,h,points:divider,fill:'001233'}));
+      const outside=gaugePoint(mark);
+      if(!(profile.key==='total'&&mark===profile.optimalStart)){
+        const inside=mark===3?{x:260,y:272}:{x:381,y:328},dx=outside.x-inside.x,dy=outside.y-inside.y,len=Math.hypot(dx,dy)||1,nx=-dy/len*3.5,ny=dx/len*3.5;
+        const divider=[{x:inside.x+nx,y:inside.y+ny},{x:outside.x+nx,y:outside.y+ny},{x:outside.x-nx,y:outside.y-ny},{x:inside.x-nx,y:inside.y-ny}].map(map);
+        shapes.push(editableFreeform(nextId++,`Velocímetro ${label} · limite ${mark}%`,{x,y,w,h,points:divider,fill:'001233'}));
+      }
       addText(`referência ${mark}%`,`${mark}%`,outside.x,outside.y-25,64,26,11,'FFFFFF');
     });
     shapes.push(editableFreeform(nextId++,`Velocímetro ${label} · ponteiro branco`,{x,y,w,h,points:gaugeNeedlePoints(value).map(map),fill:'FFFFFF'}));

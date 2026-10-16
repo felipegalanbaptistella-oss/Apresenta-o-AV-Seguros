@@ -465,8 +465,8 @@
     return `M ${tip.x.toFixed(1)} ${tip.y.toFixed(1)} L ${(bx+nx*16).toFixed(1)} ${(by+ny*16).toFixed(1)} L ${(bx-nx*16).toFixed(1)} ${(by-ny*16).toFixed(1)} Z`;
   }
   function gaugeSvgMarkup(profile,value){
-    const innerPoint=mark=>mark===1?{x:207,y:274}:mark===3?{x:260,y:272}:{x:381,y:328};
-    const markers=(profile.markers||[profile.optimalStart,profile.optimalEnd]).map(mark=>{const inside=innerPoint(mark),outside=gaugePoint(mark),label={x:outside.x,y:outside.y-25};return `<line x1="${inside.x}" y1="${inside.y}" x2="${outside.x.toFixed(1)}" y2="${outside.y.toFixed(1)}" stroke="#001233" stroke-width="7"/><text x="${label.x.toFixed(1)}" y="${label.y.toFixed(1)}" text-anchor="middle" class="gauge-svg-scale">${mark}%</text>`;}).join('');
+    const innerPoint=mark=>mark===3?{x:260,y:272}:{x:381,y:328};
+    const markers=(profile.markers||[profile.optimalStart,profile.optimalEnd]).map(mark=>{const outside=gaugePoint(mark),label={x:outside.x,y:outside.y-25};let divider='';if(!(profile.key==='total'&&mark===profile.optimalStart)){const inside=innerPoint(mark);divider=`<line x1="${inside.x}" y1="${inside.y}" x2="${outside.x.toFixed(1)}" y2="${outside.y.toFixed(1)}" stroke="#001233" stroke-width="7"/>`;}return `${divider}<text x="${label.x.toFixed(1)}" y="${label.y.toFixed(1)}" text-anchor="middle" class="gauge-svg-scale">${mark}%</text>`;}).join('');
     const recommended={x:profile.key==='total'?350:308,y:239};
     const high='<text x="448" y="296" text-anchor="middle" class="gauge-svg-label-compact"><tspan x="448">Alta</tspan><tspan x="448" dy="18">Exposição</tspan></text>';
     const optimalLabelX=profile.key==='total'?180:165;
