@@ -216,13 +216,15 @@
     stackedBar(ctx,d,980,285,195,415,withInsurance,reallocation);
     const barLegend=withInsurance?[{label:'Passivo sucessório',color:'#bfc2c8',textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos financeiros',color:GOLD},{label:'Seguro de vida',color:GREEN,bold:true}]:reallocation?[{label:'Passivo sucessório',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos financeiros',color:GOLD},{label:'Reserva lastreada',color:GREEN,bold:true}]:[{label:'PASSIVO SUCESSÓRIO',color:RED,textColor:RED,bold:true},{label:'Patrimônio imobilizado',color:BLUE},{label:'Ativos financeiros',color:GOLD}];
     legend(ctx,barLegend,1250,480,38);
-    if(stage<4){
+    const panels=slide===8
+      ?[[50,180,740,429],[50,628,740,148],[808,180,760,647]]
+      :[[50,180,740,428],[50,618,740,74],[50,698,740,129],[808,180,760,647]];
+    if(stage<panels.length){
       const complete=document.createElement('canvas');complete.width=W;complete.height=H;complete.getContext('2d').drawImage(canvas,0,0);
       const backdrop=ctx.createLinearGradient(0,180,0,827);backdrop.addColorStop(0,'#03103a');backdrop.addColorStop(1,'#010a2d');
       ctx.fillStyle=backdrop;ctx.fillRect(0,180,W,647);
       ctx.save();ctx.strokeStyle='rgba(41,72,120,.16)';ctx.lineWidth=1;
       for(let x=-900;x<2400;x+=172){ctx.beginPath();ctx.moveTo(x,180);ctx.lineTo(x+647,827);ctx.stroke();ctx.beginPath();ctx.moveTo(x+647,180);ctx.lineTo(x,827);ctx.stroke();}ctx.restore();
-      const panels=[[50,180,740,428],[50,618,740,74],[50,698,740,129],[808,180,760,647]];
       panels.slice(0,stage).forEach(([x,y,w,h])=>ctx.drawImage(complete,x,y,w,h,x,y,w,h));
     }
     return pngBytes(canvas);
@@ -616,6 +618,7 @@
     await prepareProjectionStages(zip);
     const legalTarget=await prepareLegalInfoSlides(zip);
     const costStageTargets=await prepareClickRevealStages(zip,6,3,'Custos da sucessão');
+    const currentAssetStageTargets=await prepareClickRevealStages(zip,8,3,'Patrimônio atual');
     const reallocationStageTargets=await prepareClickRevealStages(zip,9,4,'Patrimônio em realocação');
     const insuranceStageTargets=await prepareClickRevealStages(zip,10,4,'Patrimônio com seguro de vida');
     const studies=Array.isArray(d.studies)&&d.studies.length?d.studies:[d];
@@ -625,6 +628,8 @@
     for(const [no,bytes] of await renderOverviewSlides(combined,{includeGauge:false}))await replaceSlide(zip,no,bytes);
     await replaceSlide(zip,6,await slide6(combined,0));
     for(let index=0;index<costStageTargets.length;index++)await replaceSlide(zip,costStageTargets[index],await slide6(combined,index+1));
+    await replaceSlide(zip,8,await assetSlide(8,combined,'current',0));
+    for(let index=0;index<currentAssetStageTargets.length;index++)await replaceSlide(zip,currentAssetStageTargets[index],await assetSlide(8,combined,'current',index+1));
     await replaceSlide(zip,9,await assetSlide(9,combined,'reallocation',0));
     for(let index=0;index<reallocationStageTargets.length;index++)await replaceSlide(zip,reallocationStageTargets[index],await assetSlide(9,combined,'reallocation',index+1));
     await replaceSlide(zip,10,await assetSlide(10,combined,'with',0));
